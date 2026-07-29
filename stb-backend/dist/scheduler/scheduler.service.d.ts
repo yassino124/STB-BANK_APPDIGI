@@ -1,0 +1,38 @@
+import { Model } from 'mongoose';
+import { Employee } from '../employees/employee.schema';
+import { PayrollService } from '../payroll/payroll.service';
+import { CreditsService } from '../credits/credits.service';
+import { LeaveService } from '../leave/leave.service';
+import { CongesService } from '../requests/conges.service';
+import { Account } from '../accounts/schemas/account.schema';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { DocumentsService } from '../documents/documents.service';
+export declare class SchedulerService {
+    private employeeModel;
+    private accountModel;
+    private payrollService;
+    private creditsService;
+    private leaveService;
+    private congesService;
+    private eventEmitter;
+    private documentsService;
+    private readonly logger;
+    constructor(employeeModel: Model<Employee>, accountModel: Model<Account>, payrollService: PayrollService, creditsService: CreditsService, leaveService: LeaveService, congesService: CongesService, eventEmitter: EventEmitter2, documentsService: DocumentsService);
+    handleDailyTasks(): Promise<void>;
+    handleMonthlyTasks(): Promise<void>;
+    handleYearlyTasks(): Promise<void>;
+    handleWeeklyTasks(): Promise<void>;
+    handleFraudMonitoring(): Promise<void>;
+    handleWeeklyReports(): Promise<void>;
+    private resetDailyLimits;
+    private resetMonthlyLimits;
+    private handleMonthlyPayroll;
+    private handleMonthlyCreditDeductions;
+    private handleMonthlyLeaveAccrual;
+    private handleMonthlySalaryCredit;
+    handleMonthlyDocumentGeneration(): Promise<void>;
+    private _generateMonthlyDocuments;
+    private _generateEmployeeDocuments;
+    private handleLateCreditPenalties;
+    private handleYearEndCongesReport;
+}

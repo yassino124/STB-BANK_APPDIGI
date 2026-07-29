@@ -1,0 +1,33 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.AuditAction = void 0;
+var AuditAction;
+(function (AuditAction) {
+    AuditAction["LOGIN"] = "LOGIN";
+    AuditAction["LOGOUT"] = "LOGOUT";
+    AuditAction["LOGIN_FAILED"] = "LOGIN_FAILED";
+    AuditAction["FACE_ID_SUCCESS"] = "FACE_ID_SUCCESS";
+    AuditAction["FACE_ID_FAILED"] = "FACE_ID_FAILED";
+    AuditAction["FINGERPRINT_SUCCESS"] = "FINGERPRINT_SUCCESS";
+    AuditAction["FINGERPRINT_FAILED"] = "FINGERPRINT_FAILED";
+    AuditAction["PIN_SUCCESS"] = "PIN_SUCCESS";
+    AuditAction["PIN_FAILED"] = "PIN_FAILED";
+    AuditAction["OTP_SENT"] = "OTP_SENT";
+    AuditAction["OTP_VERIFIED"] = "OTP_VERIFIED";
+    AuditAction["OTP_FAILED"] = "OTP_FAILED";
+    AuditAction["ACCOUNT_ACTIVATED"] = "ACCOUNT_ACTIVATED";
+    AuditAction["PASSWORD_CHANGED"] = "PASSWORD_CHANGED";
+    AuditAction["PASSWORD_RESET"] = "PASSWORD_RESET";
+    AuditAction["PIN_CHANGED"] = "PIN_CHANGED";
+    AuditAction["DEVICE_TRUSTED"] = "DEVICE_TRUSTED";
+    AuditAction["DEVICE_REMOVED"] = "DEVICE_REMOVED";
+    AuditAction["BIOMETRICS_ENABLED"] = "BIOMETRICS_ENABLED";
+    AuditAction["BIOMETRICS_DISABLED"] = "BIOMETRICS_DISABLED";
+    AuditAction["TOKEN_REFRESHED"] = "TOKEN_REFRESHED";
+    AuditAction["SUSPICIOUS_LOGIN"] = "SUSPICIOUS_LOGIN";
+    AuditAction["ACCOUNT_LOCKED"] = "ACCOUNT_LOCKED";
+    AuditAction["TRANSFER"] = "TRANSFER";
+    AuditAction["SETTINGS_CHANGED"] = "SETTINGS_CHANGED";
+    AuditAction["PROFILE_VIEWED"] = "PROFILE_VIEWED";
+})(AuditAction || (exports.AuditAction = AuditAction = {}));
+//# sourceMappingURL=audit-action.enum.js.map

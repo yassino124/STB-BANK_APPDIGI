@@ -1,0 +1,158 @@
+Analyzing stb_mobile...                                         
+
+warning • The stack trace variable 'stackTrace' isn't used and can be removed. Try removing the stack trace variable, or using it • lib/data/repositories/banking_repository.dart:137:17 • unused_catch_stack
+   info • Statements in an if should be enclosed in a block. Try wrapping the statement in a block • lib/data/repositories/banking_repository.dart:190:25 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block. Try wrapping the statement in a block • lib/data/repositories/banking_repository.dart:191:12 • curly_braces_in_flow_control_structures
+warning • Unused import: 'services/polling_service.dart'. Try removing the import directive • lib/main.dart:9:8 • unused_import
+   info • Don't use 'BuildContext's across async gaps. Try rewriting the code to not use the 'BuildContext', or guard the use with a 'mounted' check • lib/providers/app_provider.dart:512:20 • use_build_context_synchronously
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/providers/app_provider.dart:514:28 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/providers/app_provider.dart:514:32 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/providers/app_provider.dart:516:38 • unnecessary_underscores
+   info • 'Table.fromTextArray' is deprecated and shouldn't be used. Use TableHelper.fromTextArray() instead. Try replacing the use of the deprecated member with the replacement • lib/screens/accounts/account_detail_screen.dart:232:15 • deprecated_member_use
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/accounts/account_detail_screen.dart:558:30 • unnecessary_underscores
+warning • The value of the local variable 'acc' isn't used. Try removing the variable or using it • lib/screens/accounts/accounts_screen.dart:119:11 • unused_local_variable
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/accounts/accounts_screen.dart:207:50 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/accounts/accounts_screen.dart:207:54 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/accounts/accounts_screen.dart:215:60 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/accounts/accounts_screen.dart:555:29 • unnecessary_underscores
+warning • Unused import: '../../models/banking_models.dart'. Try removing the import directive • lib/screens/analytics/analytics_screen.dart:10:8 • unused_import
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/analytics/analytics_screen.dart:289:30 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/analytics/analytics_screen.dart:441:40 • unnecessary_underscores
+warning • The value of the field '_extractedText' isn't used. Try removing the field, or using it • lib/screens/analytics/bill_scanner_screen.dart:24:11 • unused_field
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/analytics/bill_scanner_screen.dart:209:28 • unnecessary_underscores
+   info • Don't invoke 'print' in production code. Try using a logging framework • lib/screens/annuaire/annuaire_screen.dart:42:7 • avoid_print
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/annuaire/annuaire_screen.dart:366:30 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/annuaire/annuaire_screen.dart:366:34 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/annuaire/annuaire_screen.dart:368:40 • unnecessary_underscores
+   info • Don't invoke 'print' in production code. Try using a logging framework • lib/screens/annuaire/employee_profile_screen.dart:39:7 • avoid_print
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/annuaire/employee_profile_screen.dart:99:34 • unnecessary_underscores
+warning • The value of the field '_setupToken' isn't used. Try removing the field, or using it • lib/screens/auth/activation_screen.dart:21:10 • unused_field
+warning • The value of the field '_localAuth' isn't used. Try removing the field, or using it • lib/screens/auth/activation_screen.dart:36:9 • unused_field
+   info • Statements in a for should be enclosed in a block. Try wrapping the statement in a block • lib/screens/auth/activation_screen.dart:44:32 • curly_braces_in_flow_control_structures
+   info • Statements in a for should be enclosed in a block. Try wrapping the statement in a block • lib/screens/auth/activation_screen.dart:45:32 • curly_braces_in_flow_control_structures
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/auth/activation_screen.dart:146:26 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/auth/activation_screen.dart:146:30 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/auth/activation_screen.dart:148:36 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/auth/login_screen.dart:54:26 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/auth/login_screen.dart:54:30 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/auth/login_screen.dart:56:36 • unnecessary_underscores
+   info • Don't use 'BuildContext's across async gaps. Try rewriting the code to not use the 'BuildContext', or guard the use with a 'mounted' check • lib/screens/auth/login_screen.dart:126:20 • use_build_context_synchronously
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/auth/login_screen.dart:211:26 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/auth/login_screen.dart:211:30 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/auth/login_screen.dart:213:36 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/auth/login_screen.dart:511:29 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/auth/login_screen.dart:511:33 • unnecessary_underscores
+warning • The declaration '_utilSmall' isn't referenced. Try removing the declaration of '_utilSmall' • lib/screens/auth/login_screen.dart:761:10 • unused_element
+warning • The declaration '_showSecuriteSheet' isn't referenced. Try removing the declaration of '_showSecuriteSheet' • lib/screens/auth/login_screen.dart:1671:8 • unused_element
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/bills/bills_screen.dart:320:20 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/cards/cards_screen.dart:192:51 • unnecessary_underscores
+   info • 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor or activeTrackColor instead. This feature was deprecated after v3.31.0-2.0.pre. Try replacing the use of the deprecated member with the replacement • lib/screens/cards/cards_screen.dart:602:13 • deprecated_member_use
+warning • Unused import: '../../models/banking_models.dart'. Try removing the import directive • lib/screens/cheques/cheques_screen.dart:8:8 • unused_import
+warning • The value of the field '_isListeningMic' isn't used. Try removing the field, or using it • lib/screens/copilot/copilot_chat_screen.dart:27:8 • unused_field
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/copilot/copilot_chat_screen.dart:386:36 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/copilot/copilot_chat_screen.dart:442:38 • unnecessary_underscores
+warning • The value of the local variable 'cardBg' isn't used. Try removing the variable or using it • lib/screens/copilot/copilot_chat_screen.dart:579:11 • unused_local_variable
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/copilot/copilot_chat_screen.dart:736:37 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/copilot/copilot_screen.dart:262:30 • unnecessary_underscores
+warning • The declaration '_GlassOrb' isn't referenced. Try removing the declaration of '_GlassOrb' • lib/screens/home/dashboard_screen.dart:481:7 • unused_element
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/home/dashboard_screen.dart:572:31 • unnecessary_underscores
+   info • Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' • lib/screens/home/dashboard_screen.dart:802:19 • use_null_aware_elements
+warning • The declaration '_TransactionTile' isn't referenced. Try removing the declaration of '_TransactionTile' • lib/screens/home/dashboard_screen.dart:1588:7 • unused_element
+warning • The value of the local variable 'cd' isn't used. Try removing the variable or using it • lib/screens/home/notifications_screen.dart:31:11 • unused_local_variable
+warning • Unused import: 'auth/login_screen.dart'. Try removing the import directive • lib/screens/main_screen.dart:25:8 • unused_import
+warning • Unused import: 'analytics/bill_scanner_screen.dart'. Try removing the import directive • lib/screens/main_screen.dart:26:8 • unused_import
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/main_screen.dart:732:24 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/main_screen.dart:732:28 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/main_screen.dart:734:34 • unnecessary_underscores
+warning • The declaration '_processWithAI' isn't referenced. Try removing the declaration of '_processWithAI' • lib/screens/main_screen.dart:825:16 • unused_element
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/main_screen.dart:892:34 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/onboarding/onboarding_screen.dart:64:26 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/onboarding/onboarding_screen.dart:64:30 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/onboarding/onboarding_screen.dart:65:36 • unnecessary_underscores
+warning • The value of the local variable 'dk' isn't used. Try removing the variable or using it • lib/screens/onboarding/onboarding_screen.dart:74:11 • unused_local_variable
+   info • Don't invoke 'print' in production code. Try using a logging framework • lib/screens/profile/profile_screen.dart:48:7 • avoid_print
+   info • 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor or activeTrackColor instead. This feature was deprecated after v3.31.0-2.0.pre. Try replacing the use of the deprecated member with the replacement • lib/screens/profile/settings/biometrics_settings_screen.dart:147:19 • deprecated_member_use
+   info • 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor or activeTrackColor instead. This feature was deprecated after v3.31.0-2.0.pre. Try replacing the use of the deprecated member with the replacement • lib/screens/profile/settings/two_fa_settings_screen.dart:134:13 • deprecated_member_use
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/qr/qr_screen.dart:139:33 • unnecessary_underscores
+warning • The value of the local variable 'date' isn't used. Try removing the variable or using it • lib/screens/qr_payment/qr_payment_screen.dart:135:11 • unused_local_variable
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/recharge/recharge_screen.dart:462:20 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/screens/recharge/recharge_screen.dart:1310:49 • deprecated_member_use
+   info • The import of 'dart:ui' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart'. Try removing the import directive • lib/screens/rh/ai_leave_planner_screen.dart:1:8 • unnecessary_import
+warning • Dead code. Try removing the code, or fixing the code before it so that it can be reached • lib/screens/rh/ai_leave_planner_screen.dart:71:20 • dead_code
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/rh/ai_leave_planner_screen.dart:252:26 • unnecessary_underscores
+   info • The import of 'dart:ui' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart'. Try removing the import directive • lib/screens/rh/amicale_screen.dart:10:8 • unnecessary_import
+   info • The private field _searchActive could be 'final'. Try making the field 'final' • lib/screens/rh/amicale_screen.dart:42:8 • prefer_final_fields
+warning • The value of the field '_searchActive' isn't used. Try removing the field, or using it • lib/screens/rh/amicale_screen.dart:42:8 • unused_field
+warning • The declaration '_onVoiceSearch' isn't referenced. Try removing the declaration of '_onVoiceSearch' • lib/screens/rh/amicale_screen.dart:112:8 • unused_element
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/rh/amicale_screen.dart:159:28 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/rh/amicale_screen.dart:300:71 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/rh/amicale_screen.dart:300:75 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/rh/amicale_screen.dart:355:53 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/rh/amicale_screen.dart:565:40 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/rh/amicale_screen.dart:565:43 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/rh/avance_screen.dart:259:50 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/rh/avance_screen.dart:336:51 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/rh/avance_screen.dart:487:22 • unnecessary_underscores
+   info • Don't invoke 'print' in production code. Try using a logging framework • lib/screens/rh/carte_screen.dart:363:7 • avoid_print
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/rh/carte_screen.dart:483:24 • unnecessary_underscores
+   info • The private field _durationStr could be 'final'. Try making the field 'final' • lib/screens/rh/conge_screen.dart:49:10 • prefer_final_fields
+warning • The value of the field '_durationStr' isn't used. Try removing the field, or using it • lib/screens/rh/conge_screen.dart:49:10 • unused_field
+warning • The value of the field '_autoRefreshTimer' isn't used. Try removing the field, or using it • lib/screens/rh/conge_screen.dart:67:10 • unused_field
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/rh/conge_screen.dart:251:32 • unnecessary_underscores
+warning • The value of the local variable 'nombreMois' isn't used. Try removing the variable or using it • lib/screens/rh/credit_detail_screen.dart:204:11 • unused_local_variable
+warning • The value of the local variable 'montantInitialField' isn't used. Try removing the variable or using it • lib/screens/rh/credit_detail_screen.dart:205:11 • unused_local_variable
+warning • Unused import: '../../widgets/stb_chip.dart'. Try removing the import directive • lib/screens/rh/credit_screen.dart:11:8 • unused_import
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/rh/credit_screen.dart:358:28 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/rh/credit_screen.dart:484:32 • unnecessary_underscores
+   info • The import of 'package:flutter/services.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart'. Try removing the import directive • lib/screens/rh/dialogs/early_repayment_dialog.dart:2:8 • unnecessary_import
+warning • The value of the local variable 'interetsRestantsTheorique' isn't used. Try removing the variable or using it • lib/screens/rh/dialogs/early_repayment_dialog.dart:170:11 • unused_local_variable
+   info • The import of 'package:flutter/services.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart'. Try removing the import directive • lib/screens/rh/dialogs/retry_late_payment_dialog.dart:2:8 • unnecessary_import
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/rh/documents_screen.dart:155:50 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/rh/documents_screen.dart:252:31 • unnecessary_underscores
+warning • Unused import: 'dart:math'. Try removing the import directive • lib/screens/rh/rh_hub_screen.dart:1:8 • unused_import
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/rh/rh_hub_screen.dart:244:34 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/rh/rh_hub_screen.dart:413:41 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/rh/rh_hub_screen.dart:413:45 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/rh/rh_hub_screen.dart:676:43 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/rh/rh_hub_screen.dart:676:47 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/rh/rh_hub_screen.dart:1460:98 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/rh/rh_hub_screen.dart:1460:102 • unnecessary_underscores
+warning • Dead code. Try removing the code, or fixing the code before it so that it can be reached • lib/screens/splash/splash_screen.dart:56:33 • dead_code
+warning • Unused import: 'package:provider/provider.dart'. Try removing the import directive • lib/screens/support/support_screen.dart:4:8 • unused_import
+warning • Unused import: '../../providers/app_provider.dart'. Try removing the import directive • lib/screens/support/support_screen.dart:5:8 • unused_import
+   info • The private field _selectedCategory could be 'final'. Try making the field 'final' • lib/screens/support/support_screen.dart:19:10 • prefer_final_fields
+warning • The value of the field '_selectedCategory' isn't used. Try removing the field, or using it • lib/screens/support/support_screen.dart:19:10 • unused_field
+warning • The value of the field '_isSubmitting' isn't used. Try removing the field, or using it • lib/screens/support/support_screen.dart:20:8 • unused_field
+warning • The value of the field '_categories' isn't used. Try removing the field, or using it • lib/screens/support/support_screen.dart:22:9 • unused_field
+warning • The declaration '_submitTicket' isn't referenced. Try removing the declaration of '_submitTicket' • lib/screens/support/support_screen.dart:29:8 • unused_element
+   info • Don't use 'BuildContext's across async gaps. Try rewriting the code to not use the 'BuildContext', or guard the use with a 'mounted' check • lib/screens/support/support_screen.dart:107:9 • use_build_context_synchronously
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/tickets/tickets_list_screen.dart:218:20 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores. Try using '_' • lib/screens/transactions/transactions_screen.dart:301:41 • unnecessary_underscores
+   info • The import of 'dart:ui' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart'. Try removing the import directive • lib/screens/transfer/transfer_screen.dart:10:8 • unnecessary_import
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check. Guard a 'State.context' use with a 'mounted' check on the State, and other BuildContext use with a 'mounted' check on the BuildContext • lib/screens/transfer/transfer_screen.dart:717:32 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check. Guard a 'State.context' use with a 'mounted' check on the State, and other BuildContext use with a 'mounted' check on the BuildContext • lib/screens/transfer/transfer_screen.dart:722:28 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check. Guard a 'State.context' use with a 'mounted' check on the State, and other BuildContext use with a 'mounted' check on the BuildContext • lib/screens/transfer/transfer_screen.dart:731:49 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps. Try rewriting the code to not use the 'BuildContext', or guard the use with a 'mounted' check • lib/screens/transfer/transfer_screen.dart:736:61 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps. Try rewriting the code to not use the 'BuildContext', or guard the use with a 'mounted' check • lib/screens/transfer/transfer_screen.dart:737:69 • use_build_context_synchronously
+   info • Empty catch block. Try adding statements to the block, adding a comment to the block, or removing the 'catch' clause • lib/screens/transfer/transfer_screen.dart:745:19 • empty_catches
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check. Guard a 'State.context' use with a 'mounted' check on the State, and other BuildContext use with a 'mounted' check on the BuildContext • lib/screens/transfer/transfer_screen.dart:750:7 • use_build_context_synchronously
+   info • Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' • lib/services/auth_api_service.dart:198:9 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' • lib/services/auth_api_service.dart:199:9 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' • lib/services/auth_api_service.dart:254:9 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' • lib/services/auth_api_service.dart:605:11 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' • lib/services/auth_api_service.dart:634:11 • use_null_aware_elements
+   info • Don't return 'null' from a function with a return type of 'void'. Try removing the 'null' • lib/services/auth_api_service.dart:766:11 • avoid_returning_null_for_void
+   info • Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' • lib/services/auth_api_service.dart:911:11 • use_null_aware_elements
+   info • Unnecessary braces in a string interpolation. Try removing the braces • lib/services/ollama_api_service.dart:180:20 • unnecessary_brace_in_string_interps
+warning • The value of the field '_repo' isn't used. Try removing the field, or using it • lib/viewmodels/notifications_viewmodel.dart:8:27 • unused_field
+   info • The import of 'package:flutter/services.dart' is unnecessary because all of the used elements are also provided by the import of 'dart:ui'. Try removing the import directive • lib/widgets/biometric_lock_wrapper.dart:3:8 • unnecessary_import
+warning • Unnecessary cast. Try removing the cast • lib/widgets/stb_card.dart:40:32 • unnecessary_cast
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/widgets/transaction_history_card.dart:60:30 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/widgets/transaction_history_card.dart:61:30 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/widgets/transaction_history_card.dart:65:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/widgets/transaction_history_card.dart:78:32 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/widgets/transaction_history_card.dart:81:34 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/widgets/transaction_history_card.dart:137:42 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/widgets/transaction_history_card.dart:138:39 • deprecated_member_use
+warning • Unused import: 'package:flutter/material.dart'. Try removing the import directive • test/widget_test.dart:1:8 • unused_import
+

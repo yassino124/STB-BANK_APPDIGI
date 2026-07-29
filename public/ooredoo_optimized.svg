@@ -1,0 +1,15 @@
+<svg viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg">
+  <!-- Ooredoo logo simplified with red color -->
+  <g fill="#E53935">
+    <!-- Circles pattern -->
+    <circle cx="25" cy="40" r="12"/>
+    <circle cx="55" cy="40" r="12"/>
+    <circle cx="85" cy="40" r="12"/>
+    <circle cx="115" cy="40" r="12"/>
+    <circle cx="145" cy="40" r="12"/>
+    <circle cx="175" cy="40" r="12"/>
+    
+    <!-- Red dot on the right -->
+    <circle cx="190" cy="20" r="5"/>
+  </g>
+</svg>

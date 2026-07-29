@@ -1,0 +1,14 @@
+.env
+.env.docker
+*.log
+node_modules/
+dist/
+.dart_tool/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.DS_Store
+*.iml
+.idea/
+.vscode/
+coverage/
