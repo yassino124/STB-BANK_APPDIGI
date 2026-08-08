@@ -11,12 +11,28 @@ const Attendance = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterMonth, setFilterMonth] = useState<string>('');
+  const [teamSize, setTeamSize] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await api.get('/attendance').catch(() => null);
-        setAttendance(res?.data?.data || []);
+        const [absencesRes, employeesRes] = await Promise.all([
+          api.get('/absences/my-team').catch(() => null),
+          api.get('/employees?limit=100').catch(() => null)
+        ]);
+        
+        setAttendance(absencesRes?.data?.data || absencesRes?.data || []);
+        
+        // Calculate team size
+        const allEmp = employeesRes?.data?.data || employeesRes?.data || [];
+        const myTeam = allEmp.filter((e: any) => {
+          const mid = e.managerId?._id || e.managerId;
+          const did = e.directorId?._id || e.directorId;
+          const cid = e.centralDirectorId?._id || e.centralDirectorId;
+          const userId = user?.sub?.toString() || (user as any)?._id?.toString() || (user as any)?.id?.toString();
+          return userId && ((mid && mid.toString() === userId) || (did && did.toString() === userId) || (cid && cid.toString() === userId));
+        });
+        setTeamSize(myTeam.length);
       } catch (err: any) {
         setError(err?.message || 'Erreur de chargement');
         toast.error('Erreur lors du chargement du planning');
@@ -77,7 +93,7 @@ const Attendance = () => {
         {[
           { label: 'Absences ce mois', value: attendance.filter((a: any) => a.status === 'ABSENT').length, icon: Calendar, color: '#EF4444', bg: 'rgba(239,68,68,0.1)' },
           { label: 'Retards ce mois', value: attendance.filter((a: any) => a.status === 'LATE').length, icon: Clock, color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' },
-          { label: 'Employés actifs', value: attendance.filter((a: any) => a.status === 'PRESENT').length, icon: Users, color: '#10B981', bg: 'rgba(16,185,129,0.1)' },
+          { label: 'Employés actifs', value: Math.max(0, teamSize - attendance.filter((a: any) => a.status === 'ABSENT').length), icon: Users, color: '#10B981', bg: 'rgba(16,185,129,0.1)' },
           { label: 'Alertes', value: attendance.filter((a: any) => a.alert).length, icon: AlertTriangle, color: '#EF4444', bg: 'rgba(239,68,68,0.1)' },
         ].map((stat, i) => (
           <motion.div

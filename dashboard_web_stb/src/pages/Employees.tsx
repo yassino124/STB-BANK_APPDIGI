@@ -4,6 +4,7 @@ import api from '../api/axios';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 
 interface Employee {
   _id: string;
@@ -47,6 +48,8 @@ const getRoleBadge = (role: string) => {
 
 const Employees = () => {
   const navigate = useNavigate();
+  const { isRH, isIT, isFinance } = useAuth();
+  const canManage = isRH || isIT;
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -161,22 +164,25 @@ const Employees = () => {
       <div className="page-header">
         <div>
           <motion.h1 initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="page-title">
-            Annuaire RH
+            {isIT && !isRH ? '🖥️ Gestion des Comptes' : isFinance ? 'Annuaire Collaborateurs' : 'Annuaire RH'}
           </motion.h1>
           <motion.p initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }} className="page-subtitle">
             Gestion des collaborateurs STB ({filtered.length} affichés)
           </motion.p>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button onClick={handleExport} className="btn btn-secondary">
-            <Download size={16} />
-            Exporter
-          </button>
-          <Link to="/employees/new" className="btn btn-primary">
-            <Plus size={18} />
-            Nouveau Collaborateur
-          </Link>
-        </div>
+        
+        {isRH && (
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button onClick={handleExport} className="btn btn-secondary">
+              <Download size={16} />
+              Exporter
+            </button>
+            <Link to="/employees/new" className="btn btn-primary">
+              <Plus size={18} />
+              Nouveau Collaborateur
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Filters */}
@@ -268,7 +274,7 @@ const Employees = () => {
                     style={{ originX: 0 }}
                   >
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <Link to={`/employees/${emp._id}/360`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer' }}>
                         <motion.div whileHover={{ scale: 1.1, rotate: 5 }} className="avatar avatar-md" style={{ border: '2px solid rgba(41, 98, 255, 0.2)', overflow: 'hidden' }}>
                           {emp.avatar ? (
                             <img 
@@ -291,7 +297,7 @@ const Employees = () => {
                             {emp.isActivated ? <><UserCheck size={12} color="var(--success)" /> Connecté</> : <><Monitor size={12} color="var(--warning)" /> Jamais connecté</>}
                           </p>
                         </div>
-                      </div>
+                      </Link>
                     </td>
                     <td>
                       <p style={{ margin: 0, fontFamily: 'monospace', fontSize: '0.9rem', fontWeight: 700, color: 'var(--stb-blue-300)' }}>{emp.matricule}</p>
@@ -315,44 +321,31 @@ const Employees = () => {
                         {getStatusBadge(emp.status)}
                       </motion.div>
                     </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                        <motion.button
-                          whileHover={{ scale: 1.15, background: 'rgba(255,255,255,0.1)' }}
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() => toggleStatus(emp._id, emp.status)}
-                          className="btn-icon"
-                          title={emp.status === 'ACTIVE' ? 'Suspendre' : 'Activer'}
-                        >
-                          {emp.status === 'ACTIVE'
-                            ? <ShieldBan size={16} color="var(--danger)" />
-                            : <ShieldCheck size={16} color="var(--success)" />}
-                        </motion.button>
-                        {!emp.roles?.includes('RH') && (
-                          <motion.button
-                            whileHover={{ scale: 1.15, background: 'rgba(16, 185, 129, 0.1)' }}
-                            whileTap={{ scale: 0.9 }}
-                            onClick={() => promoteToRH(emp._id, emp.prenom, emp.nom)}
-                            className="btn-icon"
-                            title="Promouvoir en RH"
-                            style={{ color: 'var(--success)' }}
-                          >
-                            <UserCheck size={16} />
-                          </motion.button>
-                        )}
-                        <motion.button 
-                          whileHover={{ scale: 1.15, background: 'rgba(255,255,255,0.1)' }}
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() => navigate(`/employees/${emp._id}/financials`)}
-                          className="btn-icon"
-                          title="Gérer les avantages (Congés, Crédits, Primes)"
-                          style={{ color: 'var(--primary)' }}
-                        >
-                          <Wallet size={16} />
-                        </motion.button>
-                        <motion.button whileHover={{ scale: 1.15, background: 'rgba(255,255,255,0.1)' }} whileTap={{ scale: 0.9 }} className="btn-icon">
+                    <td className="actions-cell">
+                      <div className="action-menu">
+                        <button className="btn-icon">
                           <MoreVertical size={16} />
-                        </motion.button>
+                        </button>
+                        <div className="action-menu-content">
+                          <Link to={`/employees/${emp._id}/360`} className="action-menu-item">
+                            <UserCheck size={14} style={{ color: 'var(--stb-blue-400)' }} /> Profil 360 Complet
+                          </Link>
+                          <Link to={`/employees/${emp._id}/financials`} className="action-menu-item">
+                            <Wallet size={14} style={{ color: 'var(--stb-electric)' }} /> Consulter Profil Financier
+                          </Link>
+                          {isRH && (
+                            <>
+                              <button onClick={() => toggleStatus(emp._id, emp.status)} className="action-menu-item">
+                                {emp.status === 'ACTIVE' ? <><ShieldBan size={14} style={{ color: 'var(--danger)' }} /> Suspendre compte</> : <><ShieldCheck size={14} style={{ color: 'var(--success)' }} /> Activer compte</>}
+                              </button>
+                              {!emp.roles?.includes('RH') && (
+                                <button onClick={() => promoteToRH(emp._id, emp.prenom, emp.nom)} className="action-menu-item">
+                                  <UserCheck size={14} style={{ color: 'var(--stb-blue-400)' }} /> Promouvoir en RH
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
                     </td>
                   </motion.tr>

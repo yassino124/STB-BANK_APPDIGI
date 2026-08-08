@@ -4,6 +4,7 @@ export declare enum Role {
     MANAGER = "MANAGER",
     FINANCE = "FINANCE",
     AGENCE = "AGENCE",
+    IT = "IT",
     ADMIN = "ADMIN",
     SUPER_ADMIN = "SUPER_ADMIN",
     TELLER = "TELLER",

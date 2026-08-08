@@ -75,8 +75,8 @@ let HierarchyService = class HierarchyService {
     async getPendingApprovals(managerId) {
         return this.leaveRequestModel
             .find({
-            managerId: new mongoose_2.Types.ObjectId(managerId),
-            status: leave_schema_2.LeaveStatus.PENDING_N1,
+            currentApproverId: new mongoose_2.Types.ObjectId(managerId),
+            status: leave_schema_2.LeaveStatus.PENDING_MANAGER,
         })
             .populate('employeeId', 'nom prenom matricule poste soldeConges')
             .sort({ createdAt: -1 })

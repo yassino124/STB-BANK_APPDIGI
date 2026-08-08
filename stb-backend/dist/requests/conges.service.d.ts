@@ -25,6 +25,7 @@ export declare class CongesService {
         statut?: string;
         employeeId?: string;
     }): Promise<Conge[]>;
+    getPendingTeam(managerId: string): Promise<Conge[]>;
     getTeamCalendar(managerId: string, month: number, year: number): Promise<Conge[]>;
     handleYearEndConges(): Promise<void>;
 }

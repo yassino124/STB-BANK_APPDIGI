@@ -62,12 +62,24 @@ const Login = () => {
       >
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
           <div style={{
-            width: '72px', height: '72px', margin: '0 auto 1.5rem', borderRadius: '20px',
-            background: 'linear-gradient(135deg, var(--stb-blue-700), var(--stb-electric))',
+            width: '100px', height: '100px', margin: '0 auto 1.5rem', borderRadius: '24px',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 8px 32px rgba(41,98,255,0.4)'
+            overflow: 'hidden',
+            boxShadow: '0 8px 32px rgba(41,98,255,0.5), 0 0 0 1px rgba(255,255,255,0.08)',
           }}>
-            <img src="/stb_logo.png" alt="STB" style={{ width: '60%', height: '60%', objectFit: 'contain' }} />
+            <img src="/stb_logo.png" alt="STB" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '24px' }}
+              onError={(e) => {
+                const img = e.target as HTMLImageElement;
+                img.style.display = 'none';
+                const parent = img.parentElement;
+                if (parent && !parent.querySelector('span')) {
+                  parent.style.background = 'linear-gradient(135deg, #0d266b, #2962FF)';
+                  const span = document.createElement('span');
+                  span.style.cssText = 'font-size:1.4rem;font-weight:900;color:#fff;letter-spacing:-0.5px';
+                  span.textContent = 'STB';
+                  parent.appendChild(span);
+                }
+              }} />
           </div>
           <h1 style={{ fontSize: '1.85rem', marginBottom: '0.4rem', color: '#fff', fontFamily: 'var(--font-display)', fontWeight: 800 }}>STB Omni-Roles</h1>
           <p style={{ color: 'var(--stb-blue-400)', fontSize: '0.9rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Authentification Entreprise</p>

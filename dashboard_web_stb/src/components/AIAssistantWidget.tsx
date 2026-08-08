@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, TrendingUp, AlertTriangle, Loader2, X, CheckCircle, BarChart2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const insights = [
   {
@@ -21,6 +22,7 @@ const insights = [
 ];
 
 const AIAssistantWidget: React.FC = () => {
+  const { isFinance, pureIT } = useAuth();
   const [currentInsight, setCurrentInsight] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -133,7 +135,7 @@ const AIAssistantWidget: React.FC = () => {
       {/* AI Content */}
       <div style={{ flex: 1, position: 'relative', zIndex: 1, overflow: 'hidden' }}>
         <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          STB RH Copilot
+          {pureIT ? 'STB IT Copilot' : isFinance ? 'STB Finance Copilot' : 'STB RH Copilot'}
           <span className="badge badge-purple" style={{ fontSize: '0.65rem', padding: '0.1rem 0.5rem' }}>AI Powered</span>
         </h3>
         

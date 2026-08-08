@@ -25,6 +25,9 @@ let CardsController = class CardsController {
     getMine(req) {
         return this.cardsService.getMyCards(req.user.sub);
     }
+    getAll() {
+        return this.cardsService.getAllCards();
+    }
     freeze(id) {
         return this.cardsService.freeze(id);
     }
@@ -47,6 +50,13 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], CardsController.prototype, "getMine", null);
+__decorate([
+    (0, common_1.Get)('all'),
+    (0, swagger_1.ApiOperation)({ summary: 'All cards (Agence)' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], CardsController.prototype, "getAll", null);
 __decorate([
     (0, common_1.Patch)(':id/freeze'),
     (0, swagger_1.ApiOperation)({ summary: 'Freeze card' }),

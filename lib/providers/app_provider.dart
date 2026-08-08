@@ -4,6 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_api_service.dart';
 import '../screens/auth/login_screen.dart';
+import 'package:provider/provider.dart';
+import '../main.dart';
+import '../viewmodels/notifications_viewmodel.dart';
+import '../viewmodels/dashboard_viewmodel.dart';
+import '../viewmodels/rh_viewmodel.dart';
 
 class AppProvider extends ChangeNotifier {
   Timer? _pollingTimer;
@@ -601,6 +606,17 @@ class AppProvider extends ChangeNotifier {
     _messages = [];
     _rhDataLoaded = false;
     _unreadNotifs = 0;
+    
+    // Clear ViewModels
+    if (STBSuperApp.navigatorKey.currentContext != null) {
+      final ctx = STBSuperApp.navigatorKey.currentContext!;
+      try {
+        ctx.read<NotificationsViewModel>().clearAll();
+        ctx.read<DashboardViewModel>().clearAll();
+        ctx.read<RhViewModel>().clearAll();
+      } catch (_) {}
+    }
+    
     notifyListeners();
   }
 

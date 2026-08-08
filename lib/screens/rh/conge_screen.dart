@@ -10,7 +10,10 @@ import '../../theme/app_theme.dart';
 import '../../services/auth_api_service.dart';
 import '../../viewmodels/rh_viewmodel.dart';
 import '../../models/rh_models.dart';
+import '../../widgets/approval_tracker.dart';
 import 'ai_leave_planner_screen.dart';
+import '../absence/absence_request_screen.dart';
+import '../team/team_validation_screen.dart';
 
 class CongeScreen extends StatefulWidget {
   const CongeScreen({super.key});
@@ -106,42 +109,44 @@ class _CongeScreenState extends State<CongeScreen> with TickerProviderStateMixin
           ));
         },
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 15),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+              colors: [Color(0xFF6C47FF), Color(0xFF9C27B0), Color(0xFF2962FF)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(32),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF667EEA).withValues(alpha: 0.5),
-                blurRadius: 20,
-                spreadRadius: 2,
-                offset: const Offset(0, 6),
+                color: const Color(0xFF6C47FF).withValues(alpha: 0.55),
+                blurRadius: 24,
+                spreadRadius: 0,
+                offset: const Offset(0, 8),
               ),
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+                color: const Color(0xFF2962FF).withValues(alpha: 0.25),
+                blurRadius: 40,
+                spreadRadius: -4,
+                offset: const Offset(0, 12),
               ),
             ],
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.18),
+              width: 1,
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(7),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
+                  color: Colors.white.withValues(alpha: 0.18),
                   shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
                 ),
-                child: const Icon(
-                  Icons.auto_awesome_rounded, 
-                  color: Colors.white, 
-                  size: 20
-                ),
+                child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 18),
               ),
               const SizedBox(width: 12),
               const Column(
@@ -154,11 +159,11 @@ class _CongeScreenState extends State<CongeScreen> with TickerProviderStateMixin
                       color: Colors.white,
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
-                      letterSpacing: 0.3,
+                      letterSpacing: 0.2,
                     ),
                   ),
                   Text(
-                    'Smart dates suggestion',
+                    'Suggestions intelligentes ✨',
                     style: TextStyle(
                       color: Colors.white70,
                       fontSize: 10,
@@ -169,7 +174,7 @@ class _CongeScreenState extends State<CongeScreen> with TickerProviderStateMixin
               ),
             ],
           ),
-        ),
+        ).animate(onPlay: (c) => c.repeat()).shimmer(duration: 3.seconds, color: Colors.white.withValues(alpha: 0.08)),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       body: SafeArea(
@@ -229,6 +234,9 @@ class _CongeScreenState extends State<CongeScreen> with TickerProviderStateMixin
                     _buildSoldeCard(fg, mt, cd, bd, dk),
                     const SizedBox(height: 20),
 
+                    _buildManagerActions(fg, mt, cd, bd, context.watch<AppProvider>().isManager),
+                    const SizedBox(height: 20),
+
                     // Type Selector
                     _buildTypeSelector(fg, mt, cd, bd),
                     const SizedBox(height: 20),
@@ -258,8 +266,16 @@ class _CongeScreenState extends State<CongeScreen> with TickerProviderStateMixin
   }
 
   Widget _buildSoldeCard(Color fg, Color mt, Color cd, Color bd, bool dk) {
-    final p = Provider.of<AppProvider>(context, listen: false);
-    final solde = (p.userProfile?['soldeConges'] as num?)?.toInt() ?? 30;
+    final vm = context.watch<RhViewModel>();
+    
+    // Get real balance from backend LeaveBalance (NOT from userProfile)
+    final soldeAnnuel = vm.leaveBalance?.soldeAnnuel ?? 30;
+    final soldeUtilise = vm.leaveBalance?.soldeUtilise ?? 0;
+    final soldeDisponible = vm.leaveBalance?.soldeDisponible ?? (soldeAnnuel - soldeUtilise);
+    
+    final totalAnnuel = soldeAnnuel;
+    final utilises = soldeUtilise;
+    
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -313,7 +329,7 @@ class _CongeScreenState extends State<CongeScreen> with TickerProviderStateMixin
                   builder: (_, __) {
                     return CustomPaint(
                       painter: LiquidGaugePainter(
-                        fraction: (solde / 90) * _counterAnim.value,
+                        fraction: (soldeDisponible / totalAnnuel) * _counterAnim.value,
                         wavePhase: _waveCtrl.value * 2 * math.pi,
                       ),
                       child: Center(
@@ -321,7 +337,7 @@ class _CongeScreenState extends State<CongeScreen> with TickerProviderStateMixin
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              "${(solde * _counterAnim.value).round()}",
+                              "${(soldeDisponible * _counterAnim.value).round()}",
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 36,
@@ -351,11 +367,11 @@ class _CongeScreenState extends State<CongeScreen> with TickerProviderStateMixin
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _statRow(Icons.check_circle_outline_rounded, "Disponible", "$solde j", const Color(0xFF00E676)),
+                  _statRow(Icons.check_circle_outline_rounded, "Disponible", "$soldeDisponible j", const Color(0xFF00E676)),
                   const SizedBox(height: 10),
-                  _statRow(Icons.history_rounded, "Utilisés", "${90 - solde} j", Colors.white70),
+                  _statRow(Icons.history_rounded, "Utilisés", "$utilises j", Colors.white70),
                   const SizedBox(height: 10),
-                  _statRow(Icons.pie_chart_outline_rounded, "Total Annuel", "90 j", Colors.white54),
+                  _statRow(Icons.pie_chart_outline_rounded, "Total Annuel", "$totalAnnuel j", Colors.white54),
                 ],
               ),
             ],
@@ -379,6 +395,68 @@ class _CongeScreenState extends State<CongeScreen> with TickerProviderStateMixin
           value,
           style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800),
         ),
+      ],
+    );
+  }
+
+  Widget _buildManagerActions(Color fg, Color mt, Color cd, Color bd, bool isManager) {
+    return Row(
+      children: [
+        Expanded(
+          child: GestureDetector(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const AbsenceRequestScreen()));
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                color: cd,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: bd),
+              ),
+              child: Column(
+                children: [
+                  Icon(Icons.timer_outlined, color: AppTheme.electricBlue, size: 28),
+                  const SizedBox(height: 8),
+                  Text("Absences / Retards", style: TextStyle(color: fg, fontSize: 13, fontWeight: FontWeight.w700), textAlign: TextAlign.center,),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (isManager) ...[
+          const SizedBox(width: 16),
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const TeamValidationScreen()));
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppTheme.electricBlue, AppTheme.royalBlue],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(color: AppTheme.electricBlue.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4)),
+                  ],
+                ),
+                child: const Column(
+                  children: [
+                    Icon(Icons.group_outlined, color: Colors.white, size: 28),
+                    SizedBox(height: 8),
+                    Text("Mon Équipe", style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700), textAlign: TextAlign.center,),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -743,11 +821,11 @@ class _CongeScreenState extends State<CongeScreen> with TickerProviderStateMixin
     switch (status) {
       case RhStatus.approuve:
         statusColor = const Color(0xFF10B981);
-        statusText = 'Approuvée';
+        statusText = 'Approuvée ✅';
         break;
       case RhStatus.rejete:
         statusColor = const Color(0xFFEF4444);
-        statusText = 'Refusée';
+        statusText = 'Refusée ❌';
         break;
       case RhStatus.annule:
         statusColor = const Color(0xFF94A3B8);
@@ -756,6 +834,14 @@ class _CongeScreenState extends State<CongeScreen> with TickerProviderStateMixin
       case RhStatus.traite:
         statusColor = const Color(0xFF3B82F6);
         statusText = 'Traitée';
+        break;
+      case RhStatus.pendingManager:
+        statusColor = const Color(0xFFF59E0B);
+        statusText = '⏳ Attente Manager ${d.approvalLevel > 0 ? "(Niv. ${d.approvalLevel + 1})" : ""}';
+        break;
+      case RhStatus.pendingRh:
+        statusColor = const Color(0xFF8B5CF6);
+        statusText = '📋 Attente RH';
         break;
       default:
         statusColor = const Color(0xFFF59E0B);
@@ -767,19 +853,36 @@ class _CongeScreenState extends State<CongeScreen> with TickerProviderStateMixin
     final typeIcon = typeConfig.$1;
     final typeColor = typeConfig.$2;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: cd,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: bd),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: dk ? 0.15 : 0.04), blurRadius: 10, offset: const Offset(0, 4)),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: IntrinsicHeight(
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        showModalBottomSheet(
+          context: context,
+          backgroundColor: Colors.transparent,
+          isScrollControlled: true,
+          builder: (context) => Padding(
+            padding: const EdgeInsets.only(top: 100), // Leave some space at top
+            child: ApprovalTrackerWidget(
+              history: d.approvalHistory,
+              status: d.rawStatus,
+              dk: dk,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: cd,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: bd),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: dk ? 0.15 : 0.04), blurRadius: 10, offset: const Offset(0, 4)),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: IntrinsicHeight(
           child: Row(
             children: [
               // Colored left accent bar
@@ -811,7 +914,9 @@ class _CongeScreenState extends State<CongeScreen> with TickerProviderStateMixin
                             ),
                             const SizedBox(height: 3),
                             Text(
-                              "${d.dureeDays} jour(s)  ·  ${DateFormat('dd/MM/yyyy', 'fr').format(d.startDate)}",
+                              d.type == CongeType.absence || d.type == CongeType.retard || d.type == CongeType.delegation || d.type == CongeType.mission
+                                  ? "${d.nombreHeures.toStringAsFixed(1).replaceAll('.0', '')} heure(s)  ·  ${DateFormat('dd/MM/yyyy', 'fr').format(d.startDate)}"
+                                  : "${d.dureeDays} jour(s)  ·  ${DateFormat('dd/MM/yyyy', 'fr').format(d.startDate)}",
                               style: TextStyle(color: mt, fontSize: 12, fontWeight: FontWeight.w500),
                             ),
                           ],
@@ -853,7 +958,7 @@ class _CongeScreenState extends State<CongeScreen> with TickerProviderStateMixin
           ),
         ),
       ),
-    );
+    ));
   }
 
   /// Returns (icon, color) for each congé type
@@ -873,6 +978,14 @@ class _CongeScreenState extends State<CongeScreen> with TickerProviderStateMixin
         return (Icons.mosque_rounded, const Color(0xFF8B5CF6));
       case CongeType.sansSolde:
         return (Icons.money_off_rounded, const Color(0xFFF59E0B));
+      case CongeType.absence:
+        return (Icons.event_busy_rounded, const Color(0xFFF43F5E));
+      case CongeType.retard:
+        return (Icons.schedule_rounded, const Color(0xFFEAB308));
+      case CongeType.delegation:
+        return (Icons.transfer_within_a_station_rounded, const Color(0xFF3B82F6));
+      case CongeType.mission:
+        return (Icons.flight_takeoff_rounded, const Color(0xFF10B981));
     }
   }
 }

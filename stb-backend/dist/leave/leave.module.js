@@ -14,6 +14,7 @@ const leave_controller_1 = require("./leave.controller");
 const leave_schema_1 = require("./schemas/leave.schema");
 const notifications_module_1 = require("../notifications/notifications.module");
 const hierarchy_module_1 = require("../hierarchy/hierarchy.module");
+const employee_schema_1 = require("../employees/employee.schema");
 let LeaveModule = class LeaveModule {
 };
 exports.LeaveModule = LeaveModule;
@@ -23,6 +24,7 @@ exports.LeaveModule = LeaveModule = __decorate([
             mongoose_1.MongooseModule.forFeature([
                 { name: leave_schema_1.LeaveRequest.name, schema: leave_schema_1.LeaveRequestSchema },
                 { name: leave_schema_1.LeaveBalance.name, schema: leave_schema_1.LeaveBalanceSchema },
+                { name: employee_schema_1.Employee.name, schema: employee_schema_1.EmployeeSchema },
             ]),
             notifications_module_1.NotificationsModule,
             hierarchy_module_1.HierarchyModule,

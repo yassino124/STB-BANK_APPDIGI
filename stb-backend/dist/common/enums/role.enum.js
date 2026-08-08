@@ -8,6 +8,7 @@ var Role;
     Role["MANAGER"] = "MANAGER";
     Role["FINANCE"] = "FINANCE";
     Role["AGENCE"] = "AGENCE";
+    Role["IT"] = "IT";
     Role["ADMIN"] = "ADMIN";
     Role["SUPER_ADMIN"] = "SUPER_ADMIN";
     Role["TELLER"] = "TELLER";

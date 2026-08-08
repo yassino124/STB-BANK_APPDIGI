@@ -74,7 +74,7 @@ let AvancesService = class AvancesService {
         }
         return this.avanceModel
             .find(query)
-            .populate('employee', 'matricule nom prenom email')
+            .populate('employee', 'matricule nom prenom email avatar')
             .populate('approvedBy', 'nom prenom')
             .sort({ createdAt: -1 })
             .exec();

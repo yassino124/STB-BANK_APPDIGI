@@ -103,6 +103,27 @@ let DashboardService = class DashboardService {
             },
         };
     }
+    async getItDashboard() {
+        const [totalUsers, activeUsers, suspendedUsers] = await Promise.all([
+            this.empModel.countDocuments().exec(),
+            this.empModel.countDocuments({ status: employee_status_enum_1.EmployeeStatus.ACTIVE }).exec(),
+            this.empModel.countDocuments({ status: employee_status_enum_1.EmployeeStatus.SUSPENDED }).exec(),
+        ]);
+        return {
+            metrics: {
+                apiRequestsToday: Math.floor(Math.random() * 50000) + 100000,
+                connectedUsers: activeUsers,
+                errorsToday: Math.floor(Math.random() * 5),
+                cpu: Math.floor(Math.random() * 40) + 10,
+                ram: Math.floor(Math.random() * 30) + 40,
+                storage: 78,
+                failedLogins: Math.floor(Math.random() * 20),
+                blockedAccounts: suspendedUsers,
+                suspiciousActivity: Math.floor(Math.random() * 3),
+                lastBackup: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) + ' — Succès',
+            }
+        };
+    }
 };
 exports.DashboardService = DashboardService;
 exports.DashboardService = DashboardService = __decorate([

@@ -50,6 +50,14 @@ let CongesController = class CongesController {
             data: conges,
         };
     }
+    async getPendingTeam(req) {
+        const managerId = req.user.sub;
+        const conges = await this.congesService.getPendingTeam(managerId);
+        return {
+            success: true,
+            data: conges,
+        };
+    }
     async getTeamCalendar(req, month, year) {
         const managerId = req.user.sub;
         if (!month || !year) {
@@ -90,7 +98,8 @@ let CongesController = class CongesController {
         const approverId = req.user.sub;
         const { statut, rejectionReason } = body;
         if (statut === 'APPROUVE') {
-            const conge = await this.congesService.approveConge(congeId, approverId, 'RH');
+            const role = (req.user.roles || []).includes('MANAGER') ? 'MANAGER' : 'RH';
+            const conge = await this.congesService.approveConge(congeId, approverId, role);
             return {
                 success: true,
                 message: 'Congé approuvé',
@@ -98,7 +107,7 @@ let CongesController = class CongesController {
             };
         }
         else if (statut === 'REFUSE') {
-            const conge = await this.congesService.refuseConge(congeId, rejectionReason || 'Refusé par RH');
+            const conge = await this.congesService.refuseConge(congeId, rejectionReason || 'Refusé');
             return {
                 success: true,
                 message: 'Congé refusé',
@@ -160,6 +169,13 @@ __decorate([
     __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", Promise)
 ], CongesController.prototype, "getAllConges", null);
+__decorate([
+    (0, common_1.Get)('pending-team'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], CongesController.prototype, "getPendingTeam", null);
 __decorate([
     (0, common_1.Get)('team-calendar'),
     __param(0, (0, common_1.Request)()),

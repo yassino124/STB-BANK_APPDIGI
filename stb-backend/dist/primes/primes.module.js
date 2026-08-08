@@ -12,6 +12,9 @@ const mongoose_1 = require("@nestjs/mongoose");
 const primes_service_1 = require("./primes.service");
 const primes_controller_1 = require("./primes.controller");
 const prime_schema_1 = require("./schemas/prime.schema");
+const employee_schema_1 = require("../employees/employee.schema");
+const account_schema_1 = require("../accounts/schemas/account.schema");
+const transaction_schema_1 = require("../transactions/schemas/transaction.schema");
 const notifications_module_1 = require("../notifications/notifications.module");
 let PrimesModule = class PrimesModule {
 };
@@ -19,7 +22,12 @@ exports.PrimesModule = PrimesModule;
 exports.PrimesModule = PrimesModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            mongoose_1.MongooseModule.forFeature([{ name: prime_schema_1.Prime.name, schema: prime_schema_1.PrimeSchema }]),
+            mongoose_1.MongooseModule.forFeature([
+                { name: prime_schema_1.Prime.name, schema: prime_schema_1.PrimeSchema },
+                { name: employee_schema_1.Employee.name, schema: employee_schema_1.EmployeeSchema },
+                { name: account_schema_1.Account.name, schema: account_schema_1.AccountSchema },
+                { name: transaction_schema_1.Transaction.name, schema: transaction_schema_1.TransactionSchema },
+            ]),
             notifications_module_1.NotificationsModule,
         ],
         controllers: [primes_controller_1.PrimesController],

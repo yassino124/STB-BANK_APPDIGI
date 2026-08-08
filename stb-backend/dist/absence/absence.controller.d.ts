@@ -23,6 +23,13 @@ export declare class AbsenceController {
     } & {
         id: string;
     })[]>;
+    getMyTeamAbsences(req: any): Promise<(import("mongoose").Document<unknown, {}, import("./schemas/absence.schema").AbsenceDocument, {}, import("mongoose").DefaultSchemaOptions> & import("./schemas/absence.schema").Absence & import("mongoose").Document<import("mongoose").Types.ObjectId, any, any, Record<string, any>, {}> & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }> & {
+        __v: number;
+    } & {
+        id: string;
+    })[]>;
     getPendingRh(): Promise<(import("mongoose").Document<unknown, {}, import("./schemas/absence.schema").AbsenceDocument, {}, import("mongoose").DefaultSchemaOptions> & import("./schemas/absence.schema").Absence & import("mongoose").Document<import("mongoose").Types.ObjectId, any, any, Record<string, any>, {}> & Required<{
         _id: import("mongoose").Types.ObjectId;
     }> & {

@@ -25,14 +25,75 @@ let RiskAlertsService = class RiskAlertsService {
     async create(data) {
         return this.riskAlertModel.create(data);
     }
+    async findAll(limit = 50) {
+        return this.riskAlertModel
+            .find()
+            .sort({ createdAt: -1 })
+            .limit(limit)
+            .populate('employeeId', 'nom prenom matricule roles departement')
+            .exec();
+    }
     async findByEmployee(employeeId) {
-        return this.riskAlertModel.find({ employeeId }).sort({ createdAt: -1 }).exec();
+        return this.riskAlertModel
+            .find({ employeeId })
+            .sort({ createdAt: -1 })
+            .populate('employeeId', 'nom prenom matricule')
+            .exec();
     }
     async findOpen() {
-        return this.riskAlertModel.find({ status: 'OPEN' }).sort({ severity: -1, createdAt: -1 }).exec();
+        return this.riskAlertModel
+            .find({ status: 'OPEN' })
+            .sort({ severity: -1, createdAt: -1 })
+            .populate('employeeId', 'nom prenom matricule')
+            .exec();
+    }
+    async getSummary() {
+        const [total, open, critical, resolved] = await Promise.all([
+            this.riskAlertModel.countDocuments(),
+            this.riskAlertModel.countDocuments({ status: risk_alert_schema_1.AlertStatus.OPEN }),
+            this.riskAlertModel.countDocuments({ severity: risk_alert_schema_1.AlertSeverity.CRITICAL }),
+            this.riskAlertModel.countDocuments({ status: risk_alert_schema_1.AlertStatus.RESOLVED }),
+        ]);
+        return {
+            total,
+            open,
+            critical,
+            resolved,
+            active: open,
+        };
+    }
+    async getMonthlyStats(months = 6) {
+        const since = new Date();
+        since.setMonth(since.getMonth() - months);
+        const result = await this.riskAlertModel.aggregate([
+            { $match: { createdAt: { $gte: since } } },
+            {
+                $group: {
+                    _id: {
+                        year: { $year: '$createdAt' },
+                        month: { $month: '$createdAt' },
+                    },
+                    total: { $sum: 1 },
+                    critical: { $sum: { $cond: [{ $eq: ['$severity', 'CRITICAL'] }, 1, 0] } },
+                    resolved: { $sum: { $cond: [{ $eq: ['$status', 'RESOLVED'] }, 1, 0] } },
+                },
+            },
+            { $sort: { '_id.year': 1, '_id.month': 1 } },
+        ]);
+        const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+        return result.map((r) => ({
+            month: monthNames[r._id.month - 1],
+            year: r._id.year,
+            total: r.total,
+            critical: r.critical,
+            resolved: r.resolved,
+        }));
     }
     async findOne(id) {
-        const alert = await this.riskAlertModel.findById(id).exec();
+        const alert = await this.riskAlertModel
+            .findById(id)
+            .populate('employeeId', 'nom prenom matricule roles')
+            .exec();
         if (!alert)
             throw new common_1.NotFoundException('Risk alert not found');
         return alert;

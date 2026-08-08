@@ -9,6 +9,7 @@ import { CreditsModule } from '../credits/credits.module';
 import { LeaveModule } from '../leave/leave.module';
 import { CongesModule } from '../requests/conges.module';
 import { DocumentsModule } from '../documents/documents.module';
+import { PrimesModule } from '../primes/primes.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { DocumentsModule } from '../documents/documents.module';
     LeaveModule,
     CongesModule,
     DocumentsModule,
+    PrimesModule,
   ],
   providers: [SchedulerService],
 })

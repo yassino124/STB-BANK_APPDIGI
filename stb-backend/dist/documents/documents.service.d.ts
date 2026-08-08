@@ -5,13 +5,26 @@ export declare class DocumentsService {
     private documentModel;
     private employeeModel;
     constructor(documentModel: Model<DocumentDocument>, employeeModel: Model<EmployeeDoc>);
-    generateDocument(employeeId: string, type: string): Promise<import("mongoose").Document<unknown, {}, DocumentDocument, {}, import("mongoose").DefaultSchemaOptions> & EmployeeDocument & import("mongoose").Document<Types.ObjectId, any, any, Record<string, any>, {}> & Required<{
+    private generateContratCDI;
+    private generateAttestationTravail;
+    private generateAttestationSalaire;
+    private generateFichePaie;
+    private generateContratCredit;
+    private generateBadge;
+    private generateGenericDocument;
+    generateDocument(employeeId: string, documentType: string, additionalData?: Record<string, string>): Promise<import("mongoose").Document<unknown, {}, DocumentDocument, {}, import("mongoose").DefaultSchemaOptions> & EmployeeDocument & import("mongoose").Document<Types.ObjectId, any, any, Record<string, any>, {}> & Required<{
         _id: Types.ObjectId;
     }> & {
         __v: number;
     } & {
         id: string;
     }>;
+    handleEmployeeCreatedEvent(payload: {
+        employeeId: string;
+        employee: any;
+    }): Promise<void>;
+    autoGenerateOnboardingDocuments(employeeId: string): Promise<any[]>;
+    generateMonthlyPayslips(): Promise<void>;
     create(data: Partial<EmployeeDocument>): Promise<import("mongoose").Document<unknown, {}, DocumentDocument, {}, import("mongoose").DefaultSchemaOptions> & EmployeeDocument & import("mongoose").Document<Types.ObjectId, any, any, Record<string, any>, {}> & Required<{
         _id: Types.ObjectId;
     }> & {

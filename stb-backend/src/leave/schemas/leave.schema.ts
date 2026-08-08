@@ -3,7 +3,7 @@ import { Document, Types } from 'mongoose';
 
 export type LeaveRequestDocument = LeaveRequest & Document;
 
-export enum LeaveStatus { PENDING_N1 = 'PENDING_N1', APPROVED_N1 = 'APPROVED_N1', PENDING_RH = 'PENDING_RH', APPROVED = 'APPROVED', REJECTED = 'REJECTED', CANCELLED = 'CANCELLED' }
+export enum LeaveStatus { PENDING_MANAGER = 'PENDING_MANAGER', PENDING_RH = 'PENDING_RH', APPROVED = 'APPROVED', REJECTED = 'REJECTED', CANCELLED = 'CANCELLED' }
 export enum LeaveType { REPOS = 'REPOS', MALADIE = 'MALADIE', EXCEPTIONNEL = 'EXCEPTIONNEL', SANS_SOLDE = 'SANS_SOLDE', MATERNITE = 'MATERNITE' }
 
 @Schema({ timestamps: true })
@@ -15,11 +15,11 @@ export class LeaveRequest extends Document {
   @Prop({ required: true }) nombreJours: number;
   @Prop({ default: '' }) motif: string;
   @Prop({ default: null }) pieceJointe: string;
-  @Prop({ enum: LeaveStatus, default: LeaveStatus.PENDING_N1 }) status: LeaveStatus;
-  @Prop({ type: Types.ObjectId, ref: 'Employee', default: null }) managerId: Types.ObjectId;
-  @Prop({ type: Types.ObjectId, ref: 'Employee', default: null }) n1ApprovedBy: Types.ObjectId;
-  @Prop({ default: null }) n1ApprovedAt: Date;
-  @Prop({ default: '' }) n1Commentaire: string;
+  @Prop({ enum: LeaveStatus, default: LeaveStatus.PENDING_MANAGER }) status: LeaveStatus;
+  @Prop({ type: Types.ObjectId, ref: 'Employee', default: null }) managerId: Types.ObjectId | null;
+  @Prop({ type: Types.ObjectId, ref: 'Employee', default: null }) currentApproverId: Types.ObjectId | null;
+  @Prop({ type: [{ approverId: { type: Types.ObjectId, ref: 'Employee' }, approverName: String, level: Number, decision: String, date: Date, comment: String }], default: [] }) approvalHistory: any[];
+  
   @Prop({ type: Types.ObjectId, ref: 'Employee', default: null }) rhApprovedBy: Types.ObjectId;
   @Prop({ default: null }) rhApprovedAt: Date;
   @Prop({ default: '' }) rhCommentaire: string;
@@ -30,12 +30,12 @@ export class LeaveRequest extends Document {
 
 export const LeaveRequestSchema = SchemaFactory.createForClass(LeaveRequest);
 LeaveRequestSchema.index({ employeeId: 1, status: 1 });
-LeaveRequestSchema.index({ managerId: 1, status: 1 });
+LeaveRequestSchema.index({ currentApproverId: 1, status: 1 });
 
 @Schema({ timestamps: true })
 export class LeaveBalance extends Document {
   @Prop({ required: true, type: Types.ObjectId, ref: 'Employee', unique: true }) employeeId: Types.ObjectId;
-  @Prop({ default: 90 }) soldeAnnuel: number;
+  @Prop({ default: 30 }) soldeAnnuel: number;
   @Prop({ default: 0 }) soldeUtilise: number;
   @Prop({ default: 0 }) soldeReporte: number;
   get soldeDisponible(): number { return this.soldeAnnuel - this.soldeUtilise + this.soldeReporte; }

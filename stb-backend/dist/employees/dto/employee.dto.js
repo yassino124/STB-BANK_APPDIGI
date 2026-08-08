@@ -35,6 +35,10 @@ class CreateEmployeeDto {
     managerId;
     departmentId;
     branchId;
+    service;
+    direction;
+    directorId;
+    centralDirectorId;
 }
 exports.CreateEmployeeDto = CreateEmployeeDto;
 __decorate([
@@ -156,6 +160,30 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateEmployeeDto.prototype, "branchId", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ example: 'Développement' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateEmployeeDto.prototype, "service", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ example: 'Direction Informatique' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateEmployeeDto.prototype, "direction", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ example: '507f1f77bcf86cd799439014', description: 'ID du directeur (N+2)' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateEmployeeDto.prototype, "directorId", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ example: '507f1f77bcf86cd799439015', description: 'ID du directeur central (N+3)' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateEmployeeDto.prototype, "centralDirectorId", void 0);
 class UpdateEmployeeFinancialsDto {
     soldeConges;
     creditsEnCours;

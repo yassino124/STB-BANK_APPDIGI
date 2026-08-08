@@ -56,7 +56,7 @@ export class CreditsService {
   }
 
   async getAllCredits() {
-    return this.creditModel.find().populate('employeeId', 'nom prenom matricule').sort({ createdAt: -1 }).exec();
+    return this.creditModel.find().populate('employeeId', 'nom prenom matricule avatar').sort({ createdAt: -1 }).exec();
   }
 
   async processLatePaymentPenalties() {

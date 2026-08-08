@@ -21,4 +21,10 @@ export class DashboardController {
   getRhDashboard() {
     return this.dashboardService.getRhDashboard();
   }
+
+  @Get('it')
+  @ApiOperation({ summary: 'Get IT Operations dashboard stats' })
+  getItDashboard() {
+    return this.dashboardService.getItDashboard();
+  }
 }

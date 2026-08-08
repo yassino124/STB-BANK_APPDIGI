@@ -8,6 +8,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../viewmodels/rh_viewmodel.dart';
 import 'conge_screen.dart';
 import 'avance_screen.dart';
 import 'credit_screen.dart';
@@ -99,6 +100,7 @@ class _RHHubScreenState extends State<RHHubScreen> with TickerProviderStateMixin
       final p = context.read<AppProvider>();
       p.fetchProfile();
       p.fetchCredits();
+      context.read<RhViewModel>().loadConges(silent: true);
     });
   }
 
@@ -120,6 +122,7 @@ class _RHHubScreenState extends State<RHHubScreen> with TickerProviderStateMixin
   @override
   Widget build(BuildContext context) {
     final p = Provider.of<AppProvider>(context);
+    final vm = context.watch<RhViewModel>();
     final dk = p.themeMode == ThemeMode.dark;
     final fg = Theme.of(context).colorScheme.onSurface;
     final mt = dk ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
@@ -187,6 +190,10 @@ class _RHHubScreenState extends State<RHHubScreen> with TickerProviderStateMixin
 
   // ── HERO HEADER ──────────────────────────────────────────────────────────
   Widget _buildHeader(bool dk) {
+    final vm = context.watch<RhViewModel>();
+    final soldeAnnuel = vm.leaveBalance?.soldeAnnuel ?? 30;
+    final soldeUtilise = vm.leaveBalance?.soldeUtilise ?? 0;
+    final soldeDisponible = vm.leaveBalance?.soldeDisponible ?? (soldeAnnuel - soldeUtilise);
     final p = Provider.of<AppProvider>(context);
     final user = p.userProfile;
 
@@ -207,7 +214,7 @@ class _RHHubScreenState extends State<RHHubScreen> with TickerProviderStateMixin
                   child: _glassIconButton(Icons.menu_rounded, dk),
                 ),
                 Image.asset('public/Logo_STB.png', height: 26, fit: BoxFit.contain),
-                _glassIconButton(Icons.notifications_outlined, dk, dot: true),
+                const SizedBox(width: 44), // Empty space to balance the menu icon
               ],
             ),
           ),
@@ -326,7 +333,7 @@ class _RHHubScreenState extends State<RHHubScreen> with TickerProviderStateMixin
                       // Mini stats in clean glass cards
                       Row(
                         children: [
-                          _miniStat("${user?['soldeConges'] ?? 0} j", "Congé", Icons.beach_access_rounded, _Palette.teal),
+                          _miniStat("${soldeDisponible} j", "Congé", Icons.beach_access_rounded, _Palette.teal),
                           const SizedBox(width: 8),
                           _miniStat(
                             "${_formatCreditAmount(p.credits)} TND", 
@@ -465,7 +472,13 @@ class _RHHubScreenState extends State<RHHubScreen> with TickerProviderStateMixin
   // ── STATS ROW ──────────────────────────────────────────────────────────
   Widget _buildStatsRow(bool dk, Color fg, Color mt, Color cd, Color bd) {
     final p = Provider.of<AppProvider>(context);
+    final vm = context.watch<RhViewModel>();
     final solde = p.compteSolde;
+    
+    // Get real balance
+    final soldeAnnuel = vm.leaveBalance?.soldeAnnuel ?? 30;
+    final soldeUtilise = vm.leaveBalance?.soldeUtilise ?? 0;
+    final soldeDisponible = vm.leaveBalance?.soldeDisponible ?? (soldeAnnuel - soldeUtilise);
     
     // ✅ Calculate total encours from REAL credits collection
     double totalEncours = 0.0;
@@ -478,7 +491,7 @@ class _RHHubScreenState extends State<RHHubScreen> with TickerProviderStateMixin
     final items = [
       {'label': 'Compte Chèque', 'value': solde >= 0 ? '+${solde.toStringAsFixed(3)}' : solde.toStringAsFixed(3), 'unit': 'TND', 'color': solde >= 0 ? _Palette.emerald : _Palette.rose, 'icon': Icons.account_balance_rounded},
       {'label': 'Total Encours', 'value': totalEncours.toStringAsFixed(3), 'unit': 'TND', 'color': _Palette.amber, 'icon': Icons.pie_chart_rounded},
-      {'label': 'Solde Congés', 'value': '${p.soldeConges}', 'unit': 'j', 'color': _Palette.teal, 'icon': Icons.beach_access_rounded},
+      {'label': 'Solde Congés', 'value': '$soldeDisponible', 'unit': 'j', 'color': _Palette.teal, 'icon': Icons.beach_access_rounded},
     ];
 
     return Padding(
@@ -546,6 +559,10 @@ class _RHHubScreenState extends State<RHHubScreen> with TickerProviderStateMixin
   // tinted icon chip — the vocabulary international bank apps use for
   // secondary actions, so the grid doesn't compete with the hero.
   Widget _buildServiceGrid(bool dk, Color fg, Color mt, Color cd, Color bd) {
+    final vm = context.watch<RhViewModel>();
+    final soldeAnnuel = vm.leaveBalance?.soldeAnnuel ?? 30;
+    final soldeUtilise = vm.leaveBalance?.soldeUtilise ?? 0;
+    final soldeDisponible = vm.leaveBalance?.soldeDisponible ?? (soldeAnnuel - soldeUtilise);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(children: [
@@ -553,7 +570,7 @@ class _RHHubScreenState extends State<RHHubScreen> with TickerProviderStateMixin
           Expanded(
             child: _FeatureCard(
               title: 'Mes Congés',
-              subtitle: '60 jours restants',
+              subtitle: '$soldeDisponible jours restants',
               icon: Icons.beach_access_rounded,
               gradient: const [_Palette.teal, Color(0xFF0B7873)],
               height: 138,

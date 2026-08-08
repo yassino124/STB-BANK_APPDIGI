@@ -168,6 +168,44 @@ let AccountsService = class AccountsService {
             totalBalance: totalBalance[0]?.total || 0,
         };
     }
+    async deposit(accountId, amount) {
+        if (!amount || amount <= 0) {
+            throw new common_1.BadRequestException('Amount must be greater than zero');
+        }
+        const account = await this.findOne(accountId);
+        if (account.status === account_schema_1.AccountStatus.FROZEN) {
+            throw new common_1.ForbiddenException('Cannot deposit to a frozen account');
+        }
+        if (account.status === account_schema_1.AccountStatus.CLOSED) {
+            throw new common_1.ForbiddenException('Cannot deposit to a closed account');
+        }
+        const updated = await this.accountModel.findByIdAndUpdate(accountId, { $inc: { solde: amount } }, { new: true }).populate('employeeId', 'nom prenom matricule email').exec();
+        const transaction = await this.transactionModel.create({
+            employeeId: account.employeeId,
+            montant: amount,
+            type: transaction_schema_1.TransactionType.DEPOSIT,
+            description: 'Dépôt effectué par Agence',
+            status: transaction_schema_1.TransactionStatus.COMPLETED,
+            accountId: new mongoose_2.Types.ObjectId(accountId),
+            category: transaction_schema_1.TransactionCategory.INCOME,
+            metadata: {
+                depositedBy: 'AGENCE',
+                depositedAt: new Date(),
+            },
+        });
+        this.eventEmitter.emit(events_constants_1.ACCOUNT_EVENTS.CREDITED, {
+            accountId,
+            amount,
+            transactionId: transaction._id,
+            type: 'AGENCE_DEPOSIT'
+        });
+        return {
+            success: true,
+            message: `${amount} TND deposited successfully`,
+            account: updated,
+            transaction,
+        };
+    }
 };
 exports.AccountsService = AccountsService;
 exports.AccountsService = AccountsService = __decorate([

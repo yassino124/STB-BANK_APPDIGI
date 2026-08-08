@@ -39,4 +39,10 @@ export class AccountsController {
   unfreeze(@Param('id') id: string) {
     return this.accountsService.unfreeze(id);
   }
+
+  @Post(':id/deposit')
+  @ApiOperation({ summary: 'Deposit money to account (AGENCE)' })
+  deposit(@Param('id') id: string, @Body() body: { amount: number }) {
+    return this.accountsService.deposit(id, body.amount);
+  }
 }

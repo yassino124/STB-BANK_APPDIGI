@@ -31,7 +31,7 @@ let BranchesService = class BranchesService {
         return this.branchModel.create({ ...data, code: data.code?.toUpperCase() });
     }
     async findAll() {
-        return this.branchModel.find().sort({ name: 1 }).exec();
+        return this.branchModel.find().populate('managerId', 'nom prenom matricule').sort({ name: 1 }).exec();
     }
     async findOne(id) {
         const branch = await this.branchModel.findById(id).exec();

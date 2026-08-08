@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from '../api/axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Upload, FileText, Trash2, Eye, CheckCircle, Clock, X, ChevronRight, Download } from 'lucide-react';
+import { Search, Upload, FileText, Trash2, Eye, CheckCircle, Clock, X, ChevronRight, Download, Sparkles, FileCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Document {
@@ -27,14 +27,31 @@ interface Employee {
 }
 
 const documentTypes = [
-  { value: 'PAYSLIP', label: 'Fiche de Paie', icon: '💰', color: '#10B981', gradient: 'linear-gradient(135deg, #10B981, #059669)' },
-  { value: 'WORK_CERTIFICATE', label: 'Attestation de Travail', icon: '💼', color: '#8B5CF6', gradient: 'linear-gradient(135deg, #8B5CF6, #7C3AED)' },
-  { value: 'SALARY_CERTIFICATE', label: 'Attestation Salaire', icon: '💵', color: '#3B82F6', gradient: 'linear-gradient(135deg, #3B82F6, #2563EB)' },
-  { value: 'TAX_DECLARATION', label: 'Déclaration Fiscale', icon: '📊', color: '#F59E0B', gradient: 'linear-gradient(135deg, #F59E0B, #D97706)' },
-  { value: 'CNSS_DECLARATION', label: 'Déclaration CNSS', icon: '🏥', color: '#EF4444', gradient: 'linear-gradient(135deg, #EF4444, #DC2626)' },
-  { value: 'CONTRACT', label: 'Contrat', icon: '📝', color: '#6366F1', gradient: 'linear-gradient(135deg, #6366F1, #4F46E5)' },
-  { value: 'ID_DOCUMENT', label: 'Pièce Identité', icon: '🆔', color: '#06B6D4', gradient: 'linear-gradient(135deg, #06B6D4, #0891B2)' },
-  { value: 'OTHER', label: 'Autre', icon: '📄', color: '#94A3B8', gradient: 'linear-gradient(135deg, #94A3B8, #64748B)' },
+  { value: 'PAYSLIP', label: 'Fiche de Paie', icon: '💰', color: '#10B981', gradient: 'linear-gradient(135deg, #10B981, #059669)', autoGen: false },
+  { value: 'WORK_CERTIFICATE', label: 'Attestation de Travail', icon: '💼', color: '#8B5CF6', gradient: 'linear-gradient(135deg, #8B5CF6, #7C3AED)', autoGen: false },
+  { value: 'SALARY_CERTIFICATE', label: 'Attestation Salaire', icon: '💵', color: '#3B82F6', gradient: 'linear-gradient(135deg, #3B82F6, #2563EB)', autoGen: false },
+  { value: 'TAX_DECLARATION', label: 'Déclaration Fiscale', icon: '📊', color: '#F59E0B', gradient: 'linear-gradient(135deg, #F59E0B, #D97706)', autoGen: false },
+  { value: 'CNSS_DECLARATION', label: 'Déclaration CNSS', icon: '🏥', color: '#EF4444', gradient: 'linear-gradient(135deg, #EF4444, #DC2626)', autoGen: false },
+  { value: 'CONTRACT', label: 'Contrat', icon: '📝', color: '#6366F1', gradient: 'linear-gradient(135deg, #6366F1, #4F46E5)', autoGen: false },
+  { value: 'ID_DOCUMENT', label: 'Pièce Identité', icon: '🆔', color: '#06B6D4', gradient: 'linear-gradient(135deg, #06B6D4, #0891B2)', autoGen: false },
+  { value: 'OTHER', label: 'Autre', icon: '📄', color: '#94A3B8', gradient: 'linear-gradient(135deg, #94A3B8, #64748B)', autoGen: false },
+];
+
+// Auto-generated document types (from backend)
+const autoGenDocumentTypes = [
+  { value: 'PACK_EMBAUCHE', label: 'Pack Embauche (Complet)', icon: '🎁', color: '#10B981', gradient: 'linear-gradient(135deg, #10B981, #059669)', autoGen: true },
+  { value: 'CONTRAT_CDI', label: 'Contrat CDI', icon: '📋', color: '#6366F1', gradient: 'linear-gradient(135deg, #6366F1, #4F46E5)', autoGen: true },
+  { value: 'CONTRAT_CDD', label: 'Contrat CDD', icon: '📋', color: '#8B5CF6', gradient: 'linear-gradient(135deg, #8B5CF6, #7C3AED)', autoGen: true },
+  { value: 'ATTESTATION_EMBAUCHE', label: 'Attestation Embauche', icon: '🎓', color: '#10B981', gradient: 'linear-gradient(135deg, #10B981, #059669)', autoGen: true },
+  { value: 'ATTESTATION_TRAVAIL', label: 'Attestation Travail', icon: '💼', color: '#3B82F6', gradient: 'linear-gradient(135deg, #3B82F6, #2563EB)', autoGen: true },
+  { value: 'ATTESTATION_SALAIRE', label: 'Attestation Salaire', icon: '💵', color: '#F59E0B', gradient: 'linear-gradient(135deg, #F59E0B, #D97706)', autoGen: true },
+  { value: 'FICHE_PAIE', label: 'Fiche de Paie', icon: '💰', color: '#EF4444', gradient: 'linear-gradient(135deg, #EF4444, #DC2626)', autoGen: true },
+  { value: 'AUTORISATION_CONGE', label: 'Autorisation Congé', icon: '🏖️', color: '#06B6D4', gradient: 'linear-gradient(135deg, #06B6D4, #0891B2)', autoGen: true },
+  { value: 'DECISION_PRIME', label: 'Décision Prime', icon: '💎', color: '#EC4899', gradient: 'linear-gradient(135deg, #EC4899, #DB2777)', autoGen: true },
+  { value: 'CONTRAT_CREDIT', label: 'Contrat Crédit', icon: '🏦', color: '#14B8A6', gradient: 'linear-gradient(135deg, #14B8A6, #0D9488)', autoGen: true },
+  { value: 'AVENANT_CONTRAT', label: 'Avenant Contrat', icon: '📝', color: '#8B5CF6', gradient: 'linear-gradient(135deg, #8B5CF6, #7C3AED)', autoGen: true },
+  { value: 'DECISION_PROMOTION', label: 'Décision Promotion', icon: '📈', color: '#10B981', gradient: 'linear-gradient(135deg, #10B981, #059669)', autoGen: true },
+  { value: 'DECISION_MUTATION', label: 'Décision Mutation', icon: '🔄', color: '#F59E0B', gradient: 'linear-gradient(135deg, #F59E0B, #D97706)', autoGen: true },
 ];
 
 export default function Documents() {
@@ -42,6 +59,7 @@ export default function Documents() {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showAutoGenModal, setShowAutoGenModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -52,6 +70,11 @@ export default function Documents() {
     month: new Date().getMonth() + 1,
     description: '',
     file: null as File | null,
+  });
+
+  const [autoGenData, setAutoGenData] = useState({
+    templateType: 'PACK_EMBAUCHE',
+    variables: {} as Record<string, string>,
   });
 
   useEffect(() => {
@@ -154,12 +177,59 @@ export default function Documents() {
     }
   };
 
+  const handleAutoGenerate = async () => {
+    if (!selectedEmployee) return;
+
+    try {
+      setLoading(true);
+      
+      if (autoGenData.templateType === 'PACK_EMBAUCHE') {
+        await axios.post(`/documents/onboarding/${selectedEmployee._id}`);
+        toast.success('Pack Embauche généré avec succès !');
+      } else {
+        const payload = {
+          type: autoGenData.templateType,
+          additionalData: autoGenData.variables,
+        };
+        await axios.post(`/documents/generate/${selectedEmployee._id}`, payload);
+        toast.success('Document généré avec succès !');
+      }
+      
+      setShowAutoGenModal(false);
+      setAutoGenData({ templateType: 'PACK_EMBAUCHE', variables: {} });
+      fetchDocuments(selectedEmployee._id);
+    } catch (error: any) {
+      console.error('Auto-generation error:', error);
+      toast.error(error.response?.data?.message || 'Erreur lors de la génération');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const downloadDocument = async (docId: string) => {
+    try {
+      const res = await axios.get(`/documents/${docId}/download`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `document_${docId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success('Document téléchargé');
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error('Erreur lors du téléchargement');
+    }
+  };
+
   const filteredEmployees = employees.filter(emp =>
     `${emp.prenom} ${emp.nom} ${emp.matricule}`.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const getTypeInfo = (type: string) => {
-    return documentTypes.find(t => t.value === type) || documentTypes[documentTypes.length - 1];
+    const allTypes = [...documentTypes, ...autoGenDocumentTypes];
+    return allTypes.find(t => t.value === type) || documentTypes[documentTypes.length - 1];
   };
 
   return (
@@ -179,24 +249,50 @@ export default function Documents() {
           </motion.p>
         </div>
         {selectedEmployee && (
-          <motion.button 
-            initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-            whileHover={{ scale: 1.05, boxShadow: '0 10px 25px rgba(41,98,255,0.4)' }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setShowUploadModal(true)} 
-            className="btn btn-primary"
-            style={{ 
-              padding: '0.8rem 1.75rem', 
-              background: 'linear-gradient(135deg, #2962FF, #1565C0)', 
-              boxShadow: '0 8px 20px rgba(41,98,255,0.3)',
-              borderRadius: '99px',
-              fontSize: '1rem',
-              fontWeight: 700
-            }}
-          >
-            <Upload size={18} />
-            Nouveau Document
-          </motion.button>
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            <motion.button 
+              initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+              whileHover={{ scale: 1.05, boxShadow: '0 10px 25px rgba(139,92,246,0.4)' }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowAutoGenModal(true)} 
+              className="btn"
+              style={{ 
+                padding: '0.8rem 1.75rem', 
+                background: 'linear-gradient(135deg, #8B5CF6, #7C3AED)', 
+                boxShadow: '0 8px 20px rgba(139,92,246,0.3)',
+                borderRadius: '99px',
+                fontSize: '1rem',
+                fontWeight: 700,
+                color: '#fff',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              <Sparkles size={18} />
+              Générer Auto
+            </motion.button>
+            <motion.button 
+              initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+              whileHover={{ scale: 1.05, boxShadow: '0 10px 25px rgba(41,98,255,0.4)' }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowUploadModal(true)} 
+              className="btn btn-primary"
+              style={{ 
+                padding: '0.8rem 1.75rem', 
+                background: 'linear-gradient(135deg, #2962FF, #1565C0)', 
+                boxShadow: '0 8px 20px rgba(41,98,255,0.3)',
+                borderRadius: '99px',
+                fontSize: '1rem',
+                fontWeight: 700
+              }}
+            >
+              <Upload size={18} />
+              Uploader
+            </motion.button>
+          </div>
         )}
       </div>
 
@@ -420,7 +516,7 @@ export default function Documents() {
                             <motion.button 
                               whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                               style={{ flex: 1, padding: '0.75rem', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer' }} 
-                              onClick={() => window.open(doc.fileUrl)}
+                              onClick={() => downloadDocument(doc._id)}
                             >
                               <Download size={16} /> Télécharger
                             </motion.button>
@@ -586,6 +682,109 @@ export default function Documents() {
                     <><div style={{ width: '20px', height: '20px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div> En cours...</>
                   ) : (
                     <><CheckCircle size={20} /> Valider l'Upload</>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Auto-Generate Modal */}
+      <AnimatePresence>
+        {showAutoGenModal && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}
+              style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(12px)' }}
+              onClick={() => !loading && setShowAutoGenModal(false)}
+            />
+            <motion.div initial={{ opacity: 0, scale: 0.9, y: 30 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 30 }} transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+              style={{ 
+                position: 'relative',
+                width: '100%', maxWidth: '750px', zIndex: 1000, 
+                background: 'linear-gradient(180deg, rgba(15,23,42,0.95) 0%, rgba(9,14,23,0.98) 100%)',
+                borderRadius: '32px',
+                border: '1px solid rgba(255,255,255,0.1)',
+                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)',
+                overflow: 'hidden'
+              }}
+            >
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '200px', background: 'radial-gradient(ellipse at top, rgba(139,92,246,0.15) 0%, transparent 70%)', pointerEvents: 'none' }}></div>
+              
+              <div style={{ padding: '2rem 2.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'linear-gradient(135deg, #8B5CF6, #7C3AED)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 16px rgba(139,92,246,0.3)' }}>
+                    <Sparkles size={24} color="#fff" />
+                  </div>
+                  <div>
+                    <h2 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.5px' }}>Génération Automatique</h2>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginTop: '0.2rem' }}>
+                      Pour <span style={{ color: '#fff', fontWeight: 600 }}>{selectedEmployee?.prenom} {selectedEmployee?.nom}</span>
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => !loading && setShowAutoGenModal(false)}
+                  style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', border: 'none', cursor: 'pointer', transition: 'background 0.2s' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div style={{ padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '2rem', maxHeight: '70vh', overflowY: 'auto' }} className="scrollbar-thin">
+                
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.95rem', fontWeight: 700, color: '#fff', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <FileCheck size={18} />
+                    Type de Document à Générer
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem' }}>
+                    {autoGenDocumentTypes.map(t => {
+                      const isSelected = autoGenData.templateType === t.value;
+                      return (
+                        <motion.div 
+                          key={t.value} 
+                          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                          onClick={() => setAutoGenData({ ...autoGenData, templateType: t.value })}
+                          style={{
+                            padding: '1rem', borderRadius: '16px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', textAlign: 'center',
+                            background: isSelected ? t.gradient : 'rgba(255,255,255,0.03)',
+                            border: isSelected ? '1px solid transparent' : '1px solid rgba(255,255,255,0.05)',
+                            boxShadow: isSelected ? `0 10px 20px ${t.color}30` : 'none',
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          <span style={{ fontSize: '2rem', filter: isSelected ? 'drop-shadow(0 4px 6px rgba(0,0,0,0.2))' : 'none' }}>{t.icon}</span>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 800, color: isSelected ? '#fff' : 'var(--text-muted)' }}>{t.label}</span>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div style={{ background: 'rgba(139,92,246,0.1)', padding: '1.5rem', borderRadius: '20px', border: '1px solid rgba(139,92,246,0.2)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                    <Sparkles size={20} color="#8B5CF6" />
+                    <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#fff' }}>Génération IA avec STB Branding</h3>
+                  </div>
+                  <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', lineHeight: '1.6' }}>
+                    Le document sera automatiquement généré en PDF avec le logo STB, les couleurs de la marque, et toutes les informations de l'employé. 
+                    Les templates sont pré-configurés et conformes aux standards RH.
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ padding: '1.5rem 2.5rem', background: 'rgba(0,0,0,0.3)', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: '1rem' }}>
+                <button onClick={() => setShowAutoGenModal(false)} style={{ flex: 1, padding: '1rem', borderRadius: '16px', background: 'rgba(255,255,255,0.05)', color: '#fff', fontWeight: 700, fontSize: '1rem', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}>
+                  Annuler
+                </button>
+                <button onClick={handleAutoGenerate} disabled={loading} style={{ flex: 2, padding: '1rem', borderRadius: '16px', background: loading ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, #8B5CF6, #7C3AED)', color: loading ? 'rgba(255,255,255,0.3)' : '#fff', fontWeight: 800, fontSize: '1rem', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', boxShadow: loading ? 'none' : '0 10px 20px rgba(139,92,246,0.3)' }}>
+                  {loading ? (
+                    <><div style={{ width: '20px', height: '20px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div> Génération...</>
+                  ) : (
+                    <><Sparkles size={20} /> Générer le Document</>
                   )}
                 </button>
               </div>

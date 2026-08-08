@@ -34,7 +34,7 @@ let DepartmentsService = class DepartmentsService {
         return this.departmentModel.create({ ...data, code: data.code?.toUpperCase() });
     }
     async findAll() {
-        return this.departmentModel.find().sort({ name: 1 }).exec();
+        return this.departmentModel.find().populate('managerId', 'nom prenom matricule').sort({ name: 1 }).exec();
     }
     async findOne(id) {
         const department = await this.departmentModel.findById(id).exec();

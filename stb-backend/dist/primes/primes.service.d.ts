@@ -3,8 +3,11 @@ import { Prime } from './schemas/prime.schema';
 import { NotificationsService } from '../notifications/notifications.service';
 export declare class PrimesService {
     private primeModel;
+    private accountModel;
+    private employeeModel;
+    private transactionModel;
     private notificationsService;
-    constructor(primeModel: Model<Prime>, notificationsService: NotificationsService);
+    constructor(primeModel: Model<Prime>, accountModel: Model<any>, employeeModel: Model<any>, transactionModel: Model<any>, notificationsService: NotificationsService);
     create(employeeId: string, dto: {
         type: string;
         montant: number;
@@ -15,6 +18,35 @@ export declare class PrimesService {
         __v: number;
     } & {
         id: string;
+    }>;
+    adminCreate(approverId: string, dto: {
+        employeeId: string;
+        type: string;
+        montant: number;
+        description: string;
+    }): Promise<{
+        success: boolean;
+        prime: import("mongoose").Document<unknown, {}, Prime, {}, import("mongoose").DefaultSchemaOptions> & Prime & Required<{
+            _id: Types.ObjectId;
+        }> & {
+            __v: number;
+        } & {
+            id: string;
+        };
+        credited: boolean;
+        message: string;
+    }>;
+    distributeToAll(approverId: string, dto: {
+        type: string;
+        montant: number;
+        description: string;
+    }): Promise<{
+        success: boolean;
+        total: number;
+        credited: number;
+        errors: number;
+        montantTotal: number;
+        results: any[];
     }>;
     getMyPrimes(employeeId: string): Promise<(import("mongoose").Document<unknown, {}, Prime, {}, import("mongoose").DefaultSchemaOptions> & Prime & Required<{
         _id: Types.ObjectId;

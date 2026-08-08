@@ -61,7 +61,7 @@ class _CardsScreenState extends State<CardsScreen> {
     final fg = Theme.of(context).colorScheme.onSurface;
     final mt = dk ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
     final cd = Theme.of(context).cardColor;
-    final bd = dk ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.04);
+    final bd = dk ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.04);
     
     if (_loading) {
       return Scaffold(

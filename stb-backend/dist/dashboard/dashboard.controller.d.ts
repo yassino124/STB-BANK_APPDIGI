@@ -70,4 +70,18 @@ export declare class DashboardController {
             totalPayrollMasse: any;
         };
     }>;
+    getItDashboard(): Promise<{
+        metrics: {
+            apiRequestsToday: number;
+            connectedUsers: number;
+            errorsToday: number;
+            cpu: number;
+            ram: number;
+            storage: number;
+            failedLogins: number;
+            blockedAccounts: number;
+            suspiciousActivity: number;
+            lastBackup: string;
+        };
+    }>;
 }

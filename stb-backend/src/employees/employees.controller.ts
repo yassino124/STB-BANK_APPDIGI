@@ -21,6 +21,7 @@ import { ActivityLogsService } from '../activity_logs/activity-logs.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
+import { Public } from '../common/decorators/public.decorator';
 import { Role } from '../common/enums/role.enum';
 import {
   CreateEmployeeDto,
@@ -53,7 +54,7 @@ export class EmployeesController {
   }
 
   @Get()
-  @Roles(Role.RH, Role.ADMIN, Role.SUPER_ADMIN, Role.MANAGER)
+  @Roles(Role.RH, Role.ADMIN, Role.SUPER_ADMIN, Role.MANAGER, Role.FINANCE, Role.AGENCE, Role.IT)
   @ApiOperation({ summary: '📋 List all employees (paginated)' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
@@ -64,6 +65,13 @@ export class EmployeesController {
     @Query('search') search?: string,
   ) {
     return this.employeesService.findAll(+page, +limit, search);
+  }
+
+  @Get('directory')
+  @ApiOperation({ summary: '📋 Get all employees for hierarchy dropdowns (name, matricule, poste, roles)' })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  getDirectory(@Query('search') search?: string) {
+    return this.employeesService.getDirectory(search);
   }
 
   @Get('directory/search')
@@ -88,7 +96,8 @@ export class EmployeesController {
   }
 
   @Get(':id/avatar')
-  @ApiOperation({ summary: '🖼️ Get employee avatar as image' })
+  @Public()
+  @ApiOperation({ summary: '🖼️ Get employee avatar as image (public)' })
   async getAvatar(@Param('id') id: string, @Req() req: any) {
     const employee = await this.employeesService.findOne(id);
     if (!employee || !employee.avatar) {
@@ -107,7 +116,7 @@ export class EmployeesController {
   }
 
   @Get(':id/finance-profile')
-  @Roles(Role.RH, Role.ADMIN, Role.SUPER_ADMIN, Role.MANAGER)
+  @Roles(Role.RH, Role.ADMIN, Role.SUPER_ADMIN, Role.MANAGER, Role.FINANCE, Role.AGENCE)
   @ApiOperation({ 
     summary: '💰 Get employee finance profile with REAL calculations',
     description: 'Returns salaire net AFTER credit/avance deductions, not just raw data'
@@ -117,7 +126,7 @@ export class EmployeesController {
   }
 
   @Get(':id')
-  @Roles(Role.RH, Role.ADMIN, Role.SUPER_ADMIN, Role.MANAGER)
+  @Roles(Role.RH, Role.ADMIN, Role.SUPER_ADMIN, Role.MANAGER, Role.FINANCE, Role.AGENCE)
   @ApiOperation({ summary: '🔍 Get employee by ID' })
   findOne(@Param('id') id: string) {
     return this.employeesService.findOne(id);
@@ -143,7 +152,7 @@ export class EmployeesController {
   }
 
   @Patch(':id/financials')
-  @Roles(Role.RH, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(Role.RH, Role.ADMIN, Role.SUPER_ADMIN, Role.FINANCE)
   @ApiOperation({
     summary: '💰 Update employee financials (Congés, Crédits, Prime)',
   })

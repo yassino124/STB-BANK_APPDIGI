@@ -41,6 +41,10 @@ let Employee = class Employee {
     departmentId;
     branchId;
     managerId;
+    directorId;
+    centralDirectorId;
+    service;
+    direction;
     contractType;
     contractStart;
     contractEnd;
@@ -166,6 +170,22 @@ __decorate([
     __metadata("design:type", Object)
 ], Employee.prototype, "managerId", void 0);
 __decorate([
+    (0, mongoose_1.Prop)({ type: mongoose_2.Types.ObjectId, ref: 'Employee', default: null }),
+    __metadata("design:type", Object)
+], Employee.prototype, "directorId", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: mongoose_2.Types.ObjectId, ref: 'Employee', default: null }),
+    __metadata("design:type", Object)
+], Employee.prototype, "centralDirectorId", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String, default: null, trim: true }),
+    __metadata("design:type", Object)
+], Employee.prototype, "service", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String, default: null, trim: true }),
+    __metadata("design:type", Object)
+], Employee.prototype, "direction", void 0);
+__decorate([
     (0, mongoose_1.Prop)({ type: String, default: null, trim: true }),
     __metadata("design:type", Object)
 ], Employee.prototype, "contractType", void 0);
@@ -246,5 +266,7 @@ exports.EmployeeSchema.index({ status: 1, roles: 1 });
 exports.EmployeeSchema.index({ departmentId: 1, status: 1 });
 exports.EmployeeSchema.index({ branchId: 1, status: 1 });
 exports.EmployeeSchema.index({ managerId: 1 });
+exports.EmployeeSchema.index({ directorId: 1 });
+exports.EmployeeSchema.index({ centralDirectorId: 1 });
 exports.EmployeeSchema.index({ createdAt: -1 });
 //# sourceMappingURL=employee.schema.js.map

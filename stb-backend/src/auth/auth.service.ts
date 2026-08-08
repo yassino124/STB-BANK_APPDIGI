@@ -339,15 +339,20 @@ export class AuthService {
       .select('+passwordHash')
       .exec();
 
+    console.log('--- LOGIN WEB DEBUG ---');
+    console.log('Matricule:', dto.matricule.toUpperCase());
+    console.log('Employee found?:', !!employee);
+
     if (!employee) {
+      console.log('Failed: !employee');
       throw new UnauthorizedException('Matricule ou mot de passe incorrect.');
     }
 
-      // Only allow RH / ADMIN / SUPER_ADMIN / FINANCE / AGENCE / MANAGER roles
-      const allowedRoles = [Role.RH, Role.ADMIN, Role.SUPER_ADMIN, Role.FINANCE, Role.AGENCE, Role.MANAGER];
+      // Allow RH / ADMIN / SUPER_ADMIN / FINANCE / AGENCE / MANAGER / IT roles
+      const allowedRoles = [Role.RH, Role.ADMIN, Role.SUPER_ADMIN, Role.FINANCE, Role.AGENCE, Role.MANAGER, Role.IT];
       const hasAccess = employee.roles.some((r) => allowedRoles.includes(r as Role));
     if (!hasAccess) {
-      throw new ForbiddenException("Accès refusé. Réservé aux ressources humaines et administrateurs.");
+      throw new ForbiddenException("Accès refusé. Réservé aux ressources humaines, administrateurs et équipe IT.");
     }
 
     if (employee.status === EmployeeStatus.SUSPENDED) {

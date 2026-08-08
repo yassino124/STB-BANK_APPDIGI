@@ -28,4 +28,7 @@ export declare class PayrollController {
         annee: number;
     }): Promise<any[]>;
     creditSalaries(): Promise<any[]>;
+    creditSalaryForEmployee(employeeId: string, body: {
+        force?: boolean;
+    }): Promise<any[]>;
 }

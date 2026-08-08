@@ -12,6 +12,7 @@ import { Account } from '../accounts/schemas/account.schema';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ACCOUNT_EVENTS } from '../common/constants/events.constants';
 import { DocumentsService } from '../documents/documents.service';
+import { PrimesService } from '../primes/primes.service';
 
 @Injectable()
 export class SchedulerService {
@@ -26,6 +27,7 @@ export class SchedulerService {
     private congesService: CongesService,
     private eventEmitter: EventEmitter2,
     private documentsService: DocumentsService,
+    private primesService: PrimesService,
   ) {}
 
   @Cron('0 0 * * *')
@@ -69,11 +71,140 @@ export class SchedulerService {
     this.logger.log('✅ Fraud monitoring completed');
   }
 
-  @Cron('0 9 * * 1')
+  @Cron('0 9 1 * *') // Weekly reports: every Monday at 9AM
   async handleWeeklyReports() {
     this.logger.log('📊 CRON: Generating weekly reports...');
-    // Generate weekly analytics reports
     this.logger.log('✅ Weekly reports completed');
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  PRIMES AUTOMATIQUES — Système bancaire STB
+  //  Chaque prime est calculée et versée automatiquement à la bonne date
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /** Prime Annuelle — 1er décembre à 8h (équivalent 13ème mois bancaire) */
+  @Cron('0 8 1 12 *')
+  async handlePrimeAnnuelle() {
+    this.logger.log('🎁 CRON PRIME: Distribution Prime Annuelle (Décembre)...');
+    try {
+      const result = await this.primesService.distributeToAll('system', {
+        type: 'PERFORMANCE',
+        montant: 1000,
+        description: 'Prime Annuelle STB — Distribution automatique Décembre',
+      });
+      this.logger.log(`✅ Prime Annuelle: ${result.credited}/${result.total} employés crédités (${result.montantTotal} TND)`);
+    } catch (e) {
+      this.logger.error('❌ Prime Annuelle failed:', e.message);
+    }
+  }
+
+  /** Prime Aïd el Fitr — 25 mars à 8h (10 jours avant Aïd estimé) */
+  @Cron('0 8 25 3 *')
+  async handlePrimeAidFitr() {
+    this.logger.log('🌙 CRON PRIME: Distribution Prime Aïd el Fitr...');
+    try {
+      const result = await this.primesService.distributeToAll('system', {
+        type: 'AID',
+        montant: 500,
+        description: 'Prime Aïd el Fitr — Distribution automatique STB',
+      });
+      this.logger.log(`✅ Prime Aïd Fitr: ${result.credited}/${result.total} employés crédités (${result.montantTotal} TND)`);
+    } catch (e) {
+      this.logger.error('❌ Prime Aïd Fitr failed:', e.message);
+    }
+  }
+
+  /** Prime Aïd el Adha — 15 juin à 8h (10 jours avant Aïd estimé) */
+  @Cron('0 8 15 6 *')
+  async handlePrimeAidAdha() {
+    this.logger.log('🐑 CRON PRIME: Distribution Prime Aïd el Adha...');
+    try {
+      const result = await this.primesService.distributeToAll('system', {
+        type: 'AID',
+        montant: 500,
+        description: 'Prime Aïd el Adha — Distribution automatique STB',
+      });
+      this.logger.log(`✅ Prime Aïd Adha: ${result.credited}/${result.total} employés crédités (${result.montantTotal} TND)`);
+    } catch (e) {
+      this.logger.error('❌ Prime Aïd Adha failed:', e.message);
+    }
+  }
+
+  /** Prime Ramadan — 1er mars à 8h */
+  @Cron('0 8 1 3 *')
+  async handlePrimeRamadan() {
+    this.logger.log('✨ CRON PRIME: Distribution Prime Ramadan...');
+    try {
+      const result = await this.primesService.distributeToAll('system', {
+        type: 'RAMADAN',
+        montant: 300,
+        description: 'Prime Ramadan STB — Distribution automatique',
+      });
+      this.logger.log(`✅ Prime Ramadan: ${result.credited}/${result.total} employés crédités (${result.montantTotal} TND)`);
+    } catch (e) {
+      this.logger.error('❌ Prime Ramadan failed:', e.message);
+    }
+  }
+
+  /** Prime Ancienneté — 1er janvier à 8h, calculée selon les années de service */
+  @Cron('0 8 1 1 *')
+  async handlePrimeAnciennete() {
+    this.logger.log('🏆 CRON PRIME: Distribution Prime Ancienneté...');
+    try {
+      await this._distributeAncienneteBySlice();
+    } catch (e) {
+      this.logger.error('❌ Prime Ancienneté failed:', e.message);
+    }
+  }
+
+  /** Prime Vacances — 1er juillet à 8h */
+  @Cron('0 8 1 7 *')
+  async handlePrimeVacances() {
+    this.logger.log('☀️ CRON PRIME: Distribution Prime Vacances...');
+    try {
+      const result = await this.primesService.distributeToAll('system', {
+        type: 'VACANCES',
+        montant: 400,
+        description: 'Prime Vacances STB — Distribution automatique Juillet',
+      });
+      this.logger.log(`✅ Prime Vacances: ${result.credited}/${result.total} employés crédités (${result.montantTotal} TND)`);
+    } catch (e) {
+      this.logger.error('❌ Prime Vacances failed:', e.message);
+    }
+  }
+
+  /** Calcul ancienneté par tranches (1-3 ans: 200, 3-5 ans: 400, 5-10 ans: 700, >10 ans: 1000) */
+  private async _distributeAncienneteBySlice() {
+    const employees = await this.employeeModel.find({ status: EmployeeStatus.ACTIVE }).lean().exec() as any[];
+    const now = new Date();
+    let total = 0;
+
+    for (const emp of employees) {
+      try {
+        const hireDate = emp.dateEmbauche ? new Date(emp.dateEmbauche) : null;
+        if (!hireDate) continue;
+        const years = (now.getTime() - hireDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
+
+        let montant = 0;
+        if (years >= 10) montant = 1000;
+        else if (years >= 5) montant = 700;
+        else if (years >= 3) montant = 400;
+        else if (years >= 1) montant = 200;
+        else continue; // Moins d'un an: pas de prime ancienneté
+
+        await this.primesService.adminCreate('system', {
+          employeeId: emp._id.toString(),
+          type: 'ANCIENNETE',
+          montant,
+          description: `Prime Ancienneté ${Math.floor(years)} ans de service — Auto STB`,
+        });
+        total++;
+        this.logger.log(`  → ${emp.prenom} ${emp.nom}: ${montant} TND (${Math.floor(years)} ans)`);
+      } catch (e) {
+        this.logger.error(`  ✗ ${emp.matricule}: ${e.message}`);
+      }
+    }
+    this.logger.log(`✅ Prime Ancienneté: ${total} employés crédités`);
   }
 
   private async resetDailyLimits() {

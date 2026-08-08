@@ -21,9 +21,15 @@ const notifications_service_1 = require("../notifications/notifications.service"
 const notification_schema_1 = require("../notifications/schemas/notification.schema");
 let PrimesService = class PrimesService {
     primeModel;
+    accountModel;
+    employeeModel;
+    transactionModel;
     notificationsService;
-    constructor(primeModel, notificationsService) {
+    constructor(primeModel, accountModel, employeeModel, transactionModel, notificationsService) {
         this.primeModel = primeModel;
+        this.accountModel = accountModel;
+        this.employeeModel = employeeModel;
+        this.transactionModel = transactionModel;
         this.notificationsService = notificationsService;
     }
     async create(employeeId, dto) {
@@ -43,6 +49,95 @@ let PrimesService = class PrimesService {
             status: prime_schema_1.PrimeStatus.PENDING,
         });
     }
+    async adminCreate(approverId, dto) {
+        const emp = await this.employeeModel.findById(dto.employeeId).lean().exec();
+        if (!emp)
+            throw new common_1.NotFoundException('Employé introuvable');
+        const account = await this.accountModel.findOne({ employeeId: new mongoose_2.Types.ObjectId(dto.employeeId) }).exec();
+        const prime = await this.primeModel.create({
+            employeeId: new mongoose_2.Types.ObjectId(dto.employeeId),
+            type: dto.type,
+            montant: dto.montant,
+            description: dto.description || `Prime ${dto.type} attribuée par la Finance`,
+            status: prime_schema_1.PrimeStatus.PAID,
+            approvedBy: new mongoose_2.Types.ObjectId(approverId),
+            approvedAt: new Date(),
+        });
+        if (account) {
+            await this.accountModel.findByIdAndUpdate(account._id, { $inc: { solde: dto.montant } });
+            await this.transactionModel.create({
+                employeeId: new mongoose_2.Types.ObjectId(dto.employeeId),
+                accountId: account._id,
+                montant: dto.montant,
+                type: 'PRIME',
+                category: 'OTHER',
+                description: dto.description || `Prime ${dto.type}`,
+                status: 'COMPLETED',
+                reference: `PRM-${Date.now()}`,
+                date: new Date(),
+            });
+            await this.employeeModel.updateOne({ _id: new mongoose_2.Types.ObjectId(dto.employeeId) }, { $inc: { compteSolde: dto.montant, totalPrimes: dto.montant } });
+        }
+        await this.notificationsService.sendToEmployee(dto.employeeId, '🎉 Prime créditée sur votre compte', `Votre prime de ${dto.montant} TND (${dto.type}) a été créditée directement sur votre compte STB.`, notification_schema_1.NotificationType.HR_REQUEST);
+        return {
+            success: true,
+            prime,
+            credited: !!account,
+            message: account
+                ? `Prime de ${dto.montant} TND créditée sur le compte de ${emp.prenom} ${emp.nom}`
+                : `Prime enregistrée mais aucun compte trouvé pour ${emp.prenom} ${emp.nom}`,
+        };
+    }
+    async distributeToAll(approverId, dto) {
+        const employees = await this.employeeModel.find({ status: 'ACTIVE' }).lean().exec();
+        const results = [];
+        let credited = 0;
+        let errors = 0;
+        for (const emp of employees) {
+            try {
+                const account = await this.accountModel.findOne({ employeeId: emp._id }).exec();
+                const prime = await this.primeModel.create({
+                    employeeId: emp._id,
+                    type: dto.type,
+                    montant: dto.montant,
+                    description: dto.description || `Prime ${dto.type} — distribution Finance`,
+                    status: prime_schema_1.PrimeStatus.PAID,
+                    approvedBy: new mongoose_2.Types.ObjectId(approverId),
+                    approvedAt: new Date(),
+                });
+                if (account) {
+                    await this.accountModel.findByIdAndUpdate(account._id, { $inc: { solde: dto.montant } });
+                    await this.transactionModel.create({
+                        employeeId: emp._id,
+                        accountId: account._id,
+                        montant: dto.montant,
+                        type: 'PRIME',
+                        category: 'OTHER',
+                        description: dto.description || `Prime ${dto.type}`,
+                        status: 'COMPLETED',
+                        reference: `PRM-${Date.now()}-${emp.matricule}`,
+                        date: new Date(),
+                    });
+                    await this.employeeModel.updateOne({ _id: emp._id }, { $inc: { compteSolde: dto.montant, totalPrimes: dto.montant } });
+                    credited++;
+                }
+                await this.notificationsService.sendToEmployee(emp._id.toString(), '🎉 Prime créditée sur votre compte', `Votre prime de ${dto.montant} TND (${dto.type}) a été créditée sur votre compte STB.`, notification_schema_1.NotificationType.HR_REQUEST);
+                results.push({ matricule: emp.matricule, nom: `${emp.prenom} ${emp.nom}`, credited: !!account, primeId: prime._id });
+            }
+            catch (err) {
+                errors++;
+                results.push({ matricule: emp.matricule, error: err.message });
+            }
+        }
+        return {
+            success: true,
+            total: employees.length,
+            credited,
+            errors,
+            montantTotal: credited * dto.montant,
+            results,
+        };
+    }
     async getMyPrimes(employeeId) {
         return this.primeModel.find({ employeeId: new mongoose_2.Types.ObjectId(employeeId) }).sort({ createdAt: -1 }).exec();
     }
@@ -50,7 +145,7 @@ let PrimesService = class PrimesService {
         const filter = {};
         if (status)
             filter.status = status;
-        return this.primeModel.find(filter).populate('employeeId', 'nom prenom matricule').sort({ createdAt: -1 }).exec();
+        return this.primeModel.find(filter).populate('employeeId', 'nom prenom matricule avatar').sort({ createdAt: -1 }).exec();
     }
     async handle(id, approverId, decision) {
         const prime = await this.primeModel.findById(id).exec();
@@ -70,7 +165,13 @@ exports.PrimesService = PrimesService;
 exports.PrimesService = PrimesService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(prime_schema_1.Prime.name)),
+    __param(1, (0, mongoose_1.InjectModel)('Account')),
+    __param(2, (0, mongoose_1.InjectModel)('Employee')),
+    __param(3, (0, mongoose_1.InjectModel)('Transaction')),
     __metadata("design:paramtypes", [mongoose_2.Model,
+        mongoose_2.Model,
+        mongoose_2.Model,
+        mongoose_2.Model,
         notifications_service_1.NotificationsService])
 ], PrimesService);
 //# sourceMappingURL=primes.service.js.map

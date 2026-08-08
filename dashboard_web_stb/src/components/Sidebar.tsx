@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, Users, UserPlus, Shield, Settings, LogOut, FileText,
   Building2, MapPin, BarChart3, AlertTriangle, ShieldCheck, FileBarChart,
   TrendingUp, Wallet, MessageSquare, UsersRound, Gift, Headphones, ChevronLeft, Menu,
-  Banknote, CreditCard, Calendar, CalendarDays, Target,
+  Banknote, CreditCard, Calendar, CalendarDays, Target, Monitor, Bell, ShieldAlert,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -29,6 +29,7 @@ const rhNavGroups = [
     label: 'Gestion RH',
     items: [
       { to: '/requests', icon: FileText, label: 'Demandes & Congés' },
+      { to: '/recrutement', icon: UserPlus, label: 'Recrutement IA' },
       { to: '/documents', icon: FileText, label: 'Documents & Paie' },
       { to: '/attendance', icon: Calendar, label: 'Présence' },
       { to: '/team-calendar', icon: CalendarDays, label: 'Calendrier Équipe' },
@@ -36,10 +37,9 @@ const rhNavGroups = [
     ],
   },
   {
-    label: 'Sécurité',
+    label: 'Sécurité & Fraude',
     items: [
-      { to: '/risk-alerts', icon: AlertTriangle, label: 'Alertes Risque' },
-      { to: '/fraud-detection', icon: ShieldCheck, label: 'Fraude' },
+      { to: '/security-center', icon: ShieldAlert, label: 'Security Center' },
     ],
   },
   {
@@ -53,7 +53,6 @@ const rhNavGroups = [
     label: 'Communication',
     items: [
       { to: '/tickets', icon: Headphones, label: 'Support Tickets' },
-      { to: '/messages', icon: MessageSquare, label: 'Messages' },
     ],
   },
   {
@@ -61,6 +60,18 @@ const rhNavGroups = [
     items: [
       { to: '/audit', icon: Shield, label: 'Audit Logs' },
       { to: '/settings', icon: Settings, label: 'Paramètres' },
+    ],
+  },
+];
+
+// ADMIN / SUPER_ADMIN gets IT Dashboard (replaces security section for RH)
+const adminExtraGroups = [
+  {
+    label: 'IT & Sécurité',
+    items: [
+      { to: '/it-dashboard', icon: Monitor, label: 'IT Dashboard' },
+      { to: '/security-center', icon: ShieldAlert, label: 'Security Center' },
+      { to: '/audit', icon: Shield, label: 'Audit Logs' },
     ],
   },
 ];
@@ -73,6 +84,12 @@ const agenceNavGroups = [
     ],
   },
   {
+    label: 'Collaborateurs',
+    items: [
+      { to: '/employees', icon: Users, label: 'Annuaire Collaborateurs' },
+    ],
+  },
+  {
     label: 'Bancaire',
     items: [
       { to: '/agence/accounts', icon: Banknote, label: 'Comptes Bancaires' },
@@ -82,8 +99,7 @@ const agenceNavGroups = [
   {
     label: 'Surveillance',
     items: [
-      { to: '/risk-alerts', icon: AlertTriangle, label: 'Alertes Fraude' },
-      { to: '/fraud-detection', icon: ShieldCheck, label: 'Détection Fraude' },
+      { to: '/security-center', icon: ShieldAlert, label: 'Security Center' },
     ],
   },
   {
@@ -109,14 +125,26 @@ const financeNavGroups = [
     ],
   },
   {
+    label: 'Collaborateurs',
+    items: [
+      { to: '/employees', icon: Users, label: 'Annuaire Collaborateurs' },
+    ],
+  },
+  {
     label: 'Gestion Financière',
     items: [
       { to: '/finance/payroll', icon: FileText, label: 'Fiches de Paie' },
+      { to: '/documents', icon: FileText, label: 'Documents RH' },
       { to: '/primes', icon: Gift, label: 'Primes & Bonus' },
-      { to: '/finance/budgets', icon: Wallet, label: 'Budgets' },
       { to: '/finance/credits', icon: TrendingUp, label: 'Crédits Collab' },
       { to: '/finance/avances', icon: TrendingUp, label: 'Avances Salaire' },
       { to: '/investments', icon: TrendingUp, label: 'Investissements' },
+    ],
+  },
+  {
+    label: 'Sécurité & Surviellance',
+    items: [
+      { to: '/security-center', icon: ShieldAlert, label: 'Security Center' },
     ],
   },
   {
@@ -142,11 +170,23 @@ const directionNavGroups = [
     ],
   },
   {
+    label: 'Collaborateurs',
+    items: [
+      { to: '/employees', icon: Users, label: 'Annuaire Collaborateurs' },
+    ],
+  },
+  {
     label: 'Mon Équipe',
     items: [
       { to: '/requests', icon: FileText, label: 'Demandes en attente' },
       { to: '/team-calendar', icon: CalendarDays, label: 'Calendrier Équipe' },
       { to: '/attendance', icon: Calendar, label: 'Absences Équipe' },
+    ],
+  },
+  {
+    label: 'Sécurité',
+    items: [
+      { to: '/security-center', icon: ShieldAlert, label: 'Security Center' },
     ],
   },
   {
@@ -163,17 +203,59 @@ const directionNavGroups = [
   },
 ];
 
+// ── IT Portal nav (only IT role users) ─────────────────────────
+const itNavGroups = [
+  {
+    label: 'IT Operations',
+    items: [
+      { to: '/it-dashboard', icon: Monitor, label: 'IT Dashboard' },
+    ],
+  },
+  {
+    label: 'Gestion Système',
+    items: [
+      { to: '/audit', icon: Shield, label: 'Audit & Logs' },
+      { to: '/security-center', icon: ShieldAlert, label: 'Security Center' },
+    ],
+  },
+  {
+    label: 'Support',
+    items: [
+      { to: '/tickets', icon: Headphones, label: 'Support Tickets' },
+      { to: '/notifications', icon: Bell, label: 'Notifications' },
+    ],
+  },
+  {
+    label: 'Administration',
+    items: [
+      { to: '/settings', icon: Settings, label: 'Paramètres' },
+    ],
+  },
+];
+
 const Sidebar = () => {
-  const { user, logout, isAgence, isFinance, isManager, isRH } = useAuth();
+  const { user, logout, isAgence, isFinance, isManager, isRH, isAdmin, isIT } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
 
-  const navGroups = isAgence ? agenceNavGroups
+  // Pure IT user = has IT role but is NOT also RH/AGENCE/FINANCE etc.
+  const pureIT = isIT && !isRH && !isAgence && !isFinance;
+  // Pure admin = ADMIN/SUPER_ADMIN but without any specific portal role
+  const pureAdmin = isAdmin && !isRH && !isAgence && !isFinance && !isManager && !pureIT;
+
+  // Route to the right portal
+  const baseGroups = pureIT ? itNavGroups
+    : isAgence ? agenceNavGroups
     : isFinance ? financeNavGroups
     : isManager && !isRH ? directionNavGroups
     : rhNavGroups;
 
-  const roleLabel = isAgence ? 'Portail Agence' : isFinance ? 'Portail Finance' : isManager && !isRH ? 'Portail Direction' : 'Portail RH';
-  const roleBadge = isAgence ? '#0288D1' : isFinance ? '#065F46' : isManager && !isRH ? '#7C3AED' : '#1E3A8A';
+  // Only pure admins (no other role) get the IT extra section injected
+  const navGroups = pureAdmin
+    ? [...baseGroups.filter(g => g.label !== 'Administration'), ...adminExtraGroups, { label: 'Administration', items: [{ to: '/settings', icon: Settings, label: 'Paramètres' }] }]
+    : baseGroups;
+
+  const roleLabel = pureIT ? 'Portail IT' : isAgence ? 'Portail Agence' : isFinance ? 'Portail Finance' : isManager && !isRH ? 'Portail Direction' : 'Portail RH';
+  const roleBadge = pureIT ? '#0EA5E9' : isAgence ? '#0288D1' : isFinance ? '#065F46' : isManager && !isRH ? '#7C3AED' : '#1E3A8A';
 
   const sidebarWidth = collapsed ? 72 : 268;
 
@@ -203,15 +285,26 @@ const Sidebar = () => {
         minHeight: '80px',
       }}>
         <div style={{
-          width: '42px', height: '42px', borderRadius: '12px',
-          background: 'linear-gradient(135deg, var(--stb-blue-700), var(--stb-electric))',
+          width: '46px', height: '46px', borderRadius: '12px',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 4px 16px rgba(41,98,255,0.4)',
+          boxShadow: '0 4px 16px rgba(41,98,255,0.4), 0 0 0 1px rgba(255,255,255,0.05)',
           flexShrink: 0,
           overflow: 'hidden',
+          background: 'transparent',
         }}>
-          <img src="/stb_logo.png" alt="STB" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }}
-            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+          <img src="/stb_logo.png" alt="STB" style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            onError={(e) => {
+              const img = e.target as HTMLImageElement;
+              img.style.display = 'none';
+              const parent = img.parentElement;
+              if (parent && !parent.querySelector('span')) {
+                parent.style.background = 'linear-gradient(135deg, #0d266b, #2962FF)';
+                const span = document.createElement('span');
+                span.style.cssText = 'font-size:0.85rem;font-weight:900;color:#fff;letter-spacing:-0.5px;font-family:system-ui';
+                span.textContent = 'STB';
+                parent.appendChild(span);
+              }
+            }} />
         </div>
         <AnimatePresence>
           {!collapsed && (
@@ -222,10 +315,10 @@ const Sidebar = () => {
               transition={{ duration: 0.2 }}
             >
               <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'var(--font-display)', lineHeight: 1.1 }}>
-                 {isAgence ? 'STB Agence' : isFinance ? 'STB Finance' : (isManager && !isRH) ? 'STB Direction' : 'STB Portal RH'}
+                 {pureIT ? '🖥️ STB IT Portal' : isAgence ? 'STB Agence' : isFinance ? 'STB Finance' : (isManager && !isRH) ? 'STB Direction' : 'STB Portal RH'}
                </div>
                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                 {isAgence ? 'Finance & Opérations' : isFinance ? 'Portail Finance' : (isManager && !isRH) ? 'Portail Direction' : 'Enterprise Edition'}
+                 {pureIT ? 'IT Operations Center' : isAgence ? 'Finance & Opérations' : isFinance ? 'Portail Finance' : (isManager && !isRH) ? 'Portail Direction' : 'Enterprise Edition'}
                </div>
             </motion.div>
           )}
@@ -320,30 +413,45 @@ const Sidebar = () => {
           {collapsed ? <Menu size={20} /> : <ChevronLeft size={20} />}
         </button>
 
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '0.6rem',
-          padding: collapsed ? '0.6rem 0' : '0.75rem',
-          background: 'rgba(13,71,161,0.12)',
-          border: '1px solid var(--border-blue)',
-          borderRadius: 'var(--r-md)',
-          marginBottom: '0.5rem',
-          justifyContent: collapsed ? 'center' : 'flex-start',
-          overflow: 'hidden',
-        }}>
-          <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'linear-gradient(135deg, var(--stb-blue-700), var(--stb-electric))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontWeight: 700, fontSize: '0.75rem', color: '#fff' }}>
+        <Link 
+          to={user?._id ? `/employees/${user._id}/360` : '#'}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '0.6rem',
+            padding: collapsed ? '0.6rem 0' : '0.75rem',
+            background: 'rgba(13,71,161,0.12)',
+            border: '1px solid var(--border-blue)',
+            borderRadius: 'var(--r-md)',
+            marginBottom: '0.5rem',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            overflow: 'hidden',
+            textDecoration: 'none',
+            color: 'inherit',
+            transition: 'all 0.2s',
+            cursor: 'pointer'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(13,71,161,0.2)';
+            e.currentTarget.style.transform = 'translateY(-2px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(13,71,161,0.12)';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}
+        >
+          <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'linear-gradient(135deg, var(--stb-blue-700), var(--stb-electric))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontWeight: 700, fontSize: '0.75rem', color: '#fff', boxShadow: '0 4px 10px rgba(41,98,255,0.3)' }}>
             {user?.matricule?.charAt(0) ?? 'A'}
           </div>
           <AnimatePresence>
             {!collapsed && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <div style={{ fontSize: '0.82rem', fontWeight: 700 }}>{user?.matricule ?? 'Admin'}</div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                  {roleLabel}
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>{user?.matricule ?? 'Admin'}</div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--stb-electric)', fontWeight: 600 }}>
+                  Mon Profil 360
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
+        </Link>
 
         <button
           onClick={logout}

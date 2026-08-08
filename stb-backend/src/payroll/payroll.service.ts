@@ -31,7 +31,11 @@ export class PayrollService {
         const existing = await this.payrollModel.findOne({ employeeId: emp._id, mois, annee }).exec();
         if (existing) { results.push({ matricule: emp.matricule, status: 'ALREADY_EXISTS' }); continue; }
 
-        const salaireBrut = emp.salaireBase || 1200;
+        const salaireBrut = (emp as any).salaireBase;
+        if (!salaireBrut || salaireBrut <= 0) {
+          results.push({ matricule: emp.matricule, status: 'SKIPPED', error: 'salaireBase non défini — configurez le salaire de cet employé avant de générer la paie' });
+          continue;
+        }
         const cnss = Math.round(salaireBrut * 0.0918 * 100) / 100;
         const impot = Math.round(salaireBrut * 0.15 * 100) / 100;
 
@@ -98,16 +102,43 @@ export class PayrollService {
     const filter: any = {};
     if (mois) filter.mois = mois;
     if (annee) filter.annee = annee;
-    return this.payrollModel.find(filter).populate('employeeId', 'nom prenom matricule departement').sort({ annee: -1, mois: -1 }).exec();
+    return this.payrollModel.find(filter).populate('employeeId', 'nom prenom matricule departement avatar roles').sort({ annee: -1, mois: -1 }).exec();
   }
 
-  async creditMonthlySalaries() {
-    const employees = await this.employeeModel.find({ status: EmployeeStatus.ACTIVE }).exec();
+  async creditMonthlySalaries(employeeId?: string, force?: boolean) {
+    const mois = new Date().getMonth() + 1;
+    const annee = new Date().getFullYear();
+    const query: any = { status: EmployeeStatus.ACTIVE };
+    if (employeeId) {
+      query._id = new Types.ObjectId(employeeId);
+    }
+    const employees = await this.employeeModel.find(query).exec();
     const results: any[] = [];
     
     for (const emp of employees) {
       try {
-        const salaireBrut = emp.salaireBase || 1200;
+        // Check if payroll already exists for this month (skip check if force=true)
+        if (!force) {
+          const existingPayroll = await this.payrollModel.findOne({ employeeId: emp._id, mois, annee }).exec();
+          if (existingPayroll) {
+            results.push({
+              matricule: emp.matricule,
+              error: `Paie déjà versée pour ${this.getMonthName(mois)} ${annee} — utilisez force:true pour re-verser`
+            });
+            continue;
+          }
+        }
+
+        // Re-fetch fresh employee data to avoid stale mongoose cache
+        const freshEmp = await this.employeeModel.findById(emp._id).lean().exec() as any;
+        const salaireBrut = freshEmp?.salaireBase;
+        if (!salaireBrut || salaireBrut <= 0) {
+          results.push({ 
+            matricule: emp.matricule, 
+            error: 'salaireBase non défini — configurez le salaire de cet employé avant de virer la paie' 
+          });
+          continue;
+        }
         
         // 1. Trouver le compte de l'employé
         const account = await this.accountModel.findOne({ employeeId: emp._id }).exec();
@@ -305,6 +336,23 @@ export class PayrollService {
           NotificationType.SYSTEM
         );
         
+        // If force=true, delete existing payroll for this month to avoid duplicate key error
+        if (force) {
+          await this.payrollModel.findOneAndDelete({ employeeId: emp._id, mois, annee }).exec();
+        }
+
+        await this.payrollModel.create({
+          employeeId: emp._id,
+          mois,
+          annee,
+          salaireBrut,
+          cnss,
+          impot,
+          retenues: totalMensualitesCredits + avancesADeduire,
+          salaireNet,
+          status: PayrollStatus.PAID,
+        });
+
         results.push({ 
           matricule: emp.matricule,
           salaireBrut,

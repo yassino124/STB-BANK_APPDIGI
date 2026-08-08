@@ -95,4 +95,22 @@ export declare class AccountsService {
         closed: number;
         totalBalance: any;
     }>;
+    deposit(accountId: string, amount: number): Promise<{
+        success: boolean;
+        message: string;
+        account: (import("mongoose").Document<unknown, {}, Account, {}, import("mongoose").DefaultSchemaOptions> & Account & {
+            _id: Types.ObjectId;
+        } & {
+            __v: number;
+        } & {
+            id: string;
+        }) | null;
+        transaction: import("mongoose").Document<unknown, {}, Transaction, {}, import("mongoose").DefaultSchemaOptions> & Transaction & {
+            _id: Types.ObjectId;
+        } & {
+            __v: number;
+        } & {
+            id: string;
+        };
+    }>;
 }

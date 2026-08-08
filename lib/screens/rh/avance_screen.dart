@@ -168,6 +168,10 @@ class _AvanceScreenState extends State<AvanceScreen> with SingleTickerProviderSt
 
   // ── REQUEST CARD ─────────────────────────────────────────────────────────
   Widget _buildRequestCard(Color fg, Color mt, Color cd, Color bd, bool dk, Color tabColor, double salaire, double maxAmount) {
+    // Prime tabs = auto-distributed by Finance, not a request form
+    if (_selectedTab == 1 || _selectedTab == 2) {
+      return _buildPrimeInfoCard(fg, mt, cd, bd, dk, tabColor);
+    }
     final labels = ['Avance sur Salaire', 'Prime de Rendement', 'Prime de l\'Aïd'];
     final descriptions = [
       'Max 50% salaire · Retenu sur fiche de paie',
@@ -280,6 +284,104 @@ class _AvanceScreenState extends State<AvanceScreen> with SingleTickerProviderSt
         ]),
       ),
     ).animate().fadeIn(delay: 150.ms).scale(begin: const Offset(0.97, 0.97));
+  }
+
+  // ── PRIME INFO CARD (Auto-distributed by Finance) ───────────────────
+  Widget _buildPrimeInfoCard(Color fg, Color mt, Color cd, Color bd, bool dk, Color tabColor) {
+    final isAid = _selectedTab == 2;
+    final primeTitle = isAid ? 'Prime de l\'Aïd' : 'Prime de Rendement';
+    final primeIcon = isAid ? Icons.celebration_rounded : Icons.star_rounded;
+    final primeDesc = isAid
+        ? 'Versement exceptionnel à l\'occasion de l\'Aïd'
+        : 'Basée sur votre évaluation annuelle de performance';
+    final criterias = isAid
+        ? ['Versée automatiquement avant chaque Aïd', 'Aucune demande requise', 'Montant fixé par la Finance STB']
+        : ['Calculée selon votre évaluation RH', 'Versée sur décision Finance', 'Ajoutée à votre fiche de paie'];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(children: [
+        // Header gradient banner
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [tabColor.withValues(alpha: dk ? 0.28 : 0.88), tabColor.withValues(alpha: dk ? 0.10 : 0.65)],
+              begin: Alignment.topLeft, end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [BoxShadow(color: tabColor.withValues(alpha: 0.28), blurRadius: 24, offset: const Offset(0, 10))],
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Container(
+                width: 48, height: 48,
+                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(16)),
+                child: Icon(primeIcon, color: Colors.white, size: 24),
+              ),
+              const SizedBox(width: 14),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(primeTitle, style: GoogleFonts.outfit(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800)),
+                Text(primeDesc, style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 11), maxLines: 2),
+              ])),
+            ]),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+              ),
+              child: Row(children: [
+                const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 18),
+                const SizedBox(width: 10),
+                Expanded(child: Text(
+                  'Distribution automatique par la Finance STB',
+                  style: GoogleFonts.inter(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+                )),
+              ]),
+            ),
+            const SizedBox(height: 16),
+            ...criterias.map((c) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Container(
+                  width: 6, height: 6,
+                  margin: const EdgeInsets.only(top: 5, right: 10),
+                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.8), shape: BoxShape.circle),
+                ),
+                Expanded(child: Text(c, style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 12, fontWeight: FontWeight.w600))),
+              ]),
+            )),
+          ]),
+        ).animate().fadeIn(delay: 150.ms).scale(begin: const Offset(0.97, 0.97)),
+        const SizedBox(height: 16),
+        // How it works info box
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: tabColor.withValues(alpha: dk ? 0.06 : 0.05),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: tabColor.withValues(alpha: 0.15)),
+          ),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Icon(Icons.info_outline_rounded, color: tabColor, size: 20),
+            const SizedBox(width: 12),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Comment ça fonctionne ?', style: TextStyle(color: fg, fontSize: 13, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 6),
+              Text(
+                isAid
+                    ? 'Votre prime d\'Aïd est automatiquement créditée sur votre compte STB avant chaque Aïd. Vous recevrez une notification push dès le virement.'
+                    : 'Votre prime est calculée par la Finance selon vos objectifs et évaluations. Elle apparaît dans vos fiches de paie une fois validée.',
+                style: TextStyle(color: mt, fontSize: 12, height: 1.5),
+              ),
+            ])),
+          ]),
+        ).animate().fadeIn(delay: 200.ms),
+      ]),
+    );
   }
 
   // ── POLICY CARD ───────────────────────────────────────────────────────────

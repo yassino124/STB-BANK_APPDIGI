@@ -50,7 +50,11 @@ let PayrollService = class PayrollService {
                     results.push({ matricule: emp.matricule, status: 'ALREADY_EXISTS' });
                     continue;
                 }
-                const salaireBrut = emp.salaireBase || 1200;
+                const salaireBrut = emp.salaireBase;
+                if (!salaireBrut || salaireBrut <= 0) {
+                    results.push({ matricule: emp.matricule, status: 'SKIPPED', error: 'salaireBase non défini — configurez le salaire de cet employé avant de générer la paie' });
+                    continue;
+                }
                 const cnss = Math.round(salaireBrut * 0.0918 * 100) / 100;
                 const impot = Math.round(salaireBrut * 0.15 * 100) / 100;
                 let retenues = 0;
@@ -104,14 +108,38 @@ let PayrollService = class PayrollService {
             filter.mois = mois;
         if (annee)
             filter.annee = annee;
-        return this.payrollModel.find(filter).populate('employeeId', 'nom prenom matricule departement').sort({ annee: -1, mois: -1 }).exec();
+        return this.payrollModel.find(filter).populate('employeeId', 'nom prenom matricule departement avatar roles').sort({ annee: -1, mois: -1 }).exec();
     }
-    async creditMonthlySalaries() {
-        const employees = await this.employeeModel.find({ status: employee_status_enum_1.EmployeeStatus.ACTIVE }).exec();
+    async creditMonthlySalaries(employeeId, force) {
+        const mois = new Date().getMonth() + 1;
+        const annee = new Date().getFullYear();
+        const query = { status: employee_status_enum_1.EmployeeStatus.ACTIVE };
+        if (employeeId) {
+            query._id = new mongoose_2.Types.ObjectId(employeeId);
+        }
+        const employees = await this.employeeModel.find(query).exec();
         const results = [];
         for (const emp of employees) {
             try {
-                const salaireBrut = emp.salaireBase || 1200;
+                if (!force) {
+                    const existingPayroll = await this.payrollModel.findOne({ employeeId: emp._id, mois, annee }).exec();
+                    if (existingPayroll) {
+                        results.push({
+                            matricule: emp.matricule,
+                            error: `Paie déjà versée pour ${this.getMonthName(mois)} ${annee} — utilisez force:true pour re-verser`
+                        });
+                        continue;
+                    }
+                }
+                const freshEmp = await this.employeeModel.findById(emp._id).lean().exec();
+                const salaireBrut = freshEmp?.salaireBase;
+                if (!salaireBrut || salaireBrut <= 0) {
+                    results.push({
+                        matricule: emp.matricule,
+                        error: 'salaireBase non défini — configurez le salaire de cet employé avant de virer la paie'
+                    });
+                    continue;
+                }
                 const account = await this.accountModel.findOne({ employeeId: emp._id }).exec();
                 if (!account) {
                     results.push({
@@ -261,6 +289,20 @@ let PayrollService = class PayrollService {
                 }
                 notifMessage += `\n✅ Versement net: ${salaireNet.toFixed(2)} TND`;
                 await this.notificationsService.sendToEmployee(emp._id.toString(), '💰 Salaire versé', notifMessage, notification_schema_1.NotificationType.SYSTEM);
+                if (force) {
+                    await this.payrollModel.findOneAndDelete({ employeeId: emp._id, mois, annee }).exec();
+                }
+                await this.payrollModel.create({
+                    employeeId: emp._id,
+                    mois,
+                    annee,
+                    salaireBrut,
+                    cnss,
+                    impot,
+                    retenues: totalMensualitesCredits + avancesADeduire,
+                    salaireNet,
+                    status: payroll_schema_1.PayrollStatus.PAID,
+                });
                 results.push({
                     matricule: emp.matricule,
                     salaireBrut,

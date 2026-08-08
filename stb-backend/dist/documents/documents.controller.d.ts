@@ -5,6 +5,7 @@ export declare class DocumentsController {
     constructor(documentsService: DocumentsService);
     generate(employeeId: string, data: {
         type: string;
+        additionalData?: Record<string, string>;
     }): Promise<import("mongoose").Document<unknown, {}, import("./schemas/document.schema").DocumentDocument, {}, import("mongoose").DefaultSchemaOptions> & EmployeeDocument & import("mongoose").Document<import("mongoose").Types.ObjectId, any, any, Record<string, any>, {}> & Required<{
         _id: import("mongoose").Types.ObjectId;
     }> & {
@@ -12,6 +13,19 @@ export declare class DocumentsController {
     } & {
         id: string;
     }>;
+    generateLegacy(data: {
+        employeeId: string;
+        documentType: string;
+        additionalData?: Record<string, string>;
+    }): Promise<import("mongoose").Document<unknown, {}, import("./schemas/document.schema").DocumentDocument, {}, import("mongoose").DefaultSchemaOptions> & EmployeeDocument & import("mongoose").Document<import("mongoose").Types.ObjectId, any, any, Record<string, any>, {}> & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }> & {
+        __v: number;
+    } & {
+        id: string;
+    }>;
+    generateOnboarding(employeeId: string): Promise<any[]>;
+    generateAllPayslips(): Promise<void>;
     create(data: any): Promise<import("mongoose").Document<unknown, {}, import("./schemas/document.schema").DocumentDocument, {}, import("mongoose").DefaultSchemaOptions> & EmployeeDocument & import("mongoose").Document<import("mongoose").Types.ObjectId, any, any, Record<string, any>, {}> & Required<{
         _id: import("mongoose").Types.ObjectId;
     }> & {
@@ -39,6 +53,21 @@ export declare class DocumentsController {
         unread: number;
         byType: Record<string, number>;
     }>;
+    getMyDocuments(req: any): Promise<{
+        _id: any;
+        title: any;
+        type: any;
+        fileName: any;
+        fileSize: any;
+        fileUrl: any;
+        mimeType: any;
+        description: any;
+        isRead: any;
+        year: any;
+        month: any;
+        createdAt: any;
+        updatedAt: any;
+    }[]>;
     findOne(id: string): Promise<import("mongoose").Document<unknown, {}, import("./schemas/document.schema").DocumentDocument, {}, import("mongoose").DefaultSchemaOptions> & EmployeeDocument & import("mongoose").Document<import("mongoose").Types.ObjectId, any, any, Record<string, any>, {}> & Required<{
         _id: import("mongoose").Types.ObjectId;
     }> & {

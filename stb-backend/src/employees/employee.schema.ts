@@ -85,6 +85,18 @@ export class Employee {
   @Prop({ type: Types.ObjectId, ref: 'Employee', default: null })
   managerId: Types.ObjectId | null;
 
+  @Prop({ type: Types.ObjectId, ref: 'Employee', default: null })
+  directorId: Types.ObjectId | null;
+
+  @Prop({ type: Types.ObjectId, ref: 'Employee', default: null })
+  centralDirectorId: Types.ObjectId | null;
+
+  @Prop({ type: String, default: null, trim: true })
+  service: string | null;
+
+  @Prop({ type: String, default: null, trim: true })
+  direction: string | null;
+
   @Prop({ type: String, default: null, trim: true })
   contractType: string | null;
 
@@ -146,4 +158,6 @@ EmployeeSchema.index({ status: 1, roles: 1 });
 EmployeeSchema.index({ departmentId: 1, status: 1 });
 EmployeeSchema.index({ branchId: 1, status: 1 });
 EmployeeSchema.index({ managerId: 1 });
+EmployeeSchema.index({ directorId: 1 });
+EmployeeSchema.index({ centralDirectorId: 1 });
 EmployeeSchema.index({ createdAt: -1 });

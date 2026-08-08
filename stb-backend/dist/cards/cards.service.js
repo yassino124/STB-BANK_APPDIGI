@@ -80,6 +80,14 @@ let CardsService = class CardsService {
     async getMyCards(employeeId) {
         return this.cardModel.find({ employeeId: new mongoose_2.Types.ObjectId(employeeId) }, { cvvHash: 0, pinHash: 0 }).exec();
     }
+    async getAllCards() {
+        return this.cardModel
+            .find({}, { cvvHash: 0, pinHash: 0 })
+            .populate('employeeId', 'matricule nom prenom email poste')
+            .populate('accountId', 'accountNumber solde')
+            .sort({ createdAt: -1 })
+            .exec();
+    }
     async findOne(id) {
         const card = await this.cardModel.findById(id).exec();
         if (!card)

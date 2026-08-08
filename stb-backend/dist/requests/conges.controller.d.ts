@@ -21,6 +21,10 @@ export declare class CongesController {
         success: boolean;
         data: import("./schemas/conge.schema").Conge[];
     }>;
+    getPendingTeam(req: any): Promise<{
+        success: boolean;
+        data: import("./schemas/conge.schema").Conge[];
+    }>;
     getTeamCalendar(req: any, month: string, year: string): Promise<{
         success: boolean;
         data: import("./schemas/conge.schema").Conge[];

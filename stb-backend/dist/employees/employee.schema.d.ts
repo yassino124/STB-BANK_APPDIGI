@@ -29,6 +29,10 @@ export declare class Employee {
     departmentId: Types.ObjectId | null;
     branchId: Types.ObjectId | null;
     managerId: Types.ObjectId | null;
+    directorId: Types.ObjectId | null;
+    centralDirectorId: Types.ObjectId | null;
+    service: string | null;
+    direction: string | null;
     contractType: string | null;
     contractStart: Date | null;
     contractEnd: Date | null;
@@ -283,6 +287,42 @@ export declare const EmployeeSchema: import("mongoose").Schema<Employee, import(
         id: string;
     }>> | undefined;
     managerId?: import("mongoose").SchemaDefinitionProperty<Types.ObjectId | null, Employee, Document<unknown, {}, Employee, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Employee & {
+        _id: Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & import("mongoose").HydratedDocumentOverrides<{
+        id: string;
+    }>> | undefined;
+    directorId?: import("mongoose").SchemaDefinitionProperty<Types.ObjectId | null, Employee, Document<unknown, {}, Employee, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Employee & {
+        _id: Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & import("mongoose").HydratedDocumentOverrides<{
+        id: string;
+    }>> | undefined;
+    centralDirectorId?: import("mongoose").SchemaDefinitionProperty<Types.ObjectId | null, Employee, Document<unknown, {}, Employee, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Employee & {
+        _id: Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & import("mongoose").HydratedDocumentOverrides<{
+        id: string;
+    }>> | undefined;
+    service?: import("mongoose").SchemaDefinitionProperty<string | null, Employee, Document<unknown, {}, Employee, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Employee & {
+        _id: Types.ObjectId;
+    } & {
+        __v: number;
+    }, "id"> & import("mongoose").HydratedDocumentOverrides<{
+        id: string;
+    }>> | undefined;
+    direction?: import("mongoose").SchemaDefinitionProperty<string | null, Employee, Document<unknown, {}, Employee, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<Employee & {
         _id: Types.ObjectId;

@@ -647,8 +647,15 @@ class AuthApiService {
   // ── CONGÉS ───────────────────────────────────────────────────────────────
   static Future<ApiResult<List<dynamic>>> getMyConges() async {
     return _authRequest(
-      () async => http.get(Uri.parse('$_baseUrl/conges/my'), headers: await authenticatedHeaders()).timeout(const Duration(seconds: 10)),
+      () async => http.get(Uri.parse('$_baseUrl/leave/my'), headers: await authenticatedHeaders()).timeout(const Duration(seconds: 10)),
       (body) => body as List<dynamic>,
+    );
+  }
+
+  static Future<ApiResult<Map<String, dynamic>>> getMyLeaveBalance() async {
+    return _authRequest(
+      () async => http.get(Uri.parse('$_baseUrl/leave/my-balance'), headers: await authenticatedHeaders()).timeout(const Duration(seconds: 10)),
+      (body) => body as Map<String, dynamic>,
     );
   }
 
@@ -660,12 +667,12 @@ class AuthApiService {
   }) async {
     return _authRequest(
       () async => http.post(
-        Uri.parse('$_baseUrl/conges'),
+        Uri.parse('$_baseUrl/leave'),
         headers: await authenticatedHeaders(),
         body: jsonEncode({
           'type': type,
-          'startDate': startDate,
-          'endDate': endDate,
+          'dateDebut': startDate,
+          'dateFin': endDate,
           if (motif != null) 'motif': motif,
         }),
       ).timeout(const Duration(seconds: 10)),
@@ -673,14 +680,20 @@ class AuthApiService {
     );
   }
 
-  // ── MANAGER: Pending Approvals (using new simplified endpoint) ──
+  // ── MANAGER: Pending Approvals (congés en attente de l'équipe) ──
   static Future<ApiResult<List<dynamic>>> getPendingApprovals() async {
     return _authRequest(
       () async => http.get(
         Uri.parse('$_baseUrl/leave/pending-team'),
         headers: await authenticatedHeaders(),
       ).timeout(const Duration(seconds: 10)),
-      (body) => body as List<dynamic>,
+      (body) {
+        // Backend returns { success: true, data: [...] }
+        if (body is Map && body['data'] != null) {
+          return body['data'] as List<dynamic>;
+        }
+        return body as List<dynamic>;
+      },
     );
   }
 
@@ -695,24 +708,31 @@ class AuthApiService {
     );
   }
 
-  // ── MANAGER: Approve/Reject Leave (legacy PATCH endpoint) ──────
+  // ── MANAGER: Approve/Reject Leave via /leave/:id/manager-approve or /manager-reject ──
   static Future<ApiResult<Map<String, dynamic>>> handleLeaveApproval({
     required String leaveRequestId,
     required String decision, // 'APPROVED' | 'REJECTED'
     String? commentaire,
   }) async {
-    // Use new simplified POST endpoints for manager approve/reject
-    final endpoint = decision == 'APPROVED' ? 'manager-approve' : 'manager-reject';
-    return _authRequest(
-      () async => http.post(
-        Uri.parse('$_baseUrl/leave/$leaveRequestId/$endpoint'),
-        headers: await authenticatedHeaders(),
-        body: jsonEncode({
-          if (commentaire != null && commentaire.isNotEmpty) 'commentaire': commentaire,
-        }),
-      ).timeout(const Duration(seconds: 10)),
-      (body) => body as Map<String, dynamic>,
-    );
+    if (decision == 'APPROVED') {
+      return _authRequest(
+        () async => http.post(
+          Uri.parse('$_baseUrl/leave/$leaveRequestId/manager-approve'),
+          headers: await authenticatedHeaders(),
+          body: jsonEncode({'commentaire': commentaire ?? ''}),
+        ).timeout(const Duration(seconds: 10)),
+        (body) => body as Map<String, dynamic>,
+      );
+    } else {
+      return _authRequest(
+        () async => http.post(
+          Uri.parse('$_baseUrl/leave/$leaveRequestId/manager-reject'),
+          headers: await authenticatedHeaders(),
+          body: jsonEncode({'commentaire': commentaire ?? 'Refusé par le manager'}),
+        ).timeout(const Duration(seconds: 10)),
+        (body) => body as Map<String, dynamic>,
+      );
+    }
   }
 
   // ── ABSENCE: Create Absence Request ──────────────────────────────
@@ -729,8 +749,8 @@ class AuthApiService {
         headers: await authenticatedHeaders(),
         body: jsonEncode({
           'type': type,
-          'startDate': startDate,
-          'endDate': endDate,
+          'dateDebut': startDate,
+          'dateFin': endDate,
           'nombreHeures': nombreHeures,
           if (motif != null) 'motif': motif,
         }),
@@ -1211,10 +1231,8 @@ class AuthApiService {
   // ── Documents ────────────────────────────────────────────────────
 
   static Future<ApiResult<List<dynamic>>> fetchMyDocuments() async {
-    final empId = await _getEmployeeId();
-    if (empId == null) return const ApiResult.error('Employee ID introuvable');
     return _authRequest(
-      () async => http.get(Uri.parse('$_baseUrl/documents/employee/$empId'), headers: await authenticatedHeaders()).timeout(const Duration(seconds: 10)),
+      () async => http.get(Uri.parse('$_baseUrl/documents/my'), headers: await authenticatedHeaders()).timeout(const Duration(seconds: 10)),
       (body) {
         if (body is List) return body;
         if (body is Map && body.containsKey('data') && body['data'] is List) return body['data'];
@@ -1228,6 +1246,24 @@ class AuthApiService {
       () async => http.patch(Uri.parse('$_baseUrl/documents/$docId/read'), headers: await authenticatedHeaders()).timeout(const Duration(seconds: 10)),
       (body) => body,
     );
+  }
+
+  static Future<ApiResult<List<int>>> downloadDocument(String docId) async {
+    try {
+      final headers = await authenticatedHeaders();
+      final response = await http.get(
+        Uri.parse('$_baseUrl/documents/$docId/download'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        return ApiResult.success(response.bodyBytes);
+      } else {
+        return ApiResult.error('Erreur ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      return ApiResult.error('Erreur téléchargement: $e');
+    }
   }
 
   static Future<ApiResult<int>> getUnreadTicketsCount() async {
@@ -1275,3 +1311,4 @@ class LoginResponse {
     );
   }
 }
+

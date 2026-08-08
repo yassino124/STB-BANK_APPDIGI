@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Wallet, TrendingUp, AlertTriangle, Plus, Edit2, Trash2 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Wallet, TrendingUp, AlertTriangle, Plus, Edit2, Trash2, CheckCircle2, Clock, RefreshCw } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
@@ -12,21 +12,35 @@ const FinanceBudgets = () => {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({ name: '', department: '', amount: '', commentaire: '' });
+  const [filter, setFilter] = useState<'ALL' | 'ACTIVE' | 'DRAFT' | 'COMPLETED' | 'CANCELLED'>('ALL');
+
+  const fetchData = async () => {
+    try {
+      const res = await api.get('/finance/budgets').catch(() => null);
+      setBudgets(res?.data?.data || []);
+    } catch (err: any) {
+      setError(err?.message || 'Erreur de chargement');
+      toast.error('Erreur lors du chargement des budgets');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await api.get('/finance/budgets').catch(() => null);
-        setBudgets(res?.data?.data || []);
-      } catch (err: any) {
-        setError(err?.message || 'Erreur de chargement');
-        toast.error('Erreur lors du chargement des budgets');
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
   }, []);
+
+  const filteredBudgets = budgets.filter(b => {
+    if (filter === 'ALL') return true;
+    return b.status === filter;
+  });
+
+  const stats = {
+    total: budgets.length,
+    draft: budgets.filter(b => b.status === 'DRAFT').length,
+    active: budgets.filter(b => b.status === 'ACTIVE').length,
+    totalAmount: budgets.filter(b => b.status === 'ACTIVE').reduce((sum, b) => sum + (b.amount || 0), 0)
+  };
 
   const handleCreate = async () => {
     try {
@@ -84,10 +98,18 @@ const FinanceBudgets = () => {
 
       <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.25rem', fontFamily: 'var(--font-display)' }}>
+          <h1 style={{ 
+            fontSize: '2rem', 
+            fontWeight: 900, 
+            color: 'var(--text-primary)', 
+            marginBottom: '0.25rem',
+            background: 'linear-gradient(135deg, #2962FF 0%, #00BCD4 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}>
             Gestion des Budgets
           </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Suivi des budgets par département</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>Suivi des budgets par département</p>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
@@ -107,6 +129,60 @@ const FinanceBudgets = () => {
         >
           <Plus size={14} /> Nouveau Budget
         </button>
+      </div>
+
+      {/* Stats Cards */}
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', 
+        gap: '1.25rem', 
+        marginBottom: '2rem'
+      }}>
+        {/* Total */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', borderRadius: '16px', padding: '1.5rem', color: '#fff', boxShadow: '0 8px 24px rgba(102, 126, 234, 0.25)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <Wallet size={28} style={{ opacity: 0.9 }} />
+            <span style={{ fontSize: '0.75rem', opacity: 0.8, fontWeight: 600 }}>TOTAL</span>
+          </div>
+          <div style={{ fontSize: '2.25rem', fontWeight: 900, marginBottom: '0.25rem' }}>{stats.total}</div>
+          <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>Budgets créés</div>
+        </motion.div>
+
+        {/* Brouillons */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+          style={{ background: 'linear-gradient(135deg, #F59E0B 0%, #F97316 100%)', borderRadius: '16px', padding: '1.5rem', color: '#fff', boxShadow: '0 8px 24px rgba(245, 158, 11, 0.25)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <Clock size={28} style={{ opacity: 0.9 }} />
+            <span style={{ fontSize: '0.75rem', opacity: 0.8, fontWeight: 600 }}>BROUILLONS</span>
+          </div>
+          <div style={{ fontSize: '2.25rem', fontWeight: 900, marginBottom: '0.25rem' }}>{stats.draft}</div>
+          <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>En attente</div>
+        </motion.div>
+
+        {/* Actifs */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+          style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', borderRadius: '16px', padding: '1.5rem', color: '#fff', boxShadow: '0 8px 24px rgba(16, 185, 129, 0.25)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <CheckCircle2 size={28} style={{ opacity: 0.9 }} />
+            <span style={{ fontSize: '0.75rem', opacity: 0.8, fontWeight: 600 }}>ACTIFS</span>
+          </div>
+          <div style={{ fontSize: '2.25rem', fontWeight: 900, marginBottom: '0.25rem' }}>{stats.active}</div>
+          <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>En cours</div>
+        </motion.div>
+
+        {/* Montant Total */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+          style={{ background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)', borderRadius: '16px', padding: '1.5rem', color: '#fff', boxShadow: '0 8px 24px rgba(14, 165, 233, 0.25)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <span style={{ fontSize: '1.75rem', fontWeight: 900, opacity: 0.9 }}>$</span>
+            <span style={{ fontSize: '0.75rem', opacity: 0.8, fontWeight: 600 }}>TOTAL ACTIF</span>
+          </div>
+          <div style={{ fontSize: '2.25rem', fontWeight: 900, marginBottom: '0.25rem' }}>
+            {stats.totalAmount >= 1000 ? `${(stats.totalAmount / 1000).toFixed(1)}K` : stats.totalAmount}
+          </div>
+          <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>TND alloués</div>
+        </motion.div>
       </div>
 
       {showForm && (

@@ -46,6 +46,9 @@ let HierarchyController = class HierarchyController {
     getMyInfo(req) {
         return this.hierarchyService.getChain(req.user.sub);
     }
+    getMyTeam(req) {
+        return this.hierarchyService.getDirectReports(req.user.sub);
+    }
 };
 exports.HierarchyController = HierarchyController;
 __decorate([
@@ -110,6 +113,14 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], HierarchyController.prototype, "getMyInfo", null);
+__decorate([
+    (0, common_1.Get)('my-team'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get my direct reports (team members)' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], HierarchyController.prototype, "getMyTeam", null);
 exports.HierarchyController = HierarchyController = __decorate([
     (0, swagger_1.ApiTags)('🏢 Hierarchy (N+1)'),
     (0, swagger_1.ApiBearerAuth)('JWT-auth'),

@@ -24,7 +24,17 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   int _activeIndex = -1;
   int _activeCat = -1;
 
-  final _months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun'];
+  List<String> get _months {
+    final months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+    final now = DateTime.now();
+    List<String> labels = [];
+    for (int i = 5; i >= 0; i--) {
+      int m = now.month - i;
+      if (m <= 0) m += 12;
+      labels.add(months[m - 1]);
+    }
+    return labels;
+  }
   // Replaced static values with dynamic ones loaded from view model
 
   @override

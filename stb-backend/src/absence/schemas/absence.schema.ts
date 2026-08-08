@@ -19,6 +19,27 @@ export enum AbsenceType {
   MISSION = 'MISSION',
 }
 
+@Schema({ _id: false })
+export class AbsenceApprovalStep {
+  @Prop({ type: Types.ObjectId, ref: 'Employee' })
+  approverId: Types.ObjectId;
+
+  @Prop()
+  approverName: string;
+
+  @Prop({ type: Number })
+  level: number;
+
+  @Prop({ default: 'PENDING' })
+  decision: string; // 'PENDING' | 'APPROVED' | 'REJECTED'
+
+  @Prop({ default: null })
+  date: Date;
+
+  @Prop({ default: '' })
+  comment: string;
+}
+
 @Schema({ timestamps: true })
 export class Absence extends Document {
   @Prop({ required: true, type: Types.ObjectId, ref: 'Employee', index: true })
@@ -45,18 +66,19 @@ export class Absence extends Document {
   @Prop({ enum: AbsenceStatus, default: AbsenceStatus.PENDING_N1, index: true })
   status: AbsenceStatus;
 
+  // Legacy single managerId (kept for backward compatibility)
   @Prop({ type: Types.ObjectId, ref: 'Employee', default: null })
   managerId: Types.ObjectId;
 
+  // Full multi-level approval chain (same pattern as LeaveRequest)
+  @Prop({ type: [Object], default: [] })
+  approvalHistory: AbsenceApprovalStep[];
+
+  // The current approver who needs to act
   @Prop({ type: Types.ObjectId, ref: 'Employee', default: null })
-  n1ApprovedBy: Types.ObjectId;
+  currentApproverId: Types.ObjectId;
 
-  @Prop({ default: null })
-  n1ApprovedAt: Date;
-
-  @Prop({ default: '' })
-  n1Commentaire: string;
-
+  // RH final validation
   @Prop({ type: Types.ObjectId, ref: 'Employee', default: null })
   rhApprovedBy: Types.ObjectId;
 
@@ -79,3 +101,4 @@ export class Absence extends Document {
 export const AbsenceSchema = SchemaFactory.createForClass(Absence);
 AbsenceSchema.index({ employeeId: 1, status: 1 });
 AbsenceSchema.index({ managerId: 1, status: 1 });
+AbsenceSchema.index({ currentApproverId: 1, status: 1 });

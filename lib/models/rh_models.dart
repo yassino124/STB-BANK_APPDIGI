@@ -2,17 +2,42 @@
 //                    STB BANK — TYPED RH MODELS
 // ═══════════════════════════════════════════════════════════════════════════
 
+/// Solde de congés (Leave Balance)
+class LeaveBalanceData {
+  final int soldeAnnuel;
+  final int soldeUtilise;
+  final int soldeDisponible;
+
+  const LeaveBalanceData({
+    required this.soldeAnnuel,
+    required this.soldeUtilise,
+    required this.soldeDisponible,
+  });
+
+  factory LeaveBalanceData.fromJson(Map<String, dynamic> j) {
+    final sAnnuel = (j['soldeAnnuel'] as num?)?.toInt() ?? 30;
+    final sUtilise = (j['soldeUtilise'] as num?)?.toInt() ?? 0;
+    return LeaveBalanceData(
+      soldeAnnuel: sAnnuel,
+      soldeUtilise: sUtilise,
+      soldeDisponible: (j['soldeDisponible'] as num?)?.toInt() ?? (sAnnuel - sUtilise),
+    );
+  }
+}
+
 /// Statut générique pour toutes les demandes RH
-enum RhStatus { enAttente, approuve, rejete, annule, traite }
+enum RhStatus { enAttente, pendingManager, pendingRh, approuve, rejete, annule, traite }
 
 extension RhStatusExt on RhStatus {
   String get label {
     switch (this) {
-      case RhStatus.enAttente: return 'En Attente';
-      case RhStatus.approuve:  return 'Approuvé';
-      case RhStatus.rejete:    return 'Rejeté';
-      case RhStatus.annule:    return 'Annulé';
-      case RhStatus.traite:    return 'Traité';
+      case RhStatus.enAttente:     return 'En Attente';
+      case RhStatus.pendingManager: return 'Attente Manager';
+      case RhStatus.pendingRh:     return 'Attente Validation RH';
+      case RhStatus.approuve:       return 'Approuvé';
+      case RhStatus.rejete:         return 'Rejeté';
+      case RhStatus.annule:         return 'Annulé';
+      case RhStatus.traite:         return 'Traité';
     }
   }
 
@@ -32,6 +57,11 @@ extension RhStatusExt on RhStatus {
       case 'COMPLETED':
       case 'PAID':
         return RhStatus.traite;
+      case 'PENDING_MANAGER':
+      case 'PENDING_N1':
+        return RhStatus.pendingManager;
+      case 'PENDING_RH':
+        return RhStatus.pendingRh;
       default:
         return RhStatus.enAttente;
     }
@@ -41,7 +71,8 @@ extension RhStatusExt on RhStatus {
 // ── Congé ────────────────────────────────────────────────────────────────────
 
 enum CongeType {
-  repos, maladie, mariage, naissance, deces, pelerinage, sansSolde
+  repos, maladie, mariage, naissance, deces, pelerinage, sansSolde,
+  absence, retard, delegation, mission
 }
 
 extension CongeTypeExt on CongeType {
@@ -54,6 +85,10 @@ extension CongeTypeExt on CongeType {
       case CongeType.deces:      return 'Décès';
       case CongeType.pelerinage: return 'Pèlerinage';
       case CongeType.sansSolde:  return 'Sans Solde';
+      case CongeType.absence:    return 'Absence';
+      case CongeType.retard:     return 'Retard';
+      case CongeType.delegation: return 'Délégation';
+      case CongeType.mission:    return 'Mission';
     }
   }
 
@@ -65,6 +100,10 @@ extension CongeTypeExt on CongeType {
       case 'DECES':      return CongeType.deces;
       case 'PELERINAGE': return CongeType.pelerinage;
       case 'SANS_SOLDE': return CongeType.sansSolde;
+      case 'ABSENCE':    return CongeType.absence;
+      case 'RETARD':     return CongeType.retard;
+      case 'DELEGATION': return CongeType.delegation;
+      case 'MISSION':    return CongeType.mission;
       default:           return CongeType.repos;
     }
   }
@@ -77,8 +116,12 @@ class CongeRequest {
   final DateTime startDate;
   final DateTime endDate;
   final int dureeDays;
+  final double nombreHeures;
   final String? motif;
   final DateTime createdAt;
+  final List<dynamic> approvalHistory;
+  final int approvalLevel; // how many levels approved so far
+  final String rawStatus;
 
   const CongeRequest({
     required this.id,
@@ -87,8 +130,12 @@ class CongeRequest {
     required this.startDate,
     required this.endDate,
     required this.dureeDays,
+    this.nombreHeures = 0.0,
     this.motif,
     required this.createdAt,
+    this.approvalHistory = const [],
+    this.approvalLevel = 0,
+    required this.rawStatus,
   });
 
   factory CongeRequest.fromJson(Map<String, dynamic> j) => CongeRequest(
@@ -97,12 +144,16 @@ class CongeRequest {
         status:     RhStatusExt.fromString(j['status'] as String?),
         startDate:  DateTime.tryParse(j['dateDebut'] as String? ?? '') ?? DateTime.now(),
         endDate:    DateTime.tryParse(j['dateFin'] as String? ?? '') ?? DateTime.now(),
-        dureeDays:  (j['dureeDays'] as num?)?.toInt() ?? 1,
+        dureeDays:  (j['dureeDays'] as num?)?.toInt() ?? (j['nombreJours'] as num?)?.toInt() ?? 0,
+        nombreHeures: (j['nombreHeures'] as num?)?.toDouble() ?? 0.0,
         motif:      j['motif'] as String?,
         createdAt:  DateTime.tryParse(
                       j['dateCreation'] as String? ??
                       j['createdAt'] as String? ?? '') ??
                     DateTime.now(),
+        approvalHistory: (j['approvalHistory'] as List<dynamic>?) ?? [],
+        approvalLevel: ((j['approvalHistory'] as List?)?.length ?? 0),
+        rawStatus: j['status'] as String? ?? 'PENDING',
       );
 }
 

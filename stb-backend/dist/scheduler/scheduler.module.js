@@ -18,6 +18,7 @@ const credits_module_1 = require("../credits/credits.module");
 const leave_module_1 = require("../leave/leave.module");
 const conges_module_1 = require("../requests/conges.module");
 const documents_module_1 = require("../documents/documents.module");
+const primes_module_1 = require("../primes/primes.module");
 let SchedulerModule = class SchedulerModule {
 };
 exports.SchedulerModule = SchedulerModule;
@@ -34,6 +35,7 @@ exports.SchedulerModule = SchedulerModule = __decorate([
             leave_module_1.LeaveModule,
             conges_module_1.CongesModule,
             documents_module_1.DocumentsModule,
+            primes_module_1.PrimesModule,
         ],
         providers: [scheduler_service_1.SchedulerService],
     })

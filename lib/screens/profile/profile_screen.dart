@@ -327,13 +327,16 @@ class ProfileScreen extends StatelessWidget {
 
                     // Logout Button
                     GestureDetector(
-                      onTap: () {
+                      onTap: () async {
                         HapticFeedback.mediumImpact();
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(builder: (_) => const LoginScreen()),
-                          (route) => false,
-                        );
+                        await context.read<AppProvider>().logout();
+                        if (context.mounted) {
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(builder: (_) => const LoginScreen()),
+                            (route) => false,
+                          );
+                        }
                       },
                       child: Container(
                         height: 54,

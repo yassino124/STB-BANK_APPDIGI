@@ -69,8 +69,8 @@ export class HierarchyService {
   async getPendingApprovals(managerId: string): Promise<LeaveRequestDocument[]> {
     return this.leaveRequestModel
       .find({
-        managerId: new Types.ObjectId(managerId),
-        status: LeaveStatus.PENDING_N1,
+        currentApproverId: new Types.ObjectId(managerId),
+        status: LeaveStatus.PENDING_MANAGER,
       })
       .populate('employeeId', 'nom prenom matricule poste soldeConges')
       .sort({ createdAt: -1 })

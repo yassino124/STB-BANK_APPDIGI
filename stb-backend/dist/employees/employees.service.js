@@ -49,8 +49,10 @@ exports.EmployeesService = void 0;
 const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
+const event_emitter_1 = require("@nestjs/event-emitter");
 const employee_schema_1 = require("./employee.schema");
 const employee_status_enum_1 = require("../common/enums/employee-status.enum");
+const role_enum_1 = require("../common/enums/role.enum");
 const accounts_service_1 = require("../accounts/accounts.service");
 const account_schema_1 = require("../accounts/schemas/account.schema");
 const bcrypt = __importStar(require("bcrypt"));
@@ -58,9 +60,11 @@ const crypto = __importStar(require("crypto"));
 let EmployeesService = class EmployeesService {
     employeeModel;
     accountsService;
-    constructor(employeeModel, accountsService) {
+    eventEmitter;
+    constructor(employeeModel, accountsService, eventEmitter) {
         this.employeeModel = employeeModel;
         this.accountsService = accountsService;
+        this.eventEmitter = eventEmitter;
     }
     async create(dto) {
         let finalMatricule = dto.matricule?.toUpperCase();
@@ -100,6 +104,14 @@ let EmployeesService = class EmployeesService {
         catch (error) {
             console.error('Failed to create bank account for employee:', error);
         }
+        const managerIds = [dto.managerId, dto.directorId, dto.centralDirectorId].filter(Boolean);
+        if (managerIds.length > 0) {
+            await this.employeeModel.updateMany({ _id: { $in: managerIds } }, { $addToSet: { roles: role_enum_1.Role.MANAGER } }).exec();
+        }
+        this.eventEmitter.emit('employee.created', {
+            employeeId: employee._id.toString(),
+            employee: employee,
+        });
         return { employee, defaultPassword, matricule: finalMatricule };
     }
     async findAll(page = 1, limit = 20, search) {
@@ -123,6 +135,21 @@ let EmployeesService = class EmployeesService {
             this.employeeModel.countDocuments(query),
         ]);
         return { data, total, page, pages: Math.ceil(total / limit) };
+    }
+    async getDirectory(search) {
+        const query = {};
+        if (search && search.length >= 2) {
+            query.$or = [
+                { matricule: { $regex: search, $options: 'i' } },
+                { nom: { $regex: search, $options: 'i' } },
+                { prenom: { $regex: search, $options: 'i' } },
+            ];
+        }
+        return this.employeeModel
+            .find(query)
+            .select('matricule nom prenom poste roles _id')
+            .limit(1000)
+            .exec();
     }
     async searchDirectory(search) {
         const query = { status: employee_status_enum_1.EmployeeStatus.ACTIVE };
@@ -252,6 +279,7 @@ exports.EmployeesService = EmployeesService = __decorate([
     __param(0, (0, mongoose_1.InjectModel)(employee_schema_1.Employee.name)),
     __param(1, (0, common_1.Inject)((0, common_1.forwardRef)(() => accounts_service_1.AccountsService))),
     __metadata("design:paramtypes", [mongoose_2.Model,
-        accounts_service_1.AccountsService])
+        accounts_service_1.AccountsService,
+        event_emitter_1.EventEmitter2])
 ], EmployeesService);
 //# sourceMappingURL=employees.service.js.map

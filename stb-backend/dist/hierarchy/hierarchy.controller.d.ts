@@ -13,4 +13,5 @@ export declare class HierarchyController {
         isN2?: boolean;
     }>;
     getMyInfo(req: any): Promise<import("./hierarchy.schema").HierarchyDocument[]>;
+    getMyTeam(req: any): Promise<import("./hierarchy.schema").HierarchyDocument[]>;
 }

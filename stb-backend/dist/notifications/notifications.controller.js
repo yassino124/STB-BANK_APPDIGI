@@ -15,11 +15,20 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.NotificationsController = void 0;
 const common_1 = require("@nestjs/common");
 const notifications_service_1 = require("./notifications.service");
+const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const swagger_1 = require("@nestjs/swagger");
+const send_notification_dto_1 = require("./dto/send-notification.dto");
+const roles_guard_1 = require("../common/guards/roles.guard");
+const roles_decorator_1 = require("../common/decorators/roles.decorator");
+const role_enum_1 = require("../common/enums/role.enum");
 let NotificationsController = class NotificationsController {
     notificationsService;
     constructor(notificationsService) {
         this.notificationsService = notificationsService;
+    }
+    async sendNotification(dto) {
+        const result = await this.notificationsService.sendCustomNotification(dto);
+        return { success: true, data: result };
     }
     async findMine(req, employeeId) {
         const userId = employeeId || req.user?.sub;
@@ -59,6 +68,15 @@ let NotificationsController = class NotificationsController {
     }
 };
 exports.NotificationsController = NotificationsController;
+__decorate([
+    (0, common_1.Post)('send'),
+    (0, roles_decorator_1.Roles)(role_enum_1.Role.RH, role_enum_1.Role.FINANCE, role_enum_1.Role.AGENCE, role_enum_1.Role.MANAGER, role_enum_1.Role.ADMIN, role_enum_1.Role.SUPER_ADMIN),
+    (0, swagger_1.ApiOperation)({ summary: 'Send a custom notification to an employee or all active employees' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [send_notification_dto_1.SendNotificationDto]),
+    __metadata("design:returntype", Promise)
+], NotificationsController.prototype, "sendNotification", null);
 __decorate([
     (0, common_1.Get)('my'),
     (0, swagger_1.ApiOperation)({ summary: 'Get my notifications' }),
@@ -100,6 +118,7 @@ __decorate([
 exports.NotificationsController = NotificationsController = __decorate([
     (0, swagger_1.ApiTags)('Notifications'),
     (0, swagger_1.ApiBearerAuth)(),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, common_1.Controller)('notifications'),
     __metadata("design:paramtypes", [notifications_service_1.NotificationsService])
 ], NotificationsController);

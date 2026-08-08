@@ -1,0 +1,319 @@
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model, Types } from 'mongoose';
+import { LeaveRequest, LeaveBalance, LeaveStatus } from './schemas/leave.schema';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/schemas/notification.schema';
+import { HierarchyService } from '../hierarchy/hierarchy.service';
+import { Employee, EmployeeDocument } from '../employees/employee.schema';
+
+@Injectable()
+export class LeaveService {
+  constructor(
+    @InjectModel(LeaveRequest.name) private leaveRequestModel: Model<LeaveRequest>,
+    @InjectModel(LeaveBalance.name) private leaveBalanceModel: Model<LeaveBalance>,
+    @InjectModel(Employee.name) private employeeModel: Model<EmployeeDocument>,
+    private notificationsService: NotificationsService,
+    private hierarchyService: HierarchyService,
+  ) {}
+
+  async createRequest(employeeId: string, dto: { type: string; dateDebut: string; dateFin: string; motif: string }) {
+    const dateDebut = new Date(dto.dateDebut);
+    const dateFin = new Date(dto.dateFin);
+    const diffTime = Math.abs(dateFin.getTime() - dateDebut.getTime());
+    const nombreJours = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+    const balance = await this.getOrCreateBalance(employeeId);
+    const soldeDisponible = balance.soldeAnnuel - balance.soldeUtilise;
+    if (nombreJours > soldeDisponible) {
+      throw new BadRequestException(`Solde insuffisant. Disponible: ${soldeDisponible} jours`);
+    }
+
+    // Build the ordered approval chain: managerId -> directorId -> centralDirectorId
+    const employee = await this.employeeModel.findById(employeeId)
+      .populate('managerId', 'nom prenom')
+      .populate('directorId', 'nom prenom')
+      .populate('centralDirectorId', 'nom prenom')
+      .exec();
+    if (!employee) throw new NotFoundException('Employé introuvable');
+
+    const approvalHistory: any[] = [];
+    const approvalChain: string[] = [];
+
+    let level = 1;
+    if (employee.managerId) {
+      const mgr: any = employee.managerId;
+      approvalChain.push(mgr._id.toString());
+      approvalHistory.push({ approverId: mgr._id, approverName: `${mgr.prenom} ${mgr.nom}`, level: level++, decision: 'PENDING' });
+    }
+    if ((employee as any).directorId) {
+      const dir: any = (employee as any).directorId;
+      approvalChain.push(dir._id.toString());
+      approvalHistory.push({ approverId: dir._id, approverName: `${dir.prenom} ${dir.nom}`, level: level++, decision: 'PENDING' });
+    }
+    if ((employee as any).centralDirectorId) {
+      const cDir: any = (employee as any).centralDirectorId;
+      approvalChain.push(cDir._id.toString());
+      approvalHistory.push({ approverId: cDir._id, approverName: `${cDir.prenom} ${cDir.nom}`, level: level++, decision: 'PENDING' });
+    }
+
+    const firstApprover = approvalChain[0] || null;
+
+    const createData: any = {
+      employeeId: new Types.ObjectId(employeeId),
+      type: dto.type as any,
+      dateDebut,
+      dateFin,
+      nombreJours,
+      motif: dto.motif,
+      status: firstApprover ? LeaveStatus.PENDING_MANAGER : LeaveStatus.PENDING_RH,
+      managerId: approvalChain.length > 0 ? new Types.ObjectId(approvalChain[0]) : null,
+      currentApproverId: firstApprover ? new Types.ObjectId(firstApprover) : null,
+      approvalHistory,
+    };
+
+    const created = await this.leaveRequestModel.create(createData);
+
+    // Notify first approver
+    if (firstApprover) {
+      await this.notificationsService.sendToEmployee(
+        firstApprover,
+        '🗓️ Nouvelle demande de congé à valider',
+        `${employee.prenom} ${employee.nom} a soumis une demande de congé (${nombreJours} jour(s)) du ${dateDebut.toLocaleDateString('fr-FR')}. Votre validation est requise.`,
+        NotificationType.HR_REQUEST,
+      );
+    }
+
+    return created;
+  }
+
+  async getMyRequests(employeeId: string) {
+    return this.leaveRequestModel.find({ employeeId: new Types.ObjectId(employeeId) }).sort({ createdAt: -1 }).exec();
+  }
+
+  async getPendingForManager(managerId: string) {
+    return this.leaveRequestModel
+      .find({
+        currentApproverId: new Types.ObjectId(managerId),
+        status: LeaveStatus.PENDING_MANAGER,
+      })
+      .populate('employeeId', 'nom prenom matricule poste department soldeConges')
+      .sort({ createdAt: -1 })
+      .exec();
+  }
+
+  async getMyTeamRequests(managerId: string) {
+    const directReports = await this.hierarchyService.getDirectReports(managerId);
+    const reportIds = directReports.map((dr) => dr.employeeId);
+
+    return this.leaveRequestModel
+      .find({ employeeId: { $in: reportIds } })
+      .sort({ createdAt: -1 })
+      .exec();
+ }
+
+
+  async getManagerStats(managerId: string) {
+    // Get direct reports (team members)
+    const directReports = await this.hierarchyService.getDirectReports(managerId);
+    const reportIds = directReports.map((dr) => dr.employeeId);
+    
+    // Count pending requests for this manager
+    const pendingCount = await this.leaveRequestModel.countDocuments({
+      currentApproverId: new Types.ObjectId(managerId),
+      status: LeaveStatus.PENDING_MANAGER,
+    });
+    
+    // Count all requests by status for team members
+    const allRequests = await this.leaveRequestModel.find({
+      employeeId: { $in: reportIds.map(id => new Types.ObjectId(id)) }
+    });
+    
+    const stats = {
+      totalEmployees: directReports.length,
+      pendingRequests: pendingCount,
+      approvedRequests: allRequests.filter(r => r.status === LeaveStatus.APPROVED).length,
+      rejectedRequests: allRequests.filter(r => r.status === LeaveStatus.REJECTED).length,
+      totalRequests: allRequests.length,
+    };
+    
+    return stats;
+  }
+  }
+
+  async handleManagerApproval(id: string, managerId: string, decision: 'APPROVED' | 'REJECTED', commentaire = '') {
+    const request = await this.leaveRequestModel.findById(id).exec();
+    if (!request) throw new NotFoundException('Demande de congé introuvable');
+
+    const isCurrentApprover = request.currentApproverId?.toString() === managerId;
+    if (!isCurrentApprover) {
+      throw new ForbiddenException('Vous n\'êtes pas le validateur actuel de cette demande');
+    }
+
+    if (request.status !== LeaveStatus.PENDING_MANAGER) {
+      throw new BadRequestException(`Demande déjà traitée. Statut actuel: ${request.status}`);
+    }
+
+    // Get the employee to determine the explicit approval chain
+    const emp = await this.employeeModel.findById(request.employeeId).exec();
+    if (!emp) throw new NotFoundException('Employé introuvable');
+
+    // Build the full approval chain for this employee
+    const fullChain: string[] = [];
+    if (emp.managerId) fullChain.push(emp.managerId.toString());
+    if ((emp as any).directorId) fullChain.push((emp as any).directorId.toString());
+    if ((emp as any).centralDirectorId) fullChain.push((emp as any).centralDirectorId.toString());
+
+    // Find current approver position in chain → next approver is fullChain[currentIndex + 1]
+    const currentIndex = fullChain.indexOf(managerId);
+    const nextApproverId = currentIndex >= 0 && currentIndex < fullChain.length - 1
+      ? fullChain[currentIndex + 1]
+      : null;
+
+    // Get approver name for notifications
+    const approver = await this.employeeModel.findById(managerId).select('nom prenom poste').exec();
+    const approverName = approver ? `${approver.prenom} ${approver.nom}` : 'Votre responsable';
+
+    // Record this approval step in history
+    const historyItem = request.approvalHistory.find(h => h.approverId?.toString() === managerId);
+    if (historyItem) {
+      historyItem.decision = decision;
+      historyItem.date = new Date();
+      historyItem.comment = commentaire;
+    } else {
+      // Fallback if not found
+      request.approvalHistory.push({
+        approverId: new Types.ObjectId(managerId),
+        approverName,
+        level: currentIndex + 1,
+        decision,
+        date: new Date(),
+        comment: commentaire
+      });
+    }
+
+    if (decision === 'APPROVED') {
+      if (nextApproverId) {
+        // Forward to next approver in chain
+        request.currentApproverId = new Types.ObjectId(nextApproverId);
+
+        // Notify the employee of the intermediate approval
+        await this.notificationsService.sendToEmployee(
+          request.employeeId.toString(),
+          `✅ Congé approuvé — Niveau ${currentIndex + 1}`,
+          `${approverName} a validé votre demande. Elle est transmise au niveau ${currentIndex + 2} pour approbation.`,
+          NotificationType.HR_REQUEST,
+        );
+
+        // Notify the next approver
+        await this.notificationsService.sendToEmployee(
+          nextApproverId,
+          '🗓️ Demande de congé à valider',
+          `Une demande de congé de ${emp.prenom} ${emp.nom} vous a été transmise après validation de ${approverName}.`,
+          NotificationType.HR_REQUEST,
+        );
+      } else {
+        // End of chain → forward to RH
+        request.status = LeaveStatus.PENDING_RH;
+        request.currentApproverId = null;
+
+        await this.notificationsService.sendToEmployee(
+          request.employeeId.toString(),
+          '✅ Congé approuvé par la hiérarchie',
+          `Toute la hiérarchie a validé votre demande de congé. Elle est maintenant en attente de validation finale RH.`,
+          NotificationType.HR_REQUEST,
+        );
+      }
+    } else {
+      request.status = LeaveStatus.REJECTED;
+      request.currentApproverId = null;
+
+      await this.notificationsService.sendToEmployee(
+        request.employeeId.toString(),
+        `❌ Congé refusé par ${approverName}`,
+        `Votre demande de congé a été refusée. Motif: ${commentaire || 'Non spécifié'}`,
+        NotificationType.HR_REQUEST,
+      );
+    }
+
+    request.markModified('approvalHistory');
+    return request.save();
+  }
+
+  async handleRhApproval(id: string, rhId: string, decision: 'APPROVED' | 'REJECTED', commentaire = '') {
+    const request = await this.leaveRequestModel.findById(id).exec();
+    if (!request) throw new NotFoundException('Demande de congé introuvable');
+
+    if (request.status !== LeaveStatus.PENDING_RH) {
+      throw new BadRequestException(`Demande ne peut pas être traitée par la RH. Statut: ${request.status}`);
+    }
+
+    if (decision === 'APPROVED') {
+      request.status = LeaveStatus.APPROVED;
+      request.rhApprovedBy = new Types.ObjectId(rhId);
+      request.rhApprovedAt = new Date();
+      request.rhCommentaire = commentaire;
+      request.validatedBy = new Types.ObjectId(rhId);
+      request.validatedAt = new Date();
+
+      const balance = await this.getOrCreateBalance(request.employeeId.toString());
+      balance.soldeUtilise += request.nombreJours;
+      await balance.save();
+
+      await this.notificationsService.sendToEmployee(
+        request.employeeId.toString(),
+        '✅ Congé validé',
+        `Votre demande de congé du ${request.dateDebut.toLocaleDateString('fr-FR')} est maintenant entièrement validée. Solde mis à jour.`,
+        NotificationType.HR_REQUEST,
+      );
+    } else {
+      request.status = LeaveStatus.REJECTED;
+      request.rhCommentaire = commentaire;
+      request.commentaire = commentaire;
+      request.validatedBy = new Types.ObjectId(rhId);
+      request.validatedAt = new Date();
+
+      await this.notificationsService.sendToEmployee(
+        request.employeeId.toString(),
+        '❌ Congé refusé par les RH',
+        `Votre demande de congé a été refusée par les RH. ${commentaire}`,
+        NotificationType.HR_REQUEST,
+      );
+    }
+
+    return request.save();
+  }
+
+  async getAllRequests(status?: string) {
+    const filter: any = {};
+    if (status) filter.status = status;
+    return this.leaveRequestModel.find(filter).populate('employeeId', 'nom prenom matricule departement').sort({ createdAt: -1 }).exec();
+  }
+
+  async getMyBalance(employeeId: string) {
+    return this.getOrCreateBalance(employeeId);
+  }
+
+  async addMonthlyBalance(days = 2.5) {
+    return this.leaveBalanceModel.updateMany({}, { $inc: { soldeAnnuel: days } }).exec();
+  }
+
+  async updateBalance(employeeId: string, days: number) {
+    const balance = await this.getOrCreateBalance(employeeId);
+    balance.soldeAnnuel = Math.round((balance.soldeAnnuel + days) * 100) / 100;
+    await balance.save();
+    return balance;
+  }
+
+  private async getOrCreateBalance(employeeId: string) {
+    let balance = await this.leaveBalanceModel.findOne({ employeeId: new Types.ObjectId(employeeId) }).exec();
+    if (!balance) {
+      balance = await this.leaveBalanceModel.create({
+        employeeId: new Types.ObjectId(employeeId),
+        soldeAnnuel: 30,
+        soldeUtilise: 0,
+      });
+    }
+    return balance;
+  }
+}

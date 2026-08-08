@@ -28,6 +28,9 @@ let DashboardController = class DashboardController {
     getRhDashboard() {
         return this.dashboardService.getRhDashboard();
     }
+    getItDashboard() {
+        return this.dashboardService.getItDashboard();
+    }
 };
 exports.DashboardController = DashboardController;
 __decorate([
@@ -45,6 +48,13 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], DashboardController.prototype, "getRhDashboard", null);
+__decorate([
+    (0, common_1.Get)('it'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get IT Operations dashboard stats' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], DashboardController.prototype, "getItDashboard", null);
 exports.DashboardController = DashboardController = __decorate([
     (0, swagger_1.ApiTags)('Dashboard'),
     (0, swagger_1.ApiBearerAuth)(),

@@ -37,6 +37,9 @@ let PayrollController = class PayrollController {
     creditSalaries() {
         return this.payrollService.creditMonthlySalaries();
     }
+    creditSalaryForEmployee(employeeId, body) {
+        return this.payrollService.creditMonthlySalaries(employeeId, body?.force);
+    }
 };
 exports.PayrollController = PayrollController;
 __decorate([
@@ -79,6 +82,15 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], PayrollController.prototype, "creditSalaries", null);
+__decorate([
+    (0, common_1.Post)('credit-salary/:employeeId'),
+    (0, swagger_1.ApiOperation)({ summary: 'Credit monthly salary for a specific employee (Finance/Admin). Use force=true to bypass month lock (testing).' }),
+    __param(0, (0, common_1.Param)('employeeId')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], PayrollController.prototype, "creditSalaryForEmployee", null);
 exports.PayrollController = PayrollController = __decorate([
     (0, swagger_1.ApiTags)('Payroll'),
     (0, swagger_1.ApiBearerAuth)(),

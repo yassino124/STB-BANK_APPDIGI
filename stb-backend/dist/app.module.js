@@ -52,6 +52,7 @@ const sessions_module_1 = require("./sessions/sessions.module");
 const audit_module_1 = require("./audit/audit.module");
 const otp_module_1 = require("./otp/otp.module");
 const copilot_module_1 = require("./copilot/copilot.module");
+const ai_module_1 = require("./ai/ai.module");
 const requests_module_1 = require("./requests/requests.module");
 const conges_module_1 = require("./requests/conges.module");
 const avances_module_1 = require("./avances/avances.module");
@@ -146,6 +147,7 @@ exports.AppModule = AppModule = __decorate([
             audit_module_1.AuditModule,
             otp_module_1.OtpModule,
             copilot_module_1.CopilotModule,
+            ai_module_1.AiModule,
             hierarchy_module_1.HierarchyModule,
             absence_module_1.AbsenceModule,
             finance_module_1.FinanceModule,

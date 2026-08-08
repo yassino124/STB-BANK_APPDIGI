@@ -34,6 +34,9 @@ let AbsenceController = class AbsenceController {
     getPendingForManager(req) {
         return this.absenceService.getPendingForManager(req.user.sub);
     }
+    getMyTeamAbsences(req) {
+        return this.absenceService.getMyTeamAbsences(req.user.sub);
+    }
     getPendingRh() {
         return this.absenceService.getPendingForRh();
     }
@@ -77,6 +80,14 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], AbsenceController.prototype, "getPendingForManager", null);
 __decorate([
+    (0, common_1.Get)('my-team'),
+    (0, swagger_1.ApiOperation)({ summary: 'All absence requests from my direct reports' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], AbsenceController.prototype, "getMyTeamAbsences", null);
+__decorate([
     (0, common_1.Get)('pending-rh'),
     (0, roles_decorator_1.Roles)(role_enum_1.Role.RH, role_enum_1.Role.ADMIN, role_enum_1.Role.SUPER_ADMIN),
     (0, swagger_1.ApiOperation)({ summary: 'Pending RH validation' }),
@@ -95,7 +106,7 @@ __decorate([
 ], AbsenceController.prototype, "getAll", null);
 __decorate([
     (0, common_1.Patch)(':id/handle-manager'),
-    (0, roles_decorator_1.Roles)(role_enum_1.Role.MANAGER),
+    (0, roles_decorator_1.Roles)(role_enum_1.Role.MANAGER, role_enum_1.Role.ADMIN, role_enum_1.Role.SUPER_ADMIN),
     (0, swagger_1.ApiOperation)({ summary: 'Manager approves or rejects absence (N+1)' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Request)()),

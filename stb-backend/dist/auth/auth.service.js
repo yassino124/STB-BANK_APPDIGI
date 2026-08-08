@@ -236,13 +236,17 @@ let AuthService = AuthService_1 = class AuthService {
             .findOne({ matricule: dto.matricule.toUpperCase() })
             .select('+passwordHash')
             .exec();
+        console.log('--- LOGIN WEB DEBUG ---');
+        console.log('Matricule:', dto.matricule.toUpperCase());
+        console.log('Employee found?:', !!employee);
         if (!employee) {
+            console.log('Failed: !employee');
             throw new common_1.UnauthorizedException('Matricule ou mot de passe incorrect.');
         }
-        const allowedRoles = [role_enum_1.Role.RH, role_enum_1.Role.ADMIN, role_enum_1.Role.SUPER_ADMIN, role_enum_1.Role.FINANCE, role_enum_1.Role.AGENCE, role_enum_1.Role.MANAGER];
+        const allowedRoles = [role_enum_1.Role.RH, role_enum_1.Role.ADMIN, role_enum_1.Role.SUPER_ADMIN, role_enum_1.Role.FINANCE, role_enum_1.Role.AGENCE, role_enum_1.Role.MANAGER, role_enum_1.Role.IT];
         const hasAccess = employee.roles.some((r) => allowedRoles.includes(r));
         if (!hasAccess) {
-            throw new common_1.ForbiddenException("Accès refusé. Réservé aux ressources humaines et administrateurs.");
+            throw new common_1.ForbiddenException("Accès refusé. Réservé aux ressources humaines, administrateurs et équipe IT.");
         }
         if (employee.status === employee_status_enum_1.EmployeeStatus.SUSPENDED) {
             throw new common_1.ForbiddenException('Compte suspendu. Contactez le service informatique.');

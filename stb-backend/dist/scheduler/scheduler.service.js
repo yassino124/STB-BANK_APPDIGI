@@ -27,6 +27,7 @@ const conges_service_1 = require("../requests/conges.service");
 const account_schema_1 = require("../accounts/schemas/account.schema");
 const event_emitter_1 = require("@nestjs/event-emitter");
 const documents_service_1 = require("../documents/documents.service");
+const primes_service_1 = require("../primes/primes.service");
 let SchedulerService = SchedulerService_1 = class SchedulerService {
     employeeModel;
     accountModel;
@@ -36,8 +37,9 @@ let SchedulerService = SchedulerService_1 = class SchedulerService {
     congesService;
     eventEmitter;
     documentsService;
+    primesService;
     logger = new common_1.Logger(SchedulerService_1.name);
-    constructor(employeeModel, accountModel, payrollService, creditsService, leaveService, congesService, eventEmitter, documentsService) {
+    constructor(employeeModel, accountModel, payrollService, creditsService, leaveService, congesService, eventEmitter, documentsService, primesService) {
         this.employeeModel = employeeModel;
         this.accountModel = accountModel;
         this.payrollService = payrollService;
@@ -46,6 +48,7 @@ let SchedulerService = SchedulerService_1 = class SchedulerService {
         this.congesService = congesService;
         this.eventEmitter = eventEmitter;
         this.documentsService = documentsService;
+        this.primesService = primesService;
     }
     async handleDailyTasks() {
         this.logger.log('🚀 CRON: Running daily tasks...');
@@ -80,6 +83,121 @@ let SchedulerService = SchedulerService_1 = class SchedulerService {
     async handleWeeklyReports() {
         this.logger.log('📊 CRON: Generating weekly reports...');
         this.logger.log('✅ Weekly reports completed');
+    }
+    async handlePrimeAnnuelle() {
+        this.logger.log('🎁 CRON PRIME: Distribution Prime Annuelle (Décembre)...');
+        try {
+            const result = await this.primesService.distributeToAll('system', {
+                type: 'PERFORMANCE',
+                montant: 1000,
+                description: 'Prime Annuelle STB — Distribution automatique Décembre',
+            });
+            this.logger.log(`✅ Prime Annuelle: ${result.credited}/${result.total} employés crédités (${result.montantTotal} TND)`);
+        }
+        catch (e) {
+            this.logger.error('❌ Prime Annuelle failed:', e.message);
+        }
+    }
+    async handlePrimeAidFitr() {
+        this.logger.log('🌙 CRON PRIME: Distribution Prime Aïd el Fitr...');
+        try {
+            const result = await this.primesService.distributeToAll('system', {
+                type: 'AID',
+                montant: 500,
+                description: 'Prime Aïd el Fitr — Distribution automatique STB',
+            });
+            this.logger.log(`✅ Prime Aïd Fitr: ${result.credited}/${result.total} employés crédités (${result.montantTotal} TND)`);
+        }
+        catch (e) {
+            this.logger.error('❌ Prime Aïd Fitr failed:', e.message);
+        }
+    }
+    async handlePrimeAidAdha() {
+        this.logger.log('🐑 CRON PRIME: Distribution Prime Aïd el Adha...');
+        try {
+            const result = await this.primesService.distributeToAll('system', {
+                type: 'AID',
+                montant: 500,
+                description: 'Prime Aïd el Adha — Distribution automatique STB',
+            });
+            this.logger.log(`✅ Prime Aïd Adha: ${result.credited}/${result.total} employés crédités (${result.montantTotal} TND)`);
+        }
+        catch (e) {
+            this.logger.error('❌ Prime Aïd Adha failed:', e.message);
+        }
+    }
+    async handlePrimeRamadan() {
+        this.logger.log('✨ CRON PRIME: Distribution Prime Ramadan...');
+        try {
+            const result = await this.primesService.distributeToAll('system', {
+                type: 'RAMADAN',
+                montant: 300,
+                description: 'Prime Ramadan STB — Distribution automatique',
+            });
+            this.logger.log(`✅ Prime Ramadan: ${result.credited}/${result.total} employés crédités (${result.montantTotal} TND)`);
+        }
+        catch (e) {
+            this.logger.error('❌ Prime Ramadan failed:', e.message);
+        }
+    }
+    async handlePrimeAnciennete() {
+        this.logger.log('🏆 CRON PRIME: Distribution Prime Ancienneté...');
+        try {
+            await this._distributeAncienneteBySlice();
+        }
+        catch (e) {
+            this.logger.error('❌ Prime Ancienneté failed:', e.message);
+        }
+    }
+    async handlePrimeVacances() {
+        this.logger.log('☀️ CRON PRIME: Distribution Prime Vacances...');
+        try {
+            const result = await this.primesService.distributeToAll('system', {
+                type: 'VACANCES',
+                montant: 400,
+                description: 'Prime Vacances STB — Distribution automatique Juillet',
+            });
+            this.logger.log(`✅ Prime Vacances: ${result.credited}/${result.total} employés crédités (${result.montantTotal} TND)`);
+        }
+        catch (e) {
+            this.logger.error('❌ Prime Vacances failed:', e.message);
+        }
+    }
+    async _distributeAncienneteBySlice() {
+        const employees = await this.employeeModel.find({ status: employee_status_enum_1.EmployeeStatus.ACTIVE }).lean().exec();
+        const now = new Date();
+        let total = 0;
+        for (const emp of employees) {
+            try {
+                const hireDate = emp.dateEmbauche ? new Date(emp.dateEmbauche) : null;
+                if (!hireDate)
+                    continue;
+                const years = (now.getTime() - hireDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
+                let montant = 0;
+                if (years >= 10)
+                    montant = 1000;
+                else if (years >= 5)
+                    montant = 700;
+                else if (years >= 3)
+                    montant = 400;
+                else if (years >= 1)
+                    montant = 200;
+                else
+                    continue;
+                await this.primesService.adminCreate('system', {
+                    employeeId: emp._id.toString(),
+                    type: 'ANCIENNETE',
+                    montant,
+                    description: `Prime Ancienneté ${Math.floor(years)} ans de service — Auto STB`,
+                });
+                total++;
+                this.logger.log(`  → ${emp.prenom} ${emp.nom}: ${montant} TND (${Math.floor(years)} ans)`);
+            }
+            catch (e) {
+                this.logger.error(`  ✗ ${emp.matricule}: ${e.message}`);
+            }
+        }
+        this.logger.log(`✅ Prime Ancienneté: ${total} employés crédités`);
     }
     async resetDailyLimits() {
         await this.accountModel.updateMany({ lastWithdrawalReset: { $lt: new Date(Date.now() - 24 * 60 * 60 * 1000) } }, { dailySpent: 0, lastWithdrawalReset: new Date() });
@@ -239,11 +357,47 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], SchedulerService.prototype, "handleFraudMonitoring", null);
 __decorate([
-    (0, schedule_1.Cron)('0 9 * * 1'),
+    (0, schedule_1.Cron)('0 9 1 * *'),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], SchedulerService.prototype, "handleWeeklyReports", null);
+__decorate([
+    (0, schedule_1.Cron)('0 8 1 12 *'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], SchedulerService.prototype, "handlePrimeAnnuelle", null);
+__decorate([
+    (0, schedule_1.Cron)('0 8 25 3 *'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], SchedulerService.prototype, "handlePrimeAidFitr", null);
+__decorate([
+    (0, schedule_1.Cron)('0 8 15 6 *'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], SchedulerService.prototype, "handlePrimeAidAdha", null);
+__decorate([
+    (0, schedule_1.Cron)('0 8 1 3 *'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], SchedulerService.prototype, "handlePrimeRamadan", null);
+__decorate([
+    (0, schedule_1.Cron)('0 8 1 1 *'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], SchedulerService.prototype, "handlePrimeAnciennete", null);
+__decorate([
+    (0, schedule_1.Cron)('0 8 1 7 *'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], SchedulerService.prototype, "handlePrimeVacances", null);
 __decorate([
     (0, schedule_1.Cron)('0 6 1 * *'),
     __metadata("design:type", Function),
@@ -261,6 +415,7 @@ exports.SchedulerService = SchedulerService = SchedulerService_1 = __decorate([
         leave_service_1.LeaveService,
         conges_service_1.CongesService,
         event_emitter_1.EventEmitter2,
-        documents_service_1.DocumentsService])
+        documents_service_1.DocumentsService,
+        primes_service_1.PrimesService])
 ], SchedulerService);
 //# sourceMappingURL=scheduler.service.js.map

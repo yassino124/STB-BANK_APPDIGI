@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, Check, Clock, CheckCircle } from 'lucide-react';
+import { Bell, Check, Clock, CheckCircle, Send, X } from 'lucide-react';
 import api from '../api/axios';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 
 interface Notification {
   _id: string;
@@ -16,8 +17,21 @@ interface Notification {
 }
 
 const Notifications = () => {
+  const { isRH, isFinance, isAgence, isIT } = useAuth();
+  const title = `Notifications ${isRH ? 'RH' : isFinance ? 'Finance' : isAgence ? 'Agence' : isIT ? 'IT' : ''}`;
+
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Send Notification States
+  const [showModal, setShowModal] = useState(false);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [targetType, setTargetType] = useState('ALL');
+  const [targetEmployee, setTargetEmployee] = useState('');
+  const [notifTitle, setNotifTitle] = useState('');
+  const [notifBody, setNotifBody] = useState('');
+  const [notifType, setNotifType] = useState('SYSTEM');
+  const [sending, setSending] = useState(false);
 
   const fetchNotifications = async () => {
     try {
@@ -54,8 +68,47 @@ const Notifications = () => {
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
       toast.success('Tout a été marqué comme lu');
     } catch (e) {
-      // Just visually update
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    }
+  };
+
+  const openModal = async () => {
+    setShowModal(true);
+    if (employees.length === 0) {
+      try {
+        const res = await api.get('/employees?limit=1000');
+        setEmployees(res.data?.data || res.data || []);
+      } catch (e) {}
+    }
+  };
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!notifTitle || !notifBody) {
+      toast.error('Veuillez remplir le titre et le message');
+      return;
+    }
+    if (targetType === 'SPECIFIC' && !targetEmployee) {
+      toast.error('Veuillez sélectionner un employé');
+      return;
+    }
+    
+    setSending(true);
+    try {
+      await api.post('/notifications/send', {
+        title: notifTitle,
+        body: notifBody,
+        type: notifType,
+        employeeId: targetType === 'SPECIFIC' ? targetEmployee : undefined
+      });
+      toast.success('Notification envoyée avec succès');
+      setShowModal(false);
+      setNotifTitle('');
+      setNotifBody('');
+    } catch (err) {
+      toast.error("Erreur lors de l'envoi");
+    } finally {
+      setSending(false);
     }
   };
 
@@ -66,13 +119,25 @@ const Notifications = () => {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
         <div>
           <h1 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-            Notifications RH
+            {title}
           </h1>
           <p style={{ margin: '0.25rem 0 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
             Restez à jour sur les dernières activités et demandes
           </p>
         </div>
         <div style={{ display: 'flex', gap: '1rem' }}>
+          <button
+            onClick={openModal}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.5rem',
+              padding: '0.5rem 1rem', background: '#2962FF',
+              border: 'none', borderRadius: '10px',
+              color: '#fff', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(41,98,255,0.3)'
+            }}
+          >
+            <Send size={14} /> Nouvelle Notification
+          </button>
           {unreadCount > 0 && (
             <button
               onClick={markAllAsRead}
@@ -161,6 +226,79 @@ const Notifications = () => {
         )}
       </div>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      
+      <AnimatePresence>
+        {showModal && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)'
+          }}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              style={{
+                background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '24px',
+                padding: '2rem', width: '100%', maxWidth: '500px',
+                boxShadow: '0 24px 48px rgba(0,0,0,0.5)'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <h2 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-primary)' }}>Envoyer une Notification</h2>
+                <button onClick={() => setShowModal(false)} className="btn-icon"><X size={20} /></button>
+              </div>
+              
+              <form onSubmit={handleSend} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div className="form-group">
+                  <label>Destinataire</label>
+                  <select className="form-input" value={targetType} onChange={e => setTargetType(e.target.value)}>
+                    <option value="ALL">Tous les employés</option>
+                    <option value="SPECIFIC">Employé spécifique</option>
+                  </select>
+                </div>
+                
+                {targetType === 'SPECIFIC' && (
+                  <div className="form-group">
+                    <label>Sélectionner l'employé</label>
+                    <select className="form-input" value={targetEmployee} onChange={e => setTargetEmployee(e.target.value)}>
+                      <option value="">-- Choisir un collaborateur --</option>
+                      {employees.map(emp => (
+                        <option key={emp._id} value={emp._id}>{emp.matricule} - {emp.nom} {emp.prenom}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                
+                <div className="form-group">
+                  <label>Titre de la notification</label>
+                  <input className="form-input" type="text" value={notifTitle} onChange={e => setNotifTitle(e.target.value)} placeholder="Ex: Réunion de service..." required />
+                </div>
+                
+                <div className="form-group">
+                  <label>Message</label>
+                  <textarea className="form-input" rows={3} value={notifBody} onChange={e => setNotifBody(e.target.value)} placeholder="Détails du message..." required style={{ resize: 'vertical' }} />
+                </div>
+                
+                <div className="form-group">
+                  <label>Type de notification</label>
+                  <select className="form-input" value={notifType} onChange={e => setNotifType(e.target.value)}>
+                    <option value="SYSTEM">Information (Général)</option>
+                    <option value="WARNING">Avertissement / Urgent</option>
+                    <option value="SUCCESS">Succès / Validation</option>
+                  </select>
+                </div>
+                
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
+                  <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>Annuler</button>
+                  <button type="submit" className="btn-primary" disabled={sending} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {sending ? 'Envoi en cours...' : <><Send size={16} /> Envoyer</>}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

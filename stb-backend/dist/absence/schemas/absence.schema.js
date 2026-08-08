@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AbsenceSchema = exports.Absence = exports.AbsenceType = exports.AbsenceStatus = void 0;
+exports.AbsenceSchema = exports.Absence = exports.AbsenceApprovalStep = exports.AbsenceType = exports.AbsenceStatus = void 0;
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 var AbsenceStatus;
@@ -28,6 +28,42 @@ var AbsenceType;
     AbsenceType["DELEGATION"] = "DELEGATION";
     AbsenceType["MISSION"] = "MISSION";
 })(AbsenceType || (exports.AbsenceType = AbsenceType = {}));
+let AbsenceApprovalStep = class AbsenceApprovalStep {
+    approverId;
+    approverName;
+    level;
+    decision;
+    date;
+    comment;
+};
+exports.AbsenceApprovalStep = AbsenceApprovalStep;
+__decorate([
+    (0, mongoose_1.Prop)({ type: mongoose_2.Types.ObjectId, ref: 'Employee' }),
+    __metadata("design:type", mongoose_2.Types.ObjectId)
+], AbsenceApprovalStep.prototype, "approverId", void 0);
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", String)
+], AbsenceApprovalStep.prototype, "approverName", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Number }),
+    __metadata("design:type", Number)
+], AbsenceApprovalStep.prototype, "level", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ default: 'PENDING' }),
+    __metadata("design:type", String)
+], AbsenceApprovalStep.prototype, "decision", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ default: null }),
+    __metadata("design:type", Date)
+], AbsenceApprovalStep.prototype, "date", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ default: '' }),
+    __metadata("design:type", String)
+], AbsenceApprovalStep.prototype, "comment", void 0);
+exports.AbsenceApprovalStep = AbsenceApprovalStep = __decorate([
+    (0, mongoose_1.Schema)({ _id: false })
+], AbsenceApprovalStep);
 let Absence = class Absence extends mongoose_2.Document {
     employeeId;
     type;
@@ -38,9 +74,8 @@ let Absence = class Absence extends mongoose_2.Document {
     pieceJointe;
     status;
     managerId;
-    n1ApprovedBy;
-    n1ApprovedAt;
-    n1Commentaire;
+    approvalHistory;
+    currentApproverId;
     rhApprovedBy;
     rhApprovedAt;
     rhCommentaire;
@@ -86,17 +121,13 @@ __decorate([
     __metadata("design:type", mongoose_2.Types.ObjectId)
 ], Absence.prototype, "managerId", void 0);
 __decorate([
+    (0, mongoose_1.Prop)({ type: [Object], default: [] }),
+    __metadata("design:type", Array)
+], Absence.prototype, "approvalHistory", void 0);
+__decorate([
     (0, mongoose_1.Prop)({ type: mongoose_2.Types.ObjectId, ref: 'Employee', default: null }),
     __metadata("design:type", mongoose_2.Types.ObjectId)
-], Absence.prototype, "n1ApprovedBy", void 0);
-__decorate([
-    (0, mongoose_1.Prop)({ default: null }),
-    __metadata("design:type", Date)
-], Absence.prototype, "n1ApprovedAt", void 0);
-__decorate([
-    (0, mongoose_1.Prop)({ default: '' }),
-    __metadata("design:type", String)
-], Absence.prototype, "n1Commentaire", void 0);
+], Absence.prototype, "currentApproverId", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ type: mongoose_2.Types.ObjectId, ref: 'Employee', default: null }),
     __metadata("design:type", mongoose_2.Types.ObjectId)
@@ -127,4 +158,5 @@ exports.Absence = Absence = __decorate([
 exports.AbsenceSchema = mongoose_1.SchemaFactory.createForClass(Absence);
 exports.AbsenceSchema.index({ employeeId: 1, status: 1 });
 exports.AbsenceSchema.index({ managerId: 1, status: 1 });
+exports.AbsenceSchema.index({ currentApproverId: 1, status: 1 });
 //# sourceMappingURL=absence.schema.js.map

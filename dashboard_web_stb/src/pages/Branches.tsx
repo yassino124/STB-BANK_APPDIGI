@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Plus, MapPin, Phone, Mail, Search } from 'lucide-react';
+import { Plus, MapPin, Search, Trash2, Building } from 'lucide-react';
 import api from '../api/axios';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Branch {
   _id: string;
@@ -18,7 +18,7 @@ interface Branch {
 
 const Branches = () => {
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ name: '', code: '', address: '', city: '', country: '', phone: '', email: '' });
@@ -34,7 +34,7 @@ const Branches = () => {
     } catch (e) {
       console.error(e);
     } finally {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 500);
     }
   };
 
@@ -51,7 +51,7 @@ const Branches = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this branch?')) return;
+    if (!confirm('Voulez-vous vraiment supprimer cette agence ?')) return;
     try {
       await api.delete(`/branches/${id}`);
       fetchBranches();
@@ -62,190 +62,186 @@ const Branches = () => {
 
   const filtered = branches.filter((b) =>
     b.name.toLowerCase().includes(search.toLowerCase()) ||
-    b.city.toLowerCase().includes(search.toLowerCase())
+    b.city.toLowerCase().includes(search.toLowerCase()) ||
+    b.code.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      
+      {/* ── Header ── */}
+      <div className="glass-card" style={{
+        background: 'linear-gradient(135deg, rgba(16,185,129,0.1) 0%, rgba(10,17,33,0.9) 100%)',
+        padding: '2rem',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '1rem'
+      }}>
         <div>
-          <h1 className="text-3xl font-bold text-white">Branches</h1>
-          <p className="text-slate-400 mt-1">Manage bank branches and locations</p>
+          <h1 className="page-title" style={{ marginBottom: 4 }}>Agences</h1>
+          <p className="page-subtitle">Gérez les succursales et points de vente</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition"
-        >
-          <Plus size={18} />
-          New Branch
+        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+          <Plus size={18} /> Nouvelle Agence
         </button>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-        <input
-          type="text"
-          placeholder="Search branches..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
-        />
-      </div>
-
-      {/* Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map((branch, i) => (
-          <motion.div
-            key={branch._id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
-            className="bg-slate-800/50 border border-slate-700 rounded-xl p-5 hover:border-slate-600 transition"
-          >
-            <div className="flex items-start justify-between mb-3">
-              <div>
-                <h3 className="text-white font-semibold">{branch.name}</h3>
-                <p className="text-slate-400 text-sm">{branch.code}</p>
-              </div>
-              <span
-                className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  branch.isActive
-                    ? 'bg-emerald-500/10 text-emerald-400'
-                    : 'bg-red-500/10 text-red-400'
-                }`}
-              >
-                {branch.isActive ? 'Active' : 'Inactive'}
-              </span>
-            </div>
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center gap-2 text-slate-400">
-                <MapPin size={14} />
-                {branch.address}, {branch.city}, {branch.country}
-              </div>
-              <div className="flex items-center gap-2 text-slate-400">
-                <Phone size={14} />
-                {branch.phone}
-              </div>
-              <div className="flex items-center gap-2 text-slate-400">
-                <Mail size={14} />
-                {branch.email}
-              </div>
-            </div>
-            <div className="mt-4 flex gap-2">
-              <button
-                onClick={() => handleDelete(branch._id)}
-                className="text-red-400 hover:text-red-300 text-sm"
-              >
-                Delete
-              </button>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold text-white mb-4">New Branch</h2>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm text-slate-400 mb-1">Name</label>
-                  <input
-                    type="text"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-slate-400 mb-1">Code</label>
-                  <input
-                    type="text"
-                    value={form.code}
-                    onChange={(e) => setForm({ ...form, code: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                    required
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm text-slate-400 mb-1">Address</label>
-                <input
-                  type="text"
-                  value={form.address}
-                  onChange={(e) => setForm({ ...form, address: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm text-slate-400 mb-1">City</label>
-                  <input
-                    type="text"
-                    value={form.city}
-                    onChange={(e) => setForm({ ...form, city: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-slate-400 mb-1">Country</label>
-                  <input
-                    type="text"
-                    value={form.country}
-                    onChange={(e) => setForm({ ...form, country: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                    required
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm text-slate-400 mb-1">Phone</label>
-                  <input
-                    type="text"
-                    value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-slate-400 mb-1">Email</label>
-                  <input
-                    type="email"
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                    required
-                  />
-                </div>
-              </div>
-              <div className="flex gap-3 justify-end">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-slate-400 hover:text-white transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition"
-                >
-                  Create
-                </button>
-              </div>
-            </form>
+      {loading ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+            <div className="glass-card-sm" style={{ height: 100, background: 'rgba(255,255,255,0.03)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+            <div className="glass-card-sm" style={{ height: 100, background: 'rgba(255,255,255,0.03)', animation: 'pulse 1.5s ease-in-out infinite' }} />
           </div>
+          <div className="glass-card" style={{ height: 400, background: 'rgba(255,255,255,0.03)', animation: 'pulse 1.5s ease-in-out infinite' }} />
         </div>
+      ) : (
+        <>
+          {/* ── Stats & Search ── */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+            <div className="glass-card-sm" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div className="stat-icon si-green"><Building size={24} /></div>
+              <div>
+                <p style={{ color: 'var(--text-secondary)', margin: '0 0 4px', fontSize: '0.9rem' }}>Total Agences</p>
+                <h3 style={{ margin: 0, fontSize: '1.8rem' }}>{branches.length}</h3>
+              </div>
+            </div>
+
+            <div className="glass-card-sm" style={{ display: 'flex', alignItems: 'center', gridColumn: '1 / -1' }}>
+              <Search size={20} style={{ color: 'var(--text-muted)', marginRight: '1rem' }} />
+              <input
+                type="text"
+                placeholder="Rechercher une agence par nom, code ou ville..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                style={{
+                  background: 'transparent', border: 'none', color: '#fff', 
+                  width: '100%', fontSize: '1rem', outline: 'none'
+                }}
+              />
+            </div>
+          </div>
+
+          {/* ── Cards Grid ── */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+            {filtered.map((branch) => (
+              <div key={branch._id} className="glass-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <h3 style={{ margin: '0 0 0.5rem', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      {branch.name}
+                    </h3>
+                    <span className="badge" style={{ background: 'var(--stb-blue-100)', color: 'var(--stb-blue-400)' }}>
+                      Code: {branch.code}
+                    </span>
+                  </div>
+                  {branch.isActive ? (
+                    <span className="badge" style={{ background: 'var(--success-bg)', color: 'var(--success)' }}>Active</span>
+                  ) : (
+                    <span className="badge" style={{ background: 'var(--danger-bg)', color: 'var(--danger)' }}>Inactive</span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                    <MapPin size={16} style={{ marginTop: 2, color: 'var(--text-muted)' }} />
+                    <span>{branch.address}<br/>{branch.city}, {branch.country}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem', marginTop: '0.5rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Téléphone</span>
+                      <span>{branch.phone || '-'}</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'right' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Email</span>
+                      <span>{branch.email || '-'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'auto', paddingTop: '1rem' }}>
+                  <button className="btn btn-secondary btn-sm" onClick={() => handleDelete(branch._id)} style={{ color: 'var(--danger)', padding: '0.4rem 0.8rem' }}>
+                    <Trash2 size={16} style={{ marginRight: '0.5rem' }} /> Supprimer
+                  </button>
+                </div>
+              </div>
+            ))}
+            
+            {filtered.length === 0 && (
+              <div style={{ gridColumn: '1 / -1', padding: '4rem 2rem', textAlign: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: 16, border: '1px dashed var(--border)' }}>
+                <Building size={48} style={{ color: 'var(--text-muted)', margin: '0 auto 1rem', opacity: 0.5 }} />
+                <h3 style={{ color: 'var(--text-secondary)' }}>Aucune agence trouvée</h3>
+              </div>
+            )}
+          </div>
+        </>
       )}
+
+      {/* ── Modal Creation ── */}
+      <AnimatePresence>
+        {showModal && (
+          <div style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', 
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+            backdropFilter: 'blur(4px)'
+          }}>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }} 
+              animate={{ opacity: 1, scale: 1 }} 
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="glass-card" 
+              style={{ width: '100%', maxWidth: 600, padding: '2rem', maxHeight: '90vh', overflowY: 'auto' }}
+            >
+              <h2 style={{ margin: '0 0 1.5rem', fontSize: '1.5rem' }}>Nouvelle Agence</h2>
+              <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: 8, color: 'var(--text-secondary)' }}>Code</label>
+                    <input type="text" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} style={{ width: '100%', padding: '0.8rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', color: '#fff' }} required />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: 8, color: 'var(--text-secondary)' }}>Nom</label>
+                    <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} style={{ width: '100%', padding: '0.8rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', color: '#fff' }} required />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: 8, color: 'var(--text-secondary)' }}>Adresse complète</label>
+                  <input type="text" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} style={{ width: '100%', padding: '0.8rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', color: '#fff' }} required />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: 8, color: 'var(--text-secondary)' }}>Ville</label>
+                    <input type="text" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} style={{ width: '100%', padding: '0.8rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', color: '#fff' }} required />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: 8, color: 'var(--text-secondary)' }}>Pays</label>
+                    <input type="text" value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} style={{ width: '100%', padding: '0.8rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', color: '#fff' }} required />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: 8, color: 'var(--text-secondary)' }}>Téléphone</label>
+                    <input type="text" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} style={{ width: '100%', padding: '0.8rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', color: '#fff' }} required />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: 8, color: 'var(--text-secondary)' }}>Email</label>
+                    <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={{ width: '100%', padding: '0.8rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', color: '#fff' }} required />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Annuler</button>
+                  <button type="submit" className="btn btn-primary">Créer</button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

@@ -17,10 +17,14 @@ const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 const notification_schema_1 = require("./schemas/notification.schema");
+const employee_schema_1 = require("../employees/employee.schema");
+const employee_status_enum_1 = require("../common/enums/employee-status.enum");
 let NotificationsService = class NotificationsService {
     notifModel;
-    constructor(notifModel) {
+    employeeModel;
+    constructor(notifModel, employeeModel) {
         this.notifModel = notifModel;
+        this.employeeModel = employeeModel;
     }
     async sendToEmployee(employeeId, title, body, type = notification_schema_1.NotificationType.SYSTEM, data = {}) {
         const notif = new this.notifModel({
@@ -31,6 +35,19 @@ let NotificationsService = class NotificationsService {
             data,
         });
         return notif.save();
+    }
+    async sendCustomNotification(dto) {
+        if (dto.employeeId) {
+            return this.sendToEmployee(dto.employeeId, dto.title, dto.body, dto.type);
+        }
+        const employees = await this.employeeModel.find({ status: employee_status_enum_1.EmployeeStatus.ACTIVE }).select('_id').exec();
+        const notifs = employees.map(emp => ({
+            employeeId: emp._id,
+            title: dto.title,
+            body: dto.body,
+            type: dto.type,
+        }));
+        return this.notifModel.insertMany(notifs);
     }
     async getMyNotifications(employeeId) {
         return this.notifModel.find({ employeeId: new mongoose_2.Types.ObjectId(employeeId) }).sort({ createdAt: -1 }).limit(50).exec();
@@ -49,6 +66,8 @@ exports.NotificationsService = NotificationsService;
 exports.NotificationsService = NotificationsService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(notification_schema_1.Notification.name)),
-    __metadata("design:paramtypes", [mongoose_2.Model])
+    __param(1, (0, mongoose_1.InjectModel)(employee_schema_1.Employee.name)),
+    __metadata("design:paramtypes", [mongoose_2.Model,
+        mongoose_2.Model])
 ], NotificationsService);
 //# sourceMappingURL=notifications.service.js.map

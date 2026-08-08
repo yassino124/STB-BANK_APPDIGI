@@ -55,7 +55,7 @@ class MainScreenState extends State<MainScreen> {
       const RHHubScreen(),           // 1 - RH Hub
       const AnnuaireScreen(),        // 2 - Annuaire (Center)
       const CopilotScreen(),         // 3 - Copilot AI
-      const ProfileScreen(),         // Profil (4 for non-managers)
+      const ProfileScreen(),         // 4 - Profil (for non-managers)
       const BudgetsScreen(),         // 5 - Budgets
       const QrPaymentsScreen(),      // 6 - QR Payments
       const BillsScreen(),            // 7 - Bills
@@ -64,12 +64,9 @@ class MainScreenState extends State<MainScreen> {
       const ConversationsScreen(),    // 10 - Conversations
     ];
 
-    // Direction (Manager) gets Team Validation + Absence tabs
+    // Direction (Manager) gets Team Validation tab (Absence removed - accessible from Congés screen)
     if (p.isManager) {
       base.insert(4, const TeamValidationScreen()); // 4 - Team Validation (shifts Profile to 5)
-      base.insert(5, const AbsenceRequestScreen()); // 5 - Absence Request (shifts Budgets to 6)
-    } else {
-      base.insert(5, const AbsenceRequestScreen()); // 5 - Absence Request (all employees)
     }
 
     // Finance role gets Finance tab
@@ -256,12 +253,7 @@ class MainScreenState extends State<MainScreen> {
                          _navItem(Icons.psychology_rounded, Icons.psychology_outlined, 'Copilot', 3, dk),
                          if (p.isManager)
                            _navItem(Icons.groups_rounded, Icons.groups_outlined, 'Team', 4, dk, badgeCount: _pendingTeamCount),
-                         _navItem(Icons.calendar_today_rounded, Icons.calendar_today_outlined, 'Absence', p.isManager ? 5 : 4, dk),
-                         if (p.isFinance)
-                           _navItem(Icons.account_balance_wallet_rounded, Icons.account_balance_wallet_outlined, 'Finance', p.isManager ? 6 : 5, dk),
-                         if (p.isAgence)
-                           _navItem(Icons.business_rounded, Icons.business_outlined, 'Agence', p.isManager ? (p.isFinance ? 7 : 6) : (p.isFinance ? 6 : 5), dk),
-                         _navItem(Icons.person_rounded, Icons.person_outline_rounded, 'Profil', p.isManager ? (p.isFinance ? (p.isAgence ? 7 : 6) : 5) : (p.isFinance ? (p.isAgence ? 6 : 5) : 4), dk),
+                         _navItem(Icons.person_rounded, Icons.person_outline_rounded, 'Profil', p.isManager ? 5 : 4, dk),
                       ],
                     ),
                   ),
@@ -475,7 +467,7 @@ class MainScreenState extends State<MainScreen> {
                                   ],
                                 ),
                                 Text(
-                                  '**** ${(p.userProfile?['compteRIB'] ?? '8829').toString().substring((p.userProfile?['compteRIB'] ?? '8829').toString().length - 4)}',
+                                  '**** ${(p.userProfile?['compteRIB'] ?? '0000').toString().length >= 4 ? (p.userProfile?['compteRIB'] ?? '0000').toString().substring((p.userProfile?['compteRIB'] ?? '0000').toString().length - 4) : '0000'}',
                                   style: TextStyle(color: textCol, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1),
                                 ),
                               ],
@@ -602,7 +594,7 @@ class MainScreenState extends State<MainScreen> {
                              _divider(borderCol),
                              _drawerItem(Icons.wallet_rounded, "Budgets", "", textCol, mutedCol, () {
                                Navigator.pop(context);
-                               _navigate(5);
+                               Navigator.push(context, _slide(const BudgetsScreen()));
                              }),
                              _divider(borderCol),
                              _drawerItem(Icons.description_rounded, "Documents", "📄", textCol, mutedCol, () {
@@ -710,10 +702,19 @@ class MainScreenState extends State<MainScreen> {
                                AppTheme.coralRed,
                                mutedCol,
                                () async {
-                                 Navigator.pop(context);
+                                 // Close drawer first
+                                 if (context.mounted) Navigator.pop(context);
+                                 
+                                 // Give time for drawer animation to complete
+                                 await Future.delayed(const Duration(milliseconds: 300));
+                                 
                                  HapticFeedback.mediumImpact();
+                                 
+                                 // Logout and clear session
                                  await p.logout();
-                                 if (!mounted) return;
+                                 
+                                 // Exit app after logout
+                                 await Future.delayed(const Duration(milliseconds: 100));
                                  if (Platform.isAndroid) {
                                    SystemNavigator.pop();
                                  } else {

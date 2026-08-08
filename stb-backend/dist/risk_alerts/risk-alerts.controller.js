@@ -16,6 +16,11 @@ exports.RiskAlertsController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
 const risk_alerts_service_1 = require("./risk-alerts.service");
+const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const roles_guard_1 = require("../common/guards/roles.guard");
+const roles_decorator_1 = require("../common/decorators/roles.decorator");
+const role_enum_1 = require("../common/enums/role.enum");
+const SECURITY_ROLES = [role_enum_1.Role.IT, role_enum_1.Role.ADMIN, role_enum_1.Role.SUPER_ADMIN, role_enum_1.Role.RH, role_enum_1.Role.FINANCE, role_enum_1.Role.MANAGER];
 let RiskAlertsController = class RiskAlertsController {
     riskAlertsService;
     constructor(riskAlertsService) {
@@ -24,11 +29,20 @@ let RiskAlertsController = class RiskAlertsController {
     create(data) {
         return this.riskAlertsService.create(data);
     }
-    findByEmployee(employeeId) {
-        return this.riskAlertsService.findByEmployee(employeeId);
+    findAll(limit = 50) {
+        return this.riskAlertsService.findAll(+limit);
+    }
+    getSummary() {
+        return this.riskAlertsService.getSummary();
+    }
+    getMonthlyStats(months = 6) {
+        return this.riskAlertsService.getMonthlyStats(+months);
     }
     findOpen() {
         return this.riskAlertsService.findOpen();
+    }
+    findByEmployee(employeeId) {
+        return this.riskAlertsService.findByEmployee(employeeId);
     }
     findOne(id) {
         return this.riskAlertsService.findOne(id);
@@ -40,6 +54,7 @@ let RiskAlertsController = class RiskAlertsController {
 exports.RiskAlertsController = RiskAlertsController;
 __decorate([
     (0, common_1.Post)(),
+    (0, roles_decorator_1.Roles)(role_enum_1.Role.IT, role_enum_1.Role.ADMIN, role_enum_1.Role.SUPER_ADMIN, role_enum_1.Role.FINANCE),
     (0, swagger_1.ApiOperation)({ summary: 'Create risk alert' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -48,21 +63,50 @@ __decorate([
 ], RiskAlertsController.prototype, "create", null);
 __decorate([
     (0, common_1.Get)(),
-    (0, swagger_1.ApiOperation)({ summary: 'List risk alerts' }),
-    __param(0, (0, common_1.Query)('employeeId')),
+    (0, roles_decorator_1.Roles)(...SECURITY_ROLES),
+    (0, swagger_1.ApiOperation)({ summary: '📋 List all risk alerts (populated with employee info)' }),
+    __param(0, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
-], RiskAlertsController.prototype, "findByEmployee", null);
+], RiskAlertsController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)('summary'),
+    (0, roles_decorator_1.Roles)(...SECURITY_ROLES),
+    (0, swagger_1.ApiOperation)({ summary: '📊 Get risk alert summary stats' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], RiskAlertsController.prototype, "getSummary", null);
+__decorate([
+    (0, common_1.Get)('monthly'),
+    (0, roles_decorator_1.Roles)(...SECURITY_ROLES),
+    (0, swagger_1.ApiOperation)({ summary: '📈 Monthly risk stats for Direction dashboard' }),
+    __param(0, (0, common_1.Query)('months')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], RiskAlertsController.prototype, "getMonthlyStats", null);
 __decorate([
     (0, common_1.Get)('open'),
-    (0, swagger_1.ApiOperation)({ summary: 'List open risk alerts' }),
+    (0, roles_decorator_1.Roles)(...SECURITY_ROLES),
+    (0, swagger_1.ApiOperation)({ summary: '🔴 List open risk alerts' }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], RiskAlertsController.prototype, "findOpen", null);
 __decorate([
+    (0, common_1.Get)('employee/:employeeId'),
+    (0, roles_decorator_1.Roles)(...SECURITY_ROLES),
+    (0, swagger_1.ApiOperation)({ summary: 'Get risk alerts for specific employee' }),
+    __param(0, (0, common_1.Param)('employeeId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], RiskAlertsController.prototype, "findByEmployee", null);
+__decorate([
     (0, common_1.Get)(':id'),
+    (0, roles_decorator_1.Roles)(...SECURITY_ROLES),
     (0, swagger_1.ApiOperation)({ summary: 'Get risk alert by ID' }),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
@@ -71,6 +115,7 @@ __decorate([
 ], RiskAlertsController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Patch)(':id/status'),
+    (0, roles_decorator_1.Roles)(...SECURITY_ROLES),
     (0, swagger_1.ApiOperation)({ summary: 'Update risk alert status' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)('status')),
@@ -81,6 +126,8 @@ __decorate([
 ], RiskAlertsController.prototype, "updateStatus", null);
 exports.RiskAlertsController = RiskAlertsController = __decorate([
     (0, swagger_1.ApiTags)('⚠️ Risk Alerts'),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, common_1.Controller)('risk-alerts'),
     __metadata("design:paramtypes", [risk_alerts_service_1.RiskAlertsService])
 ], RiskAlertsController);

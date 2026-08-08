@@ -77,4 +77,10 @@ export class HierarchyController {
   getMyInfo(@Request() req: any) {
     return this.hierarchyService.getChain(req.user.sub);
   }
+
+  @Get('my-team')
+  @ApiOperation({ summary: 'Get my direct reports (team members)' })
+  getMyTeam(@Request() req: any) {
+    return this.hierarchyService.getDirectReports(req.user.sub);
+  }
 }

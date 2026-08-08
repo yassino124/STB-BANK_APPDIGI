@@ -16,6 +16,7 @@ const notifications_consumer_1 = require("./notifications.consumer");
 const notifications_listener_1 = require("./notifications.listener");
 const notification_schema_1 = require("./schemas/notification.schema");
 const realtime_module_1 = require("../realtime/realtime.module");
+const employees_module_1 = require("../employees/employees.module");
 let NotificationsModule = class NotificationsModule {
 };
 exports.NotificationsModule = NotificationsModule;
@@ -27,6 +28,7 @@ exports.NotificationsModule = NotificationsModule = __decorate([
             }),
             mongoose_1.MongooseModule.forFeature([{ name: notification_schema_1.Notification.name, schema: notification_schema_1.NotificationSchema }]),
             realtime_module_1.RealtimeModule,
+            employees_module_1.EmployeesModule,
         ],
         providers: [notifications_service_1.NotificationsService, notifications_consumer_1.NotificationsConsumer, notifications_listener_1.NotificationsListener],
         controllers: [notifications_controller_1.NotificationsController],

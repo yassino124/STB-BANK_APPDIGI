@@ -10,25 +10,32 @@ const NewEmployee = () => {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
   const [successData, setSuccessData] = useState<{ matricule: string, defaultPassword: string } | null>(null);
-  const [managers, setManagers] = useState<Array<{ _id: string, prenom: string, nom: string, matricule: string }>>([]);
+  const [allEmployees, setAllEmployees] = useState<Array<{ _id: string, prenom: string, nom: string, matricule: string, roles: string[], poste?: string }>>([]);
+  const [departmentsList, setDepartmentsList] = useState<Array<{ _id: string, name: string }>>([]);
+  const [branchesList, setBranchesList] = useState<Array<{ _id: string, name: string }>>([]);
   
   useEffect(() => {
-    // Fetch managers list
-    const fetchManagers = async () => {
+    const fetchInitialData = async () => {
       try {
-        const res = await api.get('/employees/directory?search=');
-        // Filter employees who have MANAGER or RH role
-        const allEmployees = res.data;
-        const managersList = allEmployees.filter((emp: any) => 
-          emp.roles?.includes('MANAGER') || emp.roles?.includes('RH') || emp.roles?.includes('ADMIN')
-        );
-        setManagers(managersList);
+        const [empRes, deptRes, branchRes] = await Promise.all([
+          api.get('/employees/directory?search='),
+          api.get('/departments'),
+          api.get('/branches')
+        ]);
+        setAllEmployees(empRes.data || []);
+        setDepartmentsList(deptRes.data || []);
+        setBranchesList(branchRes.data || []);
       } catch (error) {
-        console.error('Error fetching managers:', error);
+        console.error('Error fetching initial data:', error);
       }
     };
-    fetchManagers();
+    fetchInitialData();
   }, []);
+  
+  // All employees can be assigned as N+1, N+2, N+3 — RH knows who is who
+  const managers = allEmployees;
+  const directors = allEmployees;
+  const allForChain = allEmployees;
   
   const [formData, setFormData] = useState({
     cin: '',
@@ -39,13 +46,17 @@ const NewEmployee = () => {
     phone: '',
     poste: '',
     departement: '',
+    service: '',
+    direction: '',
     agence: '',
     roles: ['EMPLOYEE'],
-    managerId: '', // N+1 Manager
-    soldeConges: 90,
+    managerId: '',      // Chef de Service / N+1 direct
+    directorId: '',     // Directeur de Département
+    centralDirectorId: '', // Directeur Central / DG
+    soldeConges: 30,
     creditsEnCours: 0,
     prime: 0,
-    salaireBase: 1200,
+    salaireBase: '', // Changed from 1200 to empty string for proper validation
     compteSolde: 0,
     avatar: '',
   });
@@ -75,11 +86,18 @@ const NewEmployee = () => {
   const prevStep = () => setStep(s => s - 1);
 
   const handleSubmit = async () => {
+    if (!formData.salaireBase || Number(formData.salaireBase) <= 0) {
+      toast.error("Veuillez saisir un salaire de base valide.");
+      return;
+    }
+    
     setLoading(true);
     try {
       const res = await api.post('/employees', {
         ...formData,
-        managerId: formData.managerId || null, // Send null if empty
+        managerId: formData.managerId || null,
+        directorId: formData.directorId || null,
+        centralDirectorId: formData.centralDirectorId || null,
         soldeConges: Number(formData.soldeConges),
         creditsEnCours: Number(formData.creditsEnCours),
         prime: Number(formData.prime),
@@ -280,8 +298,17 @@ const NewEmployee = () => {
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                 <div className="form-group">
-                  <label className="form-label">Département / Direction</label>
-                  <input type="text" name="departement" className="form-input" value={formData.departement} onChange={handleChange} />
+                  <label className="form-label">Direction / Département</label>
+                  <select name="direction" className="form-input" value={formData.direction} onChange={handleChange}>
+                    <option value="">Sélectionner un département</option>
+                    {departmentsList.map(dept => (
+                      <option key={dept._id} value={dept.name}>{dept.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Service</label>
+                  <input type="text" name="service" className="form-input" placeholder="Ex: Développement, Support..." value={formData.service} onChange={handleChange} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Poste</label>
@@ -289,13 +316,19 @@ const NewEmployee = () => {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Agence</label>
-                  <input type="text" name="agence" className="form-input" value={formData.agence} onChange={handleChange} />
+                  <select name="agence" className="form-input" value={formData.agence} onChange={handleChange}>
+                    <option value="">Sélectionner une agence (Optionnel)</option>
+                    {branchesList.map(branch => (
+                      <option key={branch._id} value={branch.name}>{branch.name}</option>
+                    ))}
+                  </select>
                 </div>
-                <div className="form-group">
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                   <label className="form-label">Profil d'accès (Rôles)</label>
                   <select name="roles" multiple className="form-input" style={{ height: '140px' }} value={formData.roles} onChange={handleRoleChange}>
                     <option value="EMPLOYEE">👤 Employé (Défaut)</option>
                     <option value="MANAGER">👔 Manager / Chef de Service</option>
+                    <option value="DIRECTOR">🏛️ Directeur de Département</option>
                     <option value="RH">🏢 Ressources Humaines</option>
                     <option value="AGENCE">🏦 Agence (Finance & Banque)</option>
                     <option value="FINANCE">💰 Finance</option>
@@ -303,19 +336,104 @@ const NewEmployee = () => {
                   </select>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Maintenez Ctrl/Cmd pour sélection multiple.</span>
                 </div>
-                <div className="form-group">
-                  <label className="form-label">👤 Manager / Direction (N+1)</label>
-                  <select name="managerId" className="form-input" value={formData.managerId} onChange={handleChange}>
-                    <option value="">Aucun (Direction Générale)</option>
-                    {managers.map(mgr => (
-                      <option key={mgr._id} value={mgr._id}>
-                        {mgr.prenom} {mgr.nom} ({mgr.matricule})
-                      </option>
-                    ))}
-                  </select>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    Le manager validera les congés et demandes de cet employé
-                  </span>
+              </div>
+
+              {/* Hiérarchie - N+X Workflow */}
+              <div style={{ background: 'linear-gradient(135deg, rgba(37,99,235,0.08), rgba(139,92,246,0.08))', border: '1px solid rgba(37,99,235,0.2)', borderRadius: '16px', padding: '1.5rem', marginTop: '1.5rem' }}>
+                <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', color: '#60A5FA', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  🏗️ Hiérarchie d'Approbation — Workflow N+X
+                </h4>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.2rem', lineHeight: 1.5 }}>
+                  Choisissez parmi les <strong style={{ color: '#60A5FA' }}>{allEmployees.length} collaborateurs</strong> existants. Chaque demande de congé remontera automatiquement les niveaux définis ici, jusqu'aux RH.
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                  <div className="form-group">
+                    <label className="form-label" style={{ color: '#60A5FA' }}>👔 Chef de Service (N+1)</label>
+                    <select name="managerId" className="form-input" value={formData.managerId} onChange={handleChange} style={{ fontSize: '0.85rem' }}>
+                      <option value="">— Aucun (direct RH) —</option>
+                      {allEmployees
+                        .filter(e => e._id !== formData.directorId && e._id !== formData.centralDirectorId)
+                        .map(mgr => (
+                          <option key={mgr._id} value={mgr._id}>
+                            {mgr.prenom} {mgr.nom}{mgr.poste ? ` — ${mgr.poste}` : ''} [{mgr.matricule}]
+                          </option>
+                        ))}
+                    </select>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>1er validateur de congés</span>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label" style={{ color: '#8B5CF6' }}>🏛️ Directeur (N+2)</label>
+                    <select name="directorId" className="form-input" value={formData.directorId} onChange={handleChange} style={{ fontSize: '0.85rem' }}>
+                      <option value="">— Aucun —</option>
+                      {allEmployees
+                        .filter(e => e._id !== formData.managerId && e._id !== formData.centralDirectorId)
+                        .map(d => (
+                          <option key={d._id} value={d._id}>
+                            {d.prenom} {d.nom}{d.poste ? ` — ${d.poste}` : ''} [{d.matricule}]
+                          </option>
+                        ))}
+                    </select>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>2ème validateur (après N+1)</span>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label" style={{ color: '#EC4899' }}>🏢 Directeur Central (N+3)</label>
+                    <select name="centralDirectorId" className="form-input" value={formData.centralDirectorId} onChange={handleChange} style={{ fontSize: '0.85rem' }}>
+                      <option value="">— Aucun —</option>
+                      {allEmployees
+                        .filter(e => e._id !== formData.managerId && e._id !== formData.directorId)
+                        .map(d => (
+                          <option key={d._id} value={d._id}>
+                            {d.prenom} {d.nom}{d.poste ? ` — ${d.poste}` : ''} [{d.matricule}]
+                          </option>
+                        ))}
+                    </select>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Dernier validateur avant RH</span>
+                  </div>
+                </div>
+
+                {/* Live Workflow Preview */}
+                <div style={{ marginTop: '1.2rem', padding: '1rem', background: 'rgba(15,23,42,0.6)', borderRadius: '12px', border: '1px solid rgba(96,165,250,0.15)' }}>
+                  <p style={{ fontSize: '0.72rem', color: '#94A3B8', margin: '0 0 0.6rem 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>📊 Aperçu du Workflow</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', fontSize: '0.8rem' }}>
+                    <span style={{ padding: '0.3rem 0.7rem', background: 'rgba(59,130,246,0.2)', borderRadius: '20px', color: '#93C5FD', fontWeight: 600 }}>
+                      👤 Employé
+                    </span>
+                    {formData.managerId && (() => {
+                      const m = allEmployees.find(e => e._id === formData.managerId);
+                      return m ? <>
+                        <span style={{ color: '#475569' }}>→</span>
+                        <span style={{ padding: '0.3rem 0.7rem', background: 'rgba(37,99,235,0.2)', borderRadius: '20px', color: '#60A5FA', fontWeight: 600 }}>
+                          👔 {m.prenom} {m.nom}
+                        </span>
+                      </> : null;
+                    })()}
+                    {formData.directorId && (() => {
+                      const d = allEmployees.find(e => e._id === formData.directorId);
+                      return d ? <>
+                        <span style={{ color: '#475569' }}>→</span>
+                        <span style={{ padding: '0.3rem 0.7rem', background: 'rgba(139,92,246,0.2)', borderRadius: '20px', color: '#A78BFA', fontWeight: 600 }}>
+                          🏛️ {d.prenom} {d.nom}
+                        </span>
+                      </> : null;
+                    })()}
+                    {formData.centralDirectorId && (() => {
+                      const c = allEmployees.find(e => e._id === formData.centralDirectorId);
+                      return c ? <>
+                        <span style={{ color: '#475569' }}>→</span>
+                        <span style={{ padding: '0.3rem 0.7rem', background: 'rgba(236,72,153,0.2)', borderRadius: '20px', color: '#F472B6', fontWeight: 600 }}>
+                          🏢 {c.prenom} {c.nom}
+                        </span>
+                      </> : null;
+                    })()}
+                    <span style={{ color: '#475569' }}>→</span>
+                    <span style={{ padding: '0.3rem 0.7rem', background: 'rgba(16,185,129,0.2)', borderRadius: '20px', color: '#34D399', fontWeight: 600 }}>
+                      🏢 RH
+                    </span>
+                    <span style={{ color: '#475569' }}>→</span>
+                    <span style={{ padding: '0.3rem 0.7rem', background: 'rgba(16,185,129,0.3)', borderRadius: '20px', color: '#6EE7B7', fontWeight: 700 }}>
+                      ✅ Approuvé
+                    </span>
+                  </div>
                 </div>
               </div>
               
@@ -343,9 +461,9 @@ const NewEmployee = () => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
                 <div className="form-group">
                   <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <TrendingUp size={14} /> Salaire de Base (TND)
+                    <TrendingUp size={14} /> Salaire de Base (TND) <span style={{ color: '#ef4444' }}>*</span>
                   </label>
-                  <input type="number" name="salaireBase" className="form-input" value={formData.salaireBase} onChange={handleChange} min="0" step="50" />
+                  <input type="number" name="salaireBase" className="form-input" value={formData.salaireBase} onChange={handleChange} min="0" step="50" required />
                   <span style={{ fontSize: '0.75rem', color: '#10b981', marginTop: '0.3rem', display: 'block' }}>
                     → Net après charges: {Math.round(Number(formData.salaireBase) * (1 - 0.0918 - 0.15))} TND/mois
                   </span>

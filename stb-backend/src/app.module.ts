@@ -13,6 +13,7 @@ import { SessionsModule } from './sessions/sessions.module';
 import { AuditModule } from './audit/audit.module';
 import { OtpModule } from './otp/otp.module';
 import { CopilotModule } from './copilot/copilot.module';
+import { AiModule } from './ai/ai.module';
 
 // HR & Finance Modules
 import { RequestsModule } from './requests/requests.module';
@@ -69,6 +70,7 @@ import { HierarchyModule } from './hierarchy/hierarchy.module';
 // New Modules
 import { AbsenceModule } from './absence/absence.module';
 import { FinanceModule } from './finance/finance.module';
+
 
 // Infrastructure
 import { QueueModule } from './queue/queue.module';
@@ -131,9 +133,11 @@ import { DatabaseModule } from './database/database.module';
     AuditModule,
     OtpModule,
     CopilotModule,
+    AiModule,
     HierarchyModule,
     AbsenceModule,
     FinanceModule,
+
 
     // ─── HR & Finance ───────────────────────────────────────────────
     RequestsModule,

@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
 
 const Topbar = () => {
-  const { user } = useAuth();
+  const { user, primaryRole } = useAuth();
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   return (
@@ -64,11 +64,32 @@ const Topbar = () => {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
           <div style={{ textAlign: 'right' }}>
-            <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>{user?.matricule || 'Admin RH'}</p>
-            <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--stb-blue-400)', fontWeight: 600 }}>Super Administrateur</p>
+            <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>{user?.matricule || 'Admin'}</p>
+            <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--stb-blue-400)', fontWeight: 600 }}>{primaryRole || 'Utilisateur'}</p>
           </div>
-          <div className="avatar avatar-md" style={{ border: '2px solid var(--border-blue)' }}>
-            AD
+          <div className="avatar avatar-md" style={{ border: '2px solid var(--border-blue)', overflow: 'hidden', position: 'relative' }}>
+            {user?._id ? (
+              <img
+                src={`/api/v1/employees/${user._id}/avatar`}
+                alt={user?.matricule || 'User'}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  const parent = e.currentTarget.parentElement;
+                  if (parent && !parent.querySelector('span')) {
+                    const span = document.createElement('span');
+                    span.style.cssText = 'font-size:0.85rem;font-weight:800;color:#fff';
+                    const mat = user?.matricule || 'AD';
+                    span.textContent = mat.slice(0, 2).toUpperCase();
+                    parent.appendChild(span);
+                  }
+                }}
+              />
+            ) : (
+              <span style={{ fontSize: '0.85rem', fontWeight: 800 }}>
+                {(user?.matricule || 'AD').slice(0, 2).toUpperCase()}
+              </span>
+            )}
           </div>
         </div>
       </div>

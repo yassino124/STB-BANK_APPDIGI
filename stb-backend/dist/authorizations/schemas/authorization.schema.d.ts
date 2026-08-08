@@ -119,6 +119,15 @@ export declare const AuthorizationSchema: import("mongoose").Schema<Authorizatio
     }, "id"> & import("mongoose").HydratedDocumentOverrides<{
         id: string;
     }>> | undefined;
+    approverId?: import("mongoose").SchemaDefinitionProperty<Types.ObjectId | null, Authorization, Document<unknown, {}, Authorization, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Authorization & Required<{
+        _id: Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & import("mongoose").HydratedDocumentOverrides<{
+        id: string;
+    }>> | undefined;
     commentaire?: import("mongoose").SchemaDefinitionProperty<string, Authorization, Document<unknown, {}, Authorization, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<Authorization & Required<{
@@ -165,15 +174,6 @@ export declare const AuthorizationSchema: import("mongoose").Schema<Authorizatio
         id: string;
     }>> | undefined;
     heureFin?: import("mongoose").SchemaDefinitionProperty<string, Authorization, Document<unknown, {}, Authorization, {
-        id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Authorization & Required<{
-        _id: Types.ObjectId;
-    }> & {
-        __v: number;
-    }, "id"> & import("mongoose").HydratedDocumentOverrides<{
-        id: string;
-    }>> | undefined;
-    approverId?: import("mongoose").SchemaDefinitionProperty<Types.ObjectId | null, Authorization, Document<unknown, {}, Authorization, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<Authorization & Required<{
         _id: Types.ObjectId;

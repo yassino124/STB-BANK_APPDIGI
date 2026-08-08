@@ -34,4 +34,24 @@ export declare class AccountsController {
     } & {
         id: string;
     }) | null>;
+    deposit(id: string, body: {
+        amount: number;
+    }): Promise<{
+        success: boolean;
+        message: string;
+        account: (import("mongoose").Document<unknown, {}, import("./schemas/account.schema").Account, {}, import("mongoose").DefaultSchemaOptions> & import("./schemas/account.schema").Account & {
+            _id: import("mongoose").Types.ObjectId;
+        } & {
+            __v: number;
+        } & {
+            id: string;
+        }) | null;
+        transaction: import("mongoose").Document<unknown, {}, import("../transactions/schemas/transaction.schema").Transaction, {}, import("mongoose").DefaultSchemaOptions> & import("../transactions/schemas/transaction.schema").Transaction & {
+            _id: import("mongoose").Types.ObjectId;
+        } & {
+            __v: number;
+        } & {
+            id: string;
+        };
+    }>;
 }

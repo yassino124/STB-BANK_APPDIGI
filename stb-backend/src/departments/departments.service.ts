@@ -20,7 +20,7 @@ export class DepartmentsService {
   }
 
   async findAll() {
-    return this.departmentModel.find().sort({ name: 1 }).exec();
+    return this.departmentModel.find().populate('managerId', 'nom prenom matricule').sort({ name: 1 }).exec();
   }
 
   async findOne(id: string) {

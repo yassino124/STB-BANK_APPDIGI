@@ -79,6 +79,30 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
                 SliverToBoxAdapter(child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 60, 20, 0),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    // Back button
+                    GestureDetector(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        Navigator.pop(context);
+                      },
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: dk ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: dk ? Colors.white.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.08),
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.arrow_back_rounded,
+                          color: dk ? Colors.white : const Color(0xFF0F172A),
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
                     Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text('Budgets & Épargne', style: GoogleFonts.outfit(

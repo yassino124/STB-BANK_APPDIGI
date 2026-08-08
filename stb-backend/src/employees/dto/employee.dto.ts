@@ -111,6 +111,26 @@ export class CreateEmployeeDto {
   @IsOptional()
   @IsString()
   branchId?: string;
+
+  @ApiPropertyOptional({ example: 'Développement' })
+  @IsOptional()
+  @IsString()
+  service?: string;
+
+  @ApiPropertyOptional({ example: 'Direction Informatique' })
+  @IsOptional()
+  @IsString()
+  direction?: string;
+
+  @ApiPropertyOptional({ example: '507f1f77bcf86cd799439014', description: 'ID du directeur (N+2)' })
+  @IsOptional()
+  @IsString()
+  directorId?: string;
+
+  @ApiPropertyOptional({ example: '507f1f77bcf86cd799439015', description: 'ID du directeur central (N+3)' })
+  @IsOptional()
+  @IsString()
+  centralDirectorId?: string;
 }
 
 export class UpdateEmployeeFinancialsDto {

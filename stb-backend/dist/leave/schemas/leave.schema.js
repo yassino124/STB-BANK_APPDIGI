@@ -14,8 +14,7 @@ const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 var LeaveStatus;
 (function (LeaveStatus) {
-    LeaveStatus["PENDING_N1"] = "PENDING_N1";
-    LeaveStatus["APPROVED_N1"] = "APPROVED_N1";
+    LeaveStatus["PENDING_MANAGER"] = "PENDING_MANAGER";
     LeaveStatus["PENDING_RH"] = "PENDING_RH";
     LeaveStatus["APPROVED"] = "APPROVED";
     LeaveStatus["REJECTED"] = "REJECTED";
@@ -39,9 +38,8 @@ let LeaveRequest = class LeaveRequest extends mongoose_2.Document {
     pieceJointe;
     status;
     managerId;
-    n1ApprovedBy;
-    n1ApprovedAt;
-    n1Commentaire;
+    currentApproverId;
+    approvalHistory;
     rhApprovedBy;
     rhApprovedAt;
     rhCommentaire;
@@ -79,25 +77,21 @@ __decorate([
     __metadata("design:type", String)
 ], LeaveRequest.prototype, "pieceJointe", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ enum: LeaveStatus, default: LeaveStatus.PENDING_N1 }),
+    (0, mongoose_1.Prop)({ enum: LeaveStatus, default: LeaveStatus.PENDING_MANAGER }),
     __metadata("design:type", String)
 ], LeaveRequest.prototype, "status", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ type: mongoose_2.Types.ObjectId, ref: 'Employee', default: null }),
-    __metadata("design:type", mongoose_2.Types.ObjectId)
+    __metadata("design:type", Object)
 ], LeaveRequest.prototype, "managerId", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ type: mongoose_2.Types.ObjectId, ref: 'Employee', default: null }),
-    __metadata("design:type", mongoose_2.Types.ObjectId)
-], LeaveRequest.prototype, "n1ApprovedBy", void 0);
+    __metadata("design:type", Object)
+], LeaveRequest.prototype, "currentApproverId", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ default: null }),
-    __metadata("design:type", Date)
-], LeaveRequest.prototype, "n1ApprovedAt", void 0);
-__decorate([
-    (0, mongoose_1.Prop)({ default: '' }),
-    __metadata("design:type", String)
-], LeaveRequest.prototype, "n1Commentaire", void 0);
+    (0, mongoose_1.Prop)({ type: [{ approverId: { type: mongoose_2.Types.ObjectId, ref: 'Employee' }, approverName: String, level: Number, decision: String, date: Date, comment: String }], default: [] }),
+    __metadata("design:type", Array)
+], LeaveRequest.prototype, "approvalHistory", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ type: mongoose_2.Types.ObjectId, ref: 'Employee', default: null }),
     __metadata("design:type", mongoose_2.Types.ObjectId)
@@ -127,7 +121,7 @@ exports.LeaveRequest = LeaveRequest = __decorate([
 ], LeaveRequest);
 exports.LeaveRequestSchema = mongoose_1.SchemaFactory.createForClass(LeaveRequest);
 exports.LeaveRequestSchema.index({ employeeId: 1, status: 1 });
-exports.LeaveRequestSchema.index({ managerId: 1, status: 1 });
+exports.LeaveRequestSchema.index({ currentApproverId: 1, status: 1 });
 let LeaveBalance = class LeaveBalance extends mongoose_2.Document {
     employeeId;
     soldeAnnuel;
@@ -142,7 +136,7 @@ __decorate([
     __metadata("design:type", mongoose_2.Types.ObjectId)
 ], LeaveBalance.prototype, "employeeId", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ default: 90 }),
+    (0, mongoose_1.Prop)({ default: 30 }),
     __metadata("design:type", Number)
 ], LeaveBalance.prototype, "soldeAnnuel", void 0);
 __decorate([

@@ -67,7 +67,7 @@ let CreditsService = class CreditsService {
         return this.creditModel.find({ employeeId: new mongoose_2.Types.ObjectId(employeeId) }).sort({ createdAt: -1 }).exec();
     }
     async getAllCredits() {
-        return this.creditModel.find().populate('employeeId', 'nom prenom matricule').sort({ createdAt: -1 }).exec();
+        return this.creditModel.find().populate('employeeId', 'nom prenom matricule avatar').sort({ createdAt: -1 }).exec();
     }
     async processLatePaymentPenalties() {
         const lateCredits = await this.creditModel.find({ status: credit_schema_1.CreditStatus.LATE }).exec();

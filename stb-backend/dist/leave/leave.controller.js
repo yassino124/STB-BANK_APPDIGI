@@ -37,6 +37,9 @@ let LeaveController = class LeaveController {
     getPendingForManager(req) {
         return this.leaveService.getPendingForManager(req.user.sub);
     }
+    getPendingTeam(req) {
+        return this.leaveService.getPendingForManager(req.user.sub);
+    }
     getMyTeamRequests(req) {
         return this.leaveService.getMyTeamRequests(req.user.sub);
     }
@@ -44,7 +47,7 @@ let LeaveController = class LeaveController {
         return this.leaveService.getAllRequests(status);
     }
     getPendingRh() {
-        return this.leaveService.getAllRequests('APPROVED_N1');
+        return this.leaveService.getAllRequests('PENDING_RH');
     }
     handleManagerApproval(id, req, body) {
         return this.leaveService.handleManagerApproval(id, req.user.sub, body.decision, body.commentaire);
@@ -53,13 +56,15 @@ let LeaveController = class LeaveController {
         return this.leaveService.handleRhApproval(id, req.user.sub, body.decision, body.commentaire);
     }
     managerApprove(id, req, body) {
-        return this.leaveService.handleManagerApproval(id, req.user.sub, 'APPROVED', body.commentaire || '');
+        return this.leaveService.handleManagerApproval(id, req.user.sub, 'APPROVED', body?.commentaire || '');
     }
     managerReject(id, req, body) {
-        return this.leaveService.handleManagerApproval(id, req.user.sub, 'REJECTED', body.commentaire || 'Refusé par le manager');
+        return this.leaveService.handleManagerApproval(id, req.user.sub, 'REJECTED', body?.commentaire || body?.reason || 'Refusé');
     }
-    getPendingTeam(req) {
-        return this.leaveService.getPendingForManager(req.user.sub);
+    async debugAll() {
+        const all = await this.leaveService.getAllRequests();
+        console.log('🔧 [DEBUG] Total leaves in DB:', all.length);
+        return { total: all.length, data: all };
     }
 };
 exports.LeaveController = LeaveController;
@@ -97,8 +102,15 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], LeaveController.prototype, "getPendingForManager", null);
 __decorate([
+    (0, common_1.Get)('pending-team'),
+    (0, swagger_1.ApiOperation)({ summary: 'All pending leave requests from my team (alias for pending-manager)' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], LeaveController.prototype, "getPendingTeam", null);
+__decorate([
     (0, common_1.Get)('my-team'),
-    (0, roles_decorator_1.Roles)(role_enum_1.Role.MANAGER),
     (0, swagger_1.ApiOperation)({ summary: 'All leave requests from my direct reports' }),
     __param(0, (0, common_1.Request)()),
     __metadata("design:type", Function),
@@ -124,8 +136,7 @@ __decorate([
 ], LeaveController.prototype, "getPendingRh", null);
 __decorate([
     (0, common_1.Patch)(':id/handle-manager'),
-    (0, roles_decorator_1.Roles)(role_enum_1.Role.MANAGER),
-    (0, swagger_1.ApiOperation)({ summary: 'Manager approves or rejects leave (N+1)' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Manager/Director approves or rejects leave (any level in chain)' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Request)()),
     __param(2, (0, common_1.Body)()),
@@ -146,8 +157,7 @@ __decorate([
 ], LeaveController.prototype, "handleRhApproval", null);
 __decorate([
     (0, common_1.Post)(':id/manager-approve'),
-    (0, roles_decorator_1.Roles)(role_enum_1.Role.MANAGER),
-    (0, swagger_1.ApiOperation)({ summary: '✅ Manager approves leave (simplified endpoint for mobile)' }),
+    (0, swagger_1.ApiOperation)({ summary: '✅ Manager/Director approves leave (mobile endpoint)' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Request)()),
     __param(2, (0, common_1.Body)()),
@@ -157,8 +167,7 @@ __decorate([
 ], LeaveController.prototype, "managerApprove", null);
 __decorate([
     (0, common_1.Post)(':id/manager-reject'),
-    (0, roles_decorator_1.Roles)(role_enum_1.Role.MANAGER),
-    (0, swagger_1.ApiOperation)({ summary: '❌ Manager rejects leave (simplified endpoint for mobile)' }),
+    (0, swagger_1.ApiOperation)({ summary: '❌ Manager/Director rejects leave (mobile endpoint)' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Request)()),
     __param(2, (0, common_1.Body)()),
@@ -167,14 +176,12 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], LeaveController.prototype, "managerReject", null);
 __decorate([
-    (0, common_1.Get)('pending-team'),
-    (0, roles_decorator_1.Roles)(role_enum_1.Role.MANAGER),
-    (0, swagger_1.ApiOperation)({ summary: '📋 Get all pending leave requests from my team (for swipe UI)' }),
-    __param(0, (0, common_1.Request)()),
+    (0, common_1.Get)('debug-all'),
+    (0, swagger_1.ApiOperation)({ summary: '🔧 DEBUG: Get all leaves (no filter)' }),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", void 0)
-], LeaveController.prototype, "getPendingTeam", null);
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], LeaveController.prototype, "debugAll", null);
 exports.LeaveController = LeaveController = __decorate([
     (0, swagger_1.ApiTags)('� Leave Requests'),
     (0, swagger_1.ApiBearerAuth)('JWT-auth'),

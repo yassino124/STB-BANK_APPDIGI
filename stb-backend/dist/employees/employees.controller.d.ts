@@ -22,6 +22,7 @@ export declare class EmployeesController {
         page: number;
         pages: number;
     }>;
+    getDirectory(search?: string): Promise<Partial<import("./employee.schema").EmployeeDocument>[]>;
     searchDirectory(query: string): Promise<Partial<import("./employee.schema").EmployeeDocument>[]>;
     getStats(): Promise<Record<string, number>>;
     getMyActivityTimeline(req: any, limit?: number): Promise<any[]>;

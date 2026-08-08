@@ -35,6 +35,6 @@ export declare class PayrollService {
     } & {
         id: string;
     })[]>;
-    creditMonthlySalaries(): Promise<any[]>;
+    creditMonthlySalaries(employeeId?: string, force?: boolean): Promise<any[]>;
     private getMonthName;
 }

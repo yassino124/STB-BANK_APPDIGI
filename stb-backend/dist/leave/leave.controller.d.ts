@@ -35,6 +35,13 @@ export declare class LeaveController {
     } & {
         id: string;
     })[]>;
+    getPendingTeam(req: any): Promise<(import("mongoose").Document<unknown, {}, import("./schemas/leave.schema").LeaveRequest, {}, import("mongoose").DefaultSchemaOptions> & import("./schemas/leave.schema").LeaveRequest & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }> & {
+        __v: number;
+    } & {
+        id: string;
+    })[]>;
     getMyTeamRequests(req: any): Promise<(import("mongoose").Document<unknown, {}, import("./schemas/leave.schema").LeaveRequest, {}, import("mongoose").DefaultSchemaOptions> & import("./schemas/leave.schema").LeaveRequest & Required<{
         _id: import("mongoose").Types.ObjectId;
     }> & {
@@ -76,7 +83,7 @@ export declare class LeaveController {
     } & {
         id: string;
     }>;
-    managerApprove(id: string, req: any, body: {
+    managerApprove(id: string, req: any, body?: {
         commentaire?: string;
     }): Promise<import("mongoose").Document<unknown, {}, import("./schemas/leave.schema").LeaveRequest, {}, import("mongoose").DefaultSchemaOptions> & import("./schemas/leave.schema").LeaveRequest & Required<{
         _id: import("mongoose").Types.ObjectId;
@@ -85,7 +92,8 @@ export declare class LeaveController {
     } & {
         id: string;
     }>;
-    managerReject(id: string, req: any, body: {
+    managerReject(id: string, req: any, body?: {
+        reason?: string;
         commentaire?: string;
     }): Promise<import("mongoose").Document<unknown, {}, import("./schemas/leave.schema").LeaveRequest, {}, import("mongoose").DefaultSchemaOptions> & import("./schemas/leave.schema").LeaveRequest & Required<{
         _id: import("mongoose").Types.ObjectId;
@@ -94,11 +102,14 @@ export declare class LeaveController {
     } & {
         id: string;
     }>;
-    getPendingTeam(req: any): Promise<(import("mongoose").Document<unknown, {}, import("./schemas/leave.schema").LeaveRequest, {}, import("mongoose").DefaultSchemaOptions> & import("./schemas/leave.schema").LeaveRequest & Required<{
-        _id: import("mongoose").Types.ObjectId;
-    }> & {
-        __v: number;
-    } & {
-        id: string;
-    })[]>;
+    debugAll(): Promise<{
+        total: number;
+        data: (import("mongoose").Document<unknown, {}, import("./schemas/leave.schema").LeaveRequest, {}, import("mongoose").DefaultSchemaOptions> & import("./schemas/leave.schema").LeaveRequest & Required<{
+            _id: import("mongoose").Types.ObjectId;
+        }> & {
+            __v: number;
+        } & {
+            id: string;
+        })[];
+    }>;
 }

@@ -1,7 +1,9 @@
 import { Outlet, Navigate, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import { useAuth } from '../context/AuthContext';
+import CopilotWidget from './CopilotWidget';
 
 const Layout = () => {
   const { user, isLoading } = useAuth();
@@ -28,9 +30,20 @@ const Layout = () => {
       <div className="main-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <Topbar />
         <main className="content-area" style={{ flex: 1, overflow: 'auto', padding: '1.5rem', position: 'relative' }}>
-          <Outlet />
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Outlet />
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
+      <CopilotWidget />
     </div>
   );
 };

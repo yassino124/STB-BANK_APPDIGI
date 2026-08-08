@@ -39,4 +39,13 @@ export class PayrollController {
   creditSalaries() {
     return this.payrollService.creditMonthlySalaries();
   }
+
+  @Post('credit-salary/:employeeId')
+  @ApiOperation({ summary: 'Credit monthly salary for a specific employee (Finance/Admin). Use force=true to bypass month lock (testing).' })
+  creditSalaryForEmployee(
+    @Param('employeeId') employeeId: string,
+    @Body() body: { force?: boolean },
+  ) {
+    return this.payrollService.creditMonthlySalaries(employeeId, body?.force);
+  }
 }

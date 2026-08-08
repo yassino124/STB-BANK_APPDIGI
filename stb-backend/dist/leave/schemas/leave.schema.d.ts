@@ -1,8 +1,7 @@
 import { Document, Types } from 'mongoose';
 export type LeaveRequestDocument = LeaveRequest & Document;
 export declare enum LeaveStatus {
-    PENDING_N1 = "PENDING_N1",
-    APPROVED_N1 = "APPROVED_N1",
+    PENDING_MANAGER = "PENDING_MANAGER",
     PENDING_RH = "PENDING_RH",
     APPROVED = "APPROVED",
     REJECTED = "REJECTED",
@@ -24,10 +23,9 @@ export declare class LeaveRequest extends Document {
     motif: string;
     pieceJointe: string;
     status: LeaveStatus;
-    managerId: Types.ObjectId;
-    n1ApprovedBy: Types.ObjectId;
-    n1ApprovedAt: Date;
-    n1Commentaire: string;
+    managerId: Types.ObjectId | null;
+    currentApproverId: Types.ObjectId | null;
+    approvalHistory: any[];
     rhApprovedBy: Types.ObjectId;
     rhApprovedAt: Date;
     rhCommentaire: string;
@@ -71,7 +69,7 @@ export declare const LeaveRequestSchema: import("mongoose").Schema<LeaveRequest,
     }, "id"> & import("mongoose").HydratedDocumentOverrides<{
         id: string;
     }>> | undefined;
-    managerId?: import("mongoose").SchemaDefinitionProperty<Types.ObjectId, LeaveRequest, Document<unknown, {}, LeaveRequest, {
+    managerId?: import("mongoose").SchemaDefinitionProperty<Types.ObjectId | null, LeaveRequest, Document<unknown, {}, LeaveRequest, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<LeaveRequest & Required<{
         _id: Types.ObjectId;
@@ -134,7 +132,7 @@ export declare const LeaveRequestSchema: import("mongoose").Schema<LeaveRequest,
     }, "id"> & import("mongoose").HydratedDocumentOverrides<{
         id: string;
     }>> | undefined;
-    n1ApprovedBy?: import("mongoose").SchemaDefinitionProperty<Types.ObjectId, LeaveRequest, Document<unknown, {}, LeaveRequest, {
+    currentApproverId?: import("mongoose").SchemaDefinitionProperty<Types.ObjectId | null, LeaveRequest, Document<unknown, {}, LeaveRequest, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<LeaveRequest & Required<{
         _id: Types.ObjectId;
@@ -143,16 +141,7 @@ export declare const LeaveRequestSchema: import("mongoose").Schema<LeaveRequest,
     }, "id"> & import("mongoose").HydratedDocumentOverrides<{
         id: string;
     }>> | undefined;
-    n1ApprovedAt?: import("mongoose").SchemaDefinitionProperty<Date, LeaveRequest, Document<unknown, {}, LeaveRequest, {
-        id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<LeaveRequest & Required<{
-        _id: Types.ObjectId;
-    }> & {
-        __v: number;
-    }, "id"> & import("mongoose").HydratedDocumentOverrides<{
-        id: string;
-    }>> | undefined;
-    n1Commentaire?: import("mongoose").SchemaDefinitionProperty<string, LeaveRequest, Document<unknown, {}, LeaveRequest, {
+    approvalHistory?: import("mongoose").SchemaDefinitionProperty<any[], LeaveRequest, Document<unknown, {}, LeaveRequest, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<LeaveRequest & Required<{
         _id: Types.ObjectId;

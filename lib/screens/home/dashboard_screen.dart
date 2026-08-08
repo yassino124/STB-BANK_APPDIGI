@@ -451,7 +451,11 @@ class _BalanceHeroState extends State<_BalanceHero> {
                         Row(
                           children: [
                             Text(
-                              widget.vm.isLoading ? '' : 'Compte Courant · **** 8829',
+                              widget.vm.isLoading 
+                                  ? '' 
+                                  : widget.vm.primaryAccount != null 
+                                      ? 'Compte Courant · **** ${widget.vm.primaryAccount!.iban.length >= 4 ? widget.vm.primaryAccount!.iban.substring(widget.vm.primaryAccount!.iban.length - 4) : widget.vm.primaryAccount!.iban}'
+                                      : 'Aucun compte',
                               style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.5),
                             ),
                             const Spacer(),
@@ -666,7 +670,17 @@ class _ExpenseAnalyticsCardState extends State<_ExpenseAnalyticsCard> with Singl
     Color(0xFFF59E0B),
   ];
 
-  static const _monthLabels = ['Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Jun'];
+  List<String> get _dynamicMonthLabels {
+    final months = ['Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aou', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final now = DateTime.now();
+    List<String> labels = [];
+    for (int i = 5; i >= 0; i--) {
+      int m = now.month - i;
+      if (m <= 0) m += 12;
+      labels.add(months[m - 1]);
+    }
+    return labels;
+  }
 
 
   @override
@@ -903,7 +917,7 @@ class _ExpenseAnalyticsCardState extends State<_ExpenseAnalyticsCard> with Singl
               tooltipBorderRadius: BorderRadius.circular(12),
               tooltipPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               getTooltipItem: (group, groupIndex, rod, rodIndex) => BarTooltipItem(
-                '${_monthLabels[groupIndex]}\n${rod.toY.toInt()} TND',
+                '${_dynamicMonthLabels[groupIndex]}\n${rod.toY.toInt()} TND',
                 const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800, height: 1.4),
               ),
             ),
@@ -916,7 +930,7 @@ class _ExpenseAnalyticsCardState extends State<_ExpenseAnalyticsCard> with Singl
                 getTitlesWidget: (val, meta) => Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
-                    _monthLabels[val.toInt() % _monthLabels.length],
+                    _dynamicMonthLabels[val.toInt() % _dynamicMonthLabels.length],
                     style: TextStyle(color: widget.mt, fontSize: 11, fontWeight: FontWeight.w700),
                   ),
                 ),

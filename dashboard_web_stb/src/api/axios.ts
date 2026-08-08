@@ -18,8 +18,15 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (response) => {
-    // Backend wraps response in { success, data }
-    if (response.data && typeof response.data === 'object' && 'success' in response.data && 'data' in response.data) {
+    // Backend wraps most responses in { success, data } — unwrap for convenience
+    // But some endpoints (like /ai/chat) return plain objects — keep those as-is
+    if (
+      response.data &&
+      typeof response.data === 'object' &&
+      'success' in response.data &&
+      'data' in response.data &&
+      response.data.data !== undefined
+    ) {
       response.data = response.data.data;
     }
     return response;

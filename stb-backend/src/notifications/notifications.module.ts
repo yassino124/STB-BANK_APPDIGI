@@ -8,6 +8,8 @@ import { NotificationsListener } from './notifications.listener';
 import { Notification, NotificationSchema } from './schemas/notification.schema';
 import { RealtimeModule } from '../realtime/realtime.module';
 
+import { EmployeesModule } from '../employees/employees.module';
+
 @Module({
   imports: [
     BullModule.registerQueue({
@@ -15,6 +17,7 @@ import { RealtimeModule } from '../realtime/realtime.module';
     }),
     MongooseModule.forFeature([{ name: Notification.name, schema: NotificationSchema }]),
     RealtimeModule,
+    EmployeesModule,
   ],
   providers: [NotificationsService, NotificationsConsumer, NotificationsListener],
   controllers: [NotificationsController],

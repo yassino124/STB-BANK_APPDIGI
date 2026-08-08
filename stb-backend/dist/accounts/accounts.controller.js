@@ -37,6 +37,9 @@ let AccountsController = class AccountsController {
     unfreeze(id) {
         return this.accountsService.unfreeze(id);
     }
+    deposit(id, body) {
+        return this.accountsService.deposit(id, body.amount);
+    }
 };
 exports.AccountsController = AccountsController;
 __decorate([
@@ -79,6 +82,15 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], AccountsController.prototype, "unfreeze", null);
+__decorate([
+    (0, common_1.Post)(':id/deposit'),
+    (0, swagger_1.ApiOperation)({ summary: 'Deposit money to account (AGENCE)' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], AccountsController.prototype, "deposit", null);
 exports.AccountsController = AccountsController = __decorate([
     (0, swagger_1.ApiTags)('Accounts'),
     (0, swagger_1.ApiBearerAuth)(),

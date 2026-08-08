@@ -16,8 +16,8 @@ const FinancePayroll = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await api.get('/finance/payroll').catch(() => null);
-        setPayrolls(res?.data?.data || []);
+        const res = await api.get('/payroll/all').catch(() => null);
+        setPayrolls(res?.data?.data || res?.data || []);
       } catch (err: any) {
         setError(err?.message || 'Erreur de chargement');
         toast.error('Erreur lors du chargement des fiches de paie');
@@ -29,8 +29,8 @@ const FinancePayroll = () => {
   }, []);
 
   const filteredPayrolls = payrolls.filter((p: any) => {
-    if (filterMonth && p.month !== parseInt(filterMonth)) return false;
-    if (filterYear && p.year !== parseInt(filterYear)) return false;
+    if (filterMonth && p.mois !== parseInt(filterMonth)) return false;
+    if (filterYear && p.annee !== parseInt(filterYear)) return false;
     return true;
   });
 
@@ -112,54 +112,94 @@ const FinancePayroll = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredPayrolls.map((p: any, i: number) => (
+              {filteredPayrolls.map((p: any, i: number) => {
+                const emp = p.employeeId || {};
+                const role = emp.roles?.[0] || 'EMPLOYEE';
+                return (
                 <tr key={p._id || i} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.2s' }}>
-                  <td style={{ padding: '0.75rem 1rem', color: 'var(--text-primary)', fontWeight: 600 }}>
-                    {p.employeeId?.prenom} {p.employeeId?.nom}
+                  <td style={{ padding: '1rem', color: 'var(--text-primary)', fontWeight: 600 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div className="avatar avatar-md" style={{ border: '2px solid var(--border-blue)', overflow: 'hidden', position: 'relative', background: 'var(--stb-blue-600)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {emp.avatar ? (
+                          <img
+                            src={emp.avatar.startsWith('data:') ? emp.avatar : `/api/v1/employees/${emp._id}/avatar`}
+                            alt={emp.prenom}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              const parent = e.currentTarget.parentElement;
+                              if (parent && !parent.querySelector('span')) {
+                                const span = document.createElement('span');
+                                span.style.cssText = 'font-size:0.85rem;font-weight:800;color:#fff';
+                                const mat = emp.matricule || 'AD';
+                                span.textContent = mat.slice(0, 2).toUpperCase();
+                                parent.appendChild(span);
+                              }
+                            }}
+                          />
+                        ) : (
+                          <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#fff' }}>
+                            {(emp.matricule || 'EM').slice(0, 2).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                          {emp.prenom} {emp.nom}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--stb-blue-400)', fontWeight: 600 }}>
+                          {role}
+                        </div>
+                      </div>
+                    </div>
                   </td>
-                  <td style={{ padding: '0.75rem 1rem', color: 'var(--text-secondary)' }}>
-                    {monthNames[p.month] || p.month}
+                  <td style={{ padding: '1rem', color: 'var(--text-secondary)' }}>
+                    {monthNames[p.mois] || p.mois}
                   </td>
-                  <td style={{ padding: '0.75rem 1rem', color: 'var(--text-secondary)' }}>{p.year}</td>
-                  <td style={{ padding: '0.75rem 1rem', textAlign: 'right', color: 'var(--text-primary)', fontWeight: 600 }}>
-                    {p.salaireBase?.toLocaleString('fr-FR')} TND
+                  <td style={{ padding: '1rem', color: 'var(--text-secondary)', fontWeight: 600 }}>{p.annee}</td>
+                  <td style={{ padding: '1rem', textAlign: 'right', color: 'var(--text-primary)', fontWeight: 600 }}>
+                    {p.salaireBrut?.toLocaleString('fr-FR')} <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>TND</span>
                   </td>
-                  <td style={{ padding: '0.75rem 1rem', textAlign: 'right', color: 'var(--text-primary)', fontWeight: 700 }}>
-                    {p.salaireNet?.toLocaleString('fr-FR')} TND
+                  <td style={{ padding: '1rem', textAlign: 'right', color: 'var(--text-primary)', fontWeight: 800 }}>
+                    {p.salaireNet?.toLocaleString('fr-FR')} <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>TND</span>
                   </td>
-                  <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
+                  <td style={{ padding: '1rem', textAlign: 'center' }}>
                     <span style={{
-                      padding: '2px 10px',
+                      padding: '4px 12px',
                       borderRadius: '999px',
                       fontSize: '0.75rem',
-                      fontWeight: 600,
+                      fontWeight: 700,
                       background: `${statusColors[p.status] || '#6B7280'}15`,
                       color: statusColors[p.status] || '#6B7280',
+                      border: `1px solid ${statusColors[p.status] || '#6B7280'}40`,
                     }}>
                       {p.status}
                     </span>
                   </td>
-                  <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
-                    <button
+                  <td style={{ padding: '1rem', textAlign: 'center' }}>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       style={{
-                        padding: '4px 10px',
+                        padding: '6px 12px',
                         borderRadius: '8px',
-                        border: 'none',
-                        background: '#2962FF',
-                        color: '#fff',
+                        border: '1px solid rgba(41,98,255,0.3)',
+                        background: 'linear-gradient(135deg, rgba(41,98,255,0.1), rgba(41,98,255,0.2))',
+                        color: 'var(--stb-blue-400)',
                         fontSize: '0.75rem',
-                        fontWeight: 600,
+                        fontWeight: 700,
                         cursor: 'pointer',
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '0.25rem',
+                        gap: '0.4rem',
                       }}
                     >
-                      <Download size={12} /> PDF
-                    </button>
+                      <Download size={14} /> PDF
+                    </motion.button>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
               {filteredPayrolls.length === 0 && (
                 <tr>
                   <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>

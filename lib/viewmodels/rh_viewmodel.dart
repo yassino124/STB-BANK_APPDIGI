@@ -14,11 +14,27 @@ class RhViewModel extends ChangeNotifier {
   bool _congesLoading = false;
   String? _congesError;
   bool _congeSubmitting = false;
+  LeaveBalanceData? _leaveBalance;
 
   List<CongeRequest> get conges => _conges;
   bool get congesLoading => _congesLoading;
   String? get congesError => _congesError;
   bool get congeSubmitting => _congeSubmitting;
+  LeaveBalanceData? get leaveBalance => _leaveBalance;
+
+  // ── Clear All (Logout) ───────────────────────────────────────────────────
+  void clearAll() {
+    _conges.clear();
+    _avances.clear();
+    _payrolls.clear();
+    _rhDocuments.clear();
+    _leaveBalance = null;
+    _congesError = null;
+    _avancesError = null;
+    _payrollsError = null;
+    _rhDocsError = null;
+    notifyListeners();
+  }
 
   // ── Avances ───────────────────────────────────────────────────────────────
   List<AvanceRequest> _avances = [];
@@ -63,23 +79,50 @@ class RhViewModel extends ChangeNotifier {
       notifyListeners();
     }
     try {
-      final res = await AuthApiService.getMyConges();
-      if (res.isSuccess && res.data != null) {
-        _conges = res.data!
+      final resConges = await AuthApiService.getMyConges();
+      final resAbsences = await AuthApiService.getMyAbsences();
+
+      List<CongeRequest> allRequests = [];
+      if (resConges.isSuccess && resConges.data != null) {
+        allRequests.addAll(resConges.data!
             .whereType<Map<String, dynamic>>()
-            .map(CongeRequest.fromJson)
-            .toList()
-          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        _congesError = null;
-      } else {
-        _congesError = res.error;
+            .map(CongeRequest.fromJson));
+      } else if (!resConges.isSuccess) {
+        _congesError = resConges.error;
       }
+      
+      if (resAbsences.isSuccess && resAbsences.data != null) {
+        allRequests.addAll(resAbsences.data!
+            .whereType<Map<String, dynamic>>()
+            .map(CongeRequest.fromJson));
+      }
+
+      allRequests.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      _conges = allRequests;
+      
+      if (resConges.isSuccess || resAbsences.isSuccess) {
+        _congesError = null;
+      }
+      
+      // Load leave balance
+      await _loadLeaveBalance();
     } catch (e) {
       _congesError = 'Erreur de chargement';
       debugPrint('RhViewModel.loadConges error: $e');
     } finally {
       _congesLoading = false;
       notifyListeners();
+    }
+  }
+
+  Future<void> _loadLeaveBalance() async {
+    try {
+      final res = await AuthApiService.getMyLeaveBalance();
+      if (res.isSuccess && res.data != null) {
+        _leaveBalance = LeaveBalanceData.fromJson(res.data as Map<String, dynamic>);
+      }
+    } catch (e) {
+      debugPrint('RhViewModel._loadLeaveBalance error: $e');
     }
   }
 

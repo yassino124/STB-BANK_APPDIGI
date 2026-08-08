@@ -1,13 +1,26 @@
-import { Controller, Get, Patch, Param, UseGuards, Request, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, UseGuards, Request, Query, Body } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { SendNotificationDto } from './dto/send-notification.dto';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { Role } from '../common/enums/role.enum';
 
 @ApiTags('Notifications')
 @ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('notifications')
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
+
+  @Post('send')
+  @Roles(Role.RH, Role.FINANCE, Role.AGENCE, Role.MANAGER, Role.ADMIN, Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Send a custom notification to an employee or all active employees' })
+  async sendNotification(@Body() dto: SendNotificationDto) {
+    const result = await this.notificationsService.sendCustomNotification(dto);
+    return { success: true, data: result };
+  }
 
   @Get('my')
   @ApiOperation({ summary: 'Get my notifications' })

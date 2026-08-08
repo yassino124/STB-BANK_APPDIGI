@@ -16,6 +16,12 @@ export class CardsController {
     return this.cardsService.getMyCards(req.user.sub);
   }
 
+  @Get('all')
+  @ApiOperation({ summary: 'All cards (Agence)' })
+  getAll() {
+    return this.cardsService.getAllCards();
+  }
+
   @Patch(':id/freeze')
   @ApiOperation({ summary: 'Freeze card' })
   freeze(@Param('id') id: string) {

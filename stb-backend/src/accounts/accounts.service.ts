@@ -199,4 +199,56 @@ export class AccountsService {
       totalBalance: totalBalance[0]?.total || 0,
     };
   }
+
+  async deposit(accountId: string, amount: number) {
+    if (!amount || amount <= 0) {
+      throw new BadRequestException('Amount must be greater than zero');
+    }
+
+    const account = await this.findOne(accountId);
+    
+    if (account.status === AccountStatus.FROZEN) {
+      throw new ForbiddenException('Cannot deposit to a frozen account');
+    }
+
+    if (account.status === AccountStatus.CLOSED) {
+      throw new ForbiddenException('Cannot deposit to a closed account');
+    }
+
+    // Update account balance
+    const updated = await this.accountModel.findByIdAndUpdate(
+      accountId,
+      { $inc: { solde: amount } },
+      { new: true },
+    ).populate('employeeId', 'nom prenom matricule email').exec();
+
+    // Create transaction record
+    const transaction = await this.transactionModel.create({
+      employeeId: account.employeeId,
+      montant: amount,
+      type: TransactionType.DEPOSIT,
+      description: 'Dépôt effectué par Agence',
+      status: TransactionStatus.COMPLETED,
+      accountId: new Types.ObjectId(accountId),
+      category: TransactionCategory.INCOME,
+      metadata: {
+        depositedBy: 'AGENCE',
+        depositedAt: new Date(),
+      },
+    });
+
+    this.eventEmitter.emit(ACCOUNT_EVENTS.CREDITED, { 
+      accountId, 
+      amount, 
+      transactionId: transaction._id,
+      type: 'AGENCE_DEPOSIT'
+    });
+
+    return {
+      success: true,
+      message: `${amount} TND deposited successfully`,
+      account: updated,
+      transaction,
+    };
+  }
 }

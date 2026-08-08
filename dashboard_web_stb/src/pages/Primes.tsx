@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Gift, Plus, Search, Calendar, CheckCircle2, AlertTriangle, TrendingUp, Filter } from 'lucide-react';
+import { Gift, Plus, Search, Calendar, CheckCircle2, AlertTriangle, TrendingUp, Filter, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
@@ -28,12 +28,30 @@ const Primes = () => {
   const [primes, setPrimes] = useState<Prime[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [distributing, setDistributing] = useState(false);
+  
+  // Distribution amounts (configurable by Finance)
+  const [massAmounts, setMassAmounts] = useState<Record<string, number>>({
+    'PERFORMANCE': 1000,
+    'AID':         500,
+    'RAMADAN':     300,
+    'VACANCES':    400,
+    'ANCIENNETE':  700,
+    'EXCEPTIONNELLE': 500,
+  });
+
+  const stats = {
+    total: primes.length,
+    pending: primes.filter(p => p.status === 'PENDING' || p.status === 'EN_ATTENTE').length,
+    approved: primes.filter(p => p.status === 'APPROVED' || p.status === 'APPROUVE' || p.status === 'PAID').length,
+    totalAmount: primes.filter(p => p.status === 'APPROVED' || p.status === 'APPROUVE' || p.status === 'PAID').reduce((sum, p) => sum + (p.montant || 0), 0)
+  };
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
 
   // New Prime Form
   const [selectedEmpId, setSelectedEmpId] = useState('');
-  const [primeType, setPrimeType] = useState('RENDEMENT');
+  const [primeType, setPrimeType] = useState('PERFORMANCE');
   const [montant, setMontant] = useState('');
   const [motif, setMotif] = useState('');
 
@@ -88,16 +106,27 @@ const Primes = () => {
   };
 
   const handleGenerateMassPrime = async (type: string) => {
-    if (!window.confirm(`Êtes-vous sûr de vouloir générer la prime "${type}" pour TOUS les employés éligibles ?`)) return;
+    const amount = massAmounts[type] || 500;
+    if (!window.confirm(`🎁 Distribuer la prime "${type}" (${amount} TND) à TOUS les employés actifs maintenant ?\n\nCette opération créditera les comptes immédiatement.`)) return;
     
-    const toastId = toast.loading(`Génération de la prime ${type} en cours...`);
+    setDistributing(true);
+    const toastId = toast.loading(`Distribution prime ${type} en cours...`);
     try {
-      // Simulate mass generation
-      await new Promise(r => setTimeout(r, 2000));
-      toast.success(`Prime ${type} générée avec succès pour 142 employés !`, { id: toastId });
+      const res = await api.post('/primes/distribute', {
+        type,
+        montant: amount,
+        description: `Prime ${type} — Distribution Finance STB`,
+      });
+      const result = res.data;
+      toast.success(
+        `✅ Prime ${type} distribuée ! ${result.credited}/${result.total} employés crédités — ${result.montantTotal?.toLocaleString('fr-TN')} TND`,
+        { id: toastId, duration: 6000 }
+      );
       fetchPrimes();
-    } catch (error) {
-      toast.error('Erreur lors de la génération', { id: toastId });
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Erreur lors de la distribution', { id: toastId });
+    } finally {
+      setDistributing(false);
     }
   };
 
@@ -107,10 +136,18 @@ const Primes = () => {
       
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.25rem', fontFamily: 'var(--font-display)' }}>
+          <h1 style={{ 
+            fontSize: '2rem', 
+            fontWeight: 900, 
+            color: 'var(--text-primary)', 
+            marginBottom: '0.25rem',
+            background: 'linear-gradient(135deg, #2962FF 0%, #00BCD4 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}>
             Primes & Gratifications
           </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Gestion des primes exceptionnelles et automatiques</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>Gestion des primes exceptionnelles et automatiques</p>
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
@@ -120,38 +157,116 @@ const Primes = () => {
         </button>
       </div>
 
-      {/* Auto Generation Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
-        <div style={{ background: 'linear-gradient(135deg, rgba(41,98,255,0.1), rgba(0,180,255,0.05))', border: '1px solid rgba(41,98,255,0.2)', borderRadius: '16px', padding: '1.5rem', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', right: -20, top: -20, opacity: 0.05, transform: 'rotate(15deg)' }}>
-            <Gift size={120} />
+      {/* Stats Cards */}
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', 
+        gap: '1.25rem', 
+        marginBottom: '2rem'
+      }}>
+        {/* Total */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', borderRadius: '16px', padding: '1.5rem', color: '#fff', boxShadow: '0 8px 24px rgba(102, 126, 234, 0.25)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <Gift size={28} style={{ opacity: 0.9 }} />
+            <span style={{ fontSize: '0.75rem', opacity: 0.8, fontWeight: 600 }}>TOTAL</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-            <div style={{ padding: '0.75rem', background: 'rgba(41,98,255,0.15)', borderRadius: '12px', color: '#2962FF' }}><TrendingUp size={24} /></div>
-            <div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>13ème Mois</h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Distribution Annuelle (Décembre)</p>
-            </div>
-          </div>
-          <button onClick={() => handleGenerateMassPrime('13ème Mois')} style={{ width: '100%', padding: '0.75rem', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}>
-            Générer pour tous
-          </button>
-        </div>
+          <div style={{ fontSize: '2.25rem', fontWeight: 900, marginBottom: '0.25rem' }}>{stats.total}</div>
+          <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>Primes accordées</div>
+        </motion.div>
 
-        <div style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.1), rgba(52,211,153,0.05))', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '16px', padding: '1.5rem', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', right: -20, top: -20, opacity: 0.05, transform: 'rotate(15deg)' }}>
-            <Gift size={120} />
+        {/* En Attente */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+          style={{ background: 'linear-gradient(135deg, #F59E0B 0%, #F97316 100%)', borderRadius: '16px', padding: '1.5rem', color: '#fff', boxShadow: '0 8px 24px rgba(245, 158, 11, 0.25)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <Clock size={28} style={{ opacity: 0.9 }} />
+            <span style={{ fontSize: '0.75rem', opacity: 0.8, fontWeight: 600 }}>EN ATTENTE</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-            <div style={{ padding: '0.75rem', background: 'rgba(16,185,129,0.15)', borderRadius: '12px', color: '#10B981' }}><Gift size={24} /></div>
-            <div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Prime Aïd & Événements</h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Distribution selon calendrier</p>
+          <div style={{ fontSize: '2.25rem', fontWeight: 900, marginBottom: '0.25rem' }}>{stats.pending}</div>
+          <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>À valider</div>
+        </motion.div>
+
+        {/* Approuvées */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+          style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', borderRadius: '16px', padding: '1.5rem', color: '#fff', boxShadow: '0 8px 24px rgba(16, 185, 129, 0.25)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <CheckCircle2 size={28} style={{ opacity: 0.9 }} />
+            <span style={{ fontSize: '0.75rem', opacity: 0.8, fontWeight: 600 }}>APPROUVÉES</span>
+          </div>
+          <div style={{ fontSize: '2.25rem', fontWeight: 900, marginBottom: '0.25rem' }}>{stats.approved}</div>
+          <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>Validées</div>
+        </motion.div>
+
+        {/* Montant Total */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+          style={{ background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)', borderRadius: '16px', padding: '1.5rem', color: '#fff', boxShadow: '0 8px 24px rgba(14, 165, 233, 0.25)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <span style={{ fontSize: '1.75rem', fontWeight: 900, opacity: 0.9 }}>$</span>
+            <span style={{ fontSize: '0.75rem', opacity: 0.8, fontWeight: 600 }}>MONTANT TOTAL</span>
+          </div>
+          <div style={{ fontSize: '2.25rem', fontWeight: 900, marginBottom: '0.25rem' }}>
+            {stats.totalAmount >= 1000 ? `${(stats.totalAmount / 1000).toFixed(1)}K` : stats.totalAmount}
+          </div>
+          <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>TND distribués</div>
+        </motion.div>
+      </div>
+
+      {/* Auto Distribution Cards */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
+          <div style={{ padding: '0.5rem', background: 'rgba(41,98,255,0.12)', borderRadius: '10px' }}>
+            <TrendingUp size={20} color="#2962FF" />
+          </div>
+          <div>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Distribution Automatique</h2>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>Les cron jobs versent automatiquement à la date prévue. Vous pouvez aussi déclencher manuellement.</p>
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+          {[
+            { type: 'PERFORMANCE', label: 'Prime Annuelle', icon: '🎁', desc: 'Cron: 1er Décembre', color: '#2962FF', bg: 'rgba(41,98,255,0.08)' },
+            { type: 'AID',         label: 'Prime Aïd',      icon: '🌙', desc: 'Cron: 25 Mars + 15 Juin', color: '#F59E0B', bg: 'rgba(245,158,11,0.08)' },
+            { type: 'RAMADAN',     label: 'Prime Ramadan',  icon: '✨', desc: 'Cron: 1er Mars', color: '#8B5CF6', bg: 'rgba(139,92,246,0.08)' },
+            { type: 'VACANCES',    label: 'Prime Vacances', icon: '☀️', desc: 'Cron: 1er Juillet', color: '#10B981', bg: 'rgba(16,185,129,0.08)' },
+            { type: 'ANCIENNETE',  label: 'Prime Ancienneté', icon: '🏆', desc: 'Cron: 1er Janvier (par tranches)', color: '#EF4444', bg: 'rgba(239,68,68,0.08)' },
+            { type: 'EXCEPTIONNELLE', label: 'Prime Exceptionnelle', icon: '⭐', desc: 'Déclenchement manuel uniquement', color: '#06B6D4', bg: 'rgba(6,182,212,0.08)' },
+          ].map(card => (
+            <div key={card.type} style={{ background: card.bg, border: `1px solid ${card.color}25`, borderRadius: '16px', padding: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                <span style={{ fontSize: '1.5rem' }}>{card.icon}</span>
+                <div>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>{card.label}</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{card.desc}</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <input
+                  type="number"
+                  value={massAmounts[card.type] || 500}
+                  onChange={e => setMassAmounts(prev => ({ ...prev, [card.type]: Number(e.target.value) }))}
+                  min={50}
+                  style={{
+                    flex: 1, padding: '0.5rem 0.75rem', borderRadius: '8px',
+                    border: `1px solid ${card.color}40`, background: 'var(--bg-primary)',
+                    color: 'var(--text-primary)', fontSize: '0.9rem', fontWeight: 700,
+                  }}
+                />
+                <span style={{ fontSize: '0.8rem', color: card.color, fontWeight: 600 }}>TND</span>
+              </div>
+              <button
+                onClick={() => handleGenerateMassPrime(card.type)}
+                disabled={distributing}
+                style={{
+                  width: '100%', padding: '0.6rem', borderRadius: '10px', border: 'none',
+                  background: card.color, color: '#fff', fontWeight: 700, cursor: distributing ? 'wait' : 'pointer',
+                  fontSize: '0.85rem', opacity: distributing ? 0.6 : 1,
+                  boxShadow: `0 4px 12px ${card.color}30`,
+                }}
+              >
+                {distributing ? '⏳ En cours...' : '▶ Distribuer maintenant'}
+              </button>
             </div>
-          </div>
-          <button onClick={() => handleGenerateMassPrime('Prime Aïd')} style={{ width: '100%', padding: '0.75rem', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}>
-            Générer pour tous
-          </button>
+          ))}
         </div>
       </div>
 

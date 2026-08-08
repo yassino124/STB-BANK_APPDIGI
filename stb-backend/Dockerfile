@@ -5,7 +5,7 @@ WORKDIR /app
 
 # Install dependencies first (layer cache optimization)
 COPY package*.json ./
-RUN npm ci --only=production=false
+RUN npm install
 
 # Copy source & build
 COPY . .
@@ -20,7 +20,7 @@ ENV NODE_ENV=production
 
 # Install only production dependencies
 COPY package*.json ./
-RUN npm ci --only=production && npm cache clean --force
+RUN npm install --omit=dev && npm cache clean --force
 
 # Copy built artifacts from builder
 COPY --from=builder /app/dist ./dist

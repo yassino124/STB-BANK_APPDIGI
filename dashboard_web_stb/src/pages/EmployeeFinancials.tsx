@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, CreditCard, Umbrella, Gift, Save, Wallet, TrendingUp, DollarSign, RefreshCcw, Camera, Plus } from 'lucide-react';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
@@ -8,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 const EmployeeFinancials = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isFinance, isAgence, isRH } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [creditingSalary, setCreditingSalary] = useState(false);
@@ -107,38 +109,46 @@ const EmployeeFinancials = () => {
   };
 
   const handleCreditSalaryNow = async () => {
-    if (!confirm(`Créditer le salaire NET (après déduction crédits) maintenant sur le compte de ${employee?.prenom} ${employee?.nom} ?`)) return;
+    const confirmMsg = `Créditer le salaire NET maintenant sur le compte de ${employee?.prenom} ${employee?.nom} ?\n\nSalaire brut: ${employee?.salaireBase} TND`;
+    if (!confirm(confirmMsg)) return;
     setCreditingSalary(true);
     try {
-      // Call payroll credit-salaries endpoint (credits ALL employees)
-      const response = await api.post('/payroll/credit-salaries');
+      // Try without force first
+      const response = await api.post(`/payroll/credit-salary/${employee?._id}`, { force: false });
       
-      toast.success(`✅ Salaires versés avec succès! ${response.data?.length || 0} employés crédités.`, {
-        duration: 5000,
-      });
-      
-      // Refresh employee data
-      await fetchEmployee();
-      
-      // Show breakdown if available
-      const employeeResult = response.data?.find((r: any) => r.matricule === employee?.matricule);
-      if (employeeResult) {
-        const details = `
-          Salaire Brut: ${employeeResult.salaireBrut} TND
-          Déductions sociales: -${employeeResult.deductionsSociales} TND
-          Crédits débités: -${employeeResult.creditsDebites} TND
-          Salaire NET versé: ${employeeResult.salaireNet} TND
-          Nouveau solde: ${employeeResult.newBalance} TND
-        `;
-        console.log('💰 Détails virement:', details);
-        
-        toast.success(`Détails: Salaire NET ${employeeResult.salaireNet} TND versé (après ${employeeResult.creditsDebites} TND crédit)`, {
-          duration: 8000,
-        });
+      // Check if it was blocked by monthly lock
+      const result = response.data?.[0];
+      if (result?.error && result.error.includes('déjà versée')) {
+        const forceConfirm = confirm(
+          `⚠️ Salaire déjà versé ce mois-ci pour ${employee?.prenom} ${employee?.nom}.\n\nForcer un nouveau virement quand même ? (mode test)`
+        );
+        if (!forceConfirm) { setCreditingSalary(false); return; }
+        const forceResponse = await api.post(`/payroll/credit-salary/${employee?._id}`, { force: true });
+        const forceResult = forceResponse.data?.[0];
+        if (forceResult?.salaireNet !== undefined) {
+          toast.success(`✅ Virement forcé ! ${forceResult.salaireNet} TND crédités sur le compte.`, { duration: 6000 });
+          await fetchEmployee();
+        } else {
+          toast.error(forceResult?.error || 'Erreur lors du virement forcé.');
+        }
+        return;
+      }
+
+      if (result?.salaireNet !== undefined) {
+        toast.success(`✅ Salaire versé ! ${result.salaireNet} TND crédités sur le compte de ${employee?.prenom}.`, { duration: 6000 });
+        await fetchEmployee();
+        if (result.creditsDebites > 0) {
+          toast(`💳 ${result.creditsDebites} TND déduits pour crédits en cours`, { duration: 4000 });
+        }
+      } else if (result?.error) {
+        toast.error(`❌ ${result.error}`);
+      } else {
+        toast.success(`✅ Virement effectué avec succès !`, { duration: 4000 });
+        await fetchEmployee();
       }
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || err.response?.data?.error || 'Erreur lors du virement du salaire.';
-      toast.error(errorMsg);
+      toast.error(`❌ ${errorMsg}`);
       console.error('Payroll error:', err.response?.data);
     } finally {
       setCreditingSalary(false);
@@ -333,43 +343,45 @@ const EmployeeFinancials = () => {
             )}
           </div>
 
-          {/* Salary Info Banner */}
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} style={{
-            background: 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(5,150,105,0.04))',
-            border: '1px solid rgba(16,185,129,0.2)',
-            borderRadius: '16px',
-            padding: '1.25rem 1.5rem',
-            marginBottom: '1.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '1rem',
-            flexWrap: 'wrap',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <DollarSign size={20} color="#10b981" />
-              <div>
-                <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, color: '#10b981' }}>Virement Salaires Mensuels (Tous Employés)</p>
-                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  Crédite les salaires NET de TOUS les employés après déduction automatique des crédits.
-                  Le cron automatique s'exécute le 1er de chaque mois.
-                </p>
+          {/* Payroll Action (Finance Only) */}
+          {isFinance && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} style={{
+              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(5, 150, 105, 0.04))',
+              border: '1px solid rgba(16, 185, 129, 0.2)',
+              borderRadius: '16px',
+              padding: '1.25rem 1.5rem',
+              marginBottom: '1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '1rem',
+              flexWrap: 'wrap',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <DollarSign size={20} color="#10b981" />
+                <div>
+                  <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, color: '#10b981' }}>Virement Salaire Mensuel (Cet Employé)</p>
+                  <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    Crédite le salaire NET de cet employé après déduction automatique des crédits et avances en cours.
+                  </p>
+                </div>
               </div>
-            </div>
-            <button
-              onClick={handleCreditSalaryNow}
-              disabled={creditingSalary}
-              className="btn btn-primary"
-              style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', boxShadow: '0 4px 14px rgba(16,185,129,0.3)', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-            >
-              <RefreshCcw size={16} style={{ animation: creditingSalary ? 'spin 1s linear infinite' : 'none' }} />
-              {creditingSalary ? 'Virement...' : 'Virer maintenant'}
-            </button>
-          </motion.div>
+              <button
+                onClick={handleCreditSalaryNow}
+                disabled={creditingSalary}
+                className="btn btn-primary"
+                style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', boxShadow: '0 4px 14px rgba(16,185,129,0.3)', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              >
+                <RefreshCcw size={16} style={{ animation: creditingSalary ? 'spin 1s linear infinite' : 'none' }} />
+                {creditingSalary ? 'Virement...' : 'Virer maintenant'}
+              </button>
+            </motion.div>
+          )}
 
-          {/* Core Banking Action */}
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }} style={{
-            background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.08), rgba(14, 165, 233, 0.04))',
+          {/* Core Banking Action (Agence Only) */}
+          {isAgence && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }} style={{
+              background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.08), rgba(14, 165, 233, 0.04))',
             border: '1px solid rgba(56, 189, 248, 0.2)',
             borderRadius: '16px',
             padding: '1.25rem 1.5rem',
@@ -397,12 +409,14 @@ const EmployeeFinancials = () => {
             >
               <RefreshCcw size={16} style={{ animation: creatingAccount ? 'spin 1s linear infinite' : 'none' }} />
               {creatingAccount ? 'Création...' : 'Générer RIB'}
-            </button>
-          </motion.div>
+              </button>
+            </motion.div>
+          )}
 
-          {/* Card Generation Action */}
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }} style={{
-            background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(124, 58, 237, 0.04))',
+          {/* Card Generation Action (Agence Only) */}
+          {isAgence && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }} style={{
+              background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(124, 58, 237, 0.04))',
             border: '1px solid rgba(139, 92, 246, 0.2)',
             borderRadius: '16px',
             padding: '1.25rem 1.5rem',
@@ -430,12 +444,14 @@ const EmployeeFinancials = () => {
             >
               <RefreshCcw size={16} style={{ animation: creatingCard ? 'spin 1s linear infinite' : 'none' }} />
               {creatingCard ? 'Création...' : 'Générer Carte'}
-            </button>
-          </motion.div>
+              </button>
+            </motion.div>
+          )}
 
-          {/* Main Form */}
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="glass-card">
-            <form onSubmit={handleSubmit}>
+          {/* Main Form (Finance Only) */}
+          {isFinance && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="glass-card">
+              <form onSubmit={handleSubmit}>
               <div className="section-header">
                 <div className="section-accent"></div>
                 <h3>Mise à jour du profil financier</h3>
@@ -538,8 +554,9 @@ const EmployeeFinancials = () => {
                   {saving ? 'Enregistrement...' : 'Sauvegarder'}
                 </button>
               </div>
-            </form>
-          </motion.div>
+              </form>
+            </motion.div>
+          )}
         </div>
 
         {/* Right Side: STB Mobile Preview */}

@@ -16,7 +16,7 @@ export class BranchesService {
   }
 
   async findAll() {
-    return this.branchModel.find().sort({ name: 1 }).exec();
+    return this.branchModel.find().populate('managerId', 'nom prenom matricule').sort({ name: 1 }).exec();
   }
 
   async findOne(id: string) {

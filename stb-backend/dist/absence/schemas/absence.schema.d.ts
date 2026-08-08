@@ -14,6 +14,14 @@ export declare enum AbsenceType {
     DELEGATION = "DELEGATION",
     MISSION = "MISSION"
 }
+export declare class AbsenceApprovalStep {
+    approverId: Types.ObjectId;
+    approverName: string;
+    level: number;
+    decision: string;
+    date: Date;
+    comment: string;
+}
 export declare class Absence extends Document {
     employeeId: Types.ObjectId;
     type: AbsenceType;
@@ -24,9 +32,8 @@ export declare class Absence extends Document {
     pieceJointe: string;
     status: AbsenceStatus;
     managerId: Types.ObjectId;
-    n1ApprovedBy: Types.ObjectId;
-    n1ApprovedAt: Date;
-    n1Commentaire: string;
+    approvalHistory: AbsenceApprovalStep[];
+    currentApproverId: Types.ObjectId;
     rhApprovedBy: Types.ObjectId;
     rhApprovedAt: Date;
     rhCommentaire: string;
@@ -124,7 +131,7 @@ export declare const AbsenceSchema: import("mongoose").Schema<Absence, import("m
     }, "id"> & import("mongoose").HydratedDocumentOverrides<{
         id: string;
     }>> | undefined;
-    n1ApprovedBy?: import("mongoose").SchemaDefinitionProperty<Types.ObjectId, Absence, Document<unknown, {}, Absence, {
+    currentApproverId?: import("mongoose").SchemaDefinitionProperty<Types.ObjectId, Absence, Document<unknown, {}, Absence, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<Absence & Required<{
         _id: Types.ObjectId;
@@ -133,16 +140,7 @@ export declare const AbsenceSchema: import("mongoose").Schema<Absence, import("m
     }, "id"> & import("mongoose").HydratedDocumentOverrides<{
         id: string;
     }>> | undefined;
-    n1ApprovedAt?: import("mongoose").SchemaDefinitionProperty<Date, Absence, Document<unknown, {}, Absence, {
-        id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Absence & Required<{
-        _id: Types.ObjectId;
-    }> & {
-        __v: number;
-    }, "id"> & import("mongoose").HydratedDocumentOverrides<{
-        id: string;
-    }>> | undefined;
-    n1Commentaire?: import("mongoose").SchemaDefinitionProperty<string, Absence, Document<unknown, {}, Absence, {
+    approvalHistory?: import("mongoose").SchemaDefinitionProperty<AbsenceApprovalStep[], Absence, Document<unknown, {}, Absence, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<Absence & Required<{
         _id: Types.ObjectId;

@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
 import '../../services/auth_api_service.dart';
+import '../../widgets/approval_tracker.dart';
 
 class TeamValidationScreen extends StatefulWidget {
   const TeamValidationScreen({super.key});
@@ -178,10 +179,20 @@ class _TeamValidationScreenState extends State<TeamValidationScreen>
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Row(children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), shape: BoxShape.circle),
-                          child: const Icon(Icons.people_rounded, color: Colors.white, size: 22),
+                        GestureDetector(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            Navigator.of(context).pop();
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15), 
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1),
+                            ),
+                            child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 22),
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -220,9 +231,9 @@ class _TeamValidationScreenState extends State<TeamValidationScreen>
         body: _loading
             ? const Center(child: CircularProgressIndicator(color: Color(0xFF2962FF)))
             : _error != null
-                ? _ErrorView(error: _error!, onRetry: _loadPending)
+                ? _ErrorView(error: _error!, onRetry: _loadPending, dk: dk)
                 : currentList.isEmpty
-                    ? _EmptyView(tabIndex: _tabIndex)
+                    ? _EmptyView(tabIndex: _tabIndex, dk: dk)
                     : _SwipeCardStack(
                         requests: currentList,
                         isLeave: _tabIndex == 0,
@@ -443,6 +454,33 @@ class _RequestCard extends StatelessWidget {
                 decoration: BoxDecoration(color: const Color(0xFF2962FF).withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
                 child: Text(type.replaceAll('_', ' '), style: GoogleFonts.outfit(color: const Color(0xFF2962FF), fontSize: 10, fontWeight: FontWeight.w700)),
               ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  showModalBottomSheet(
+                    context: context,
+                    backgroundColor: Colors.transparent,
+                    isScrollControlled: true,
+                    builder: (context) => Padding(
+                      padding: const EdgeInsets.only(top: 100),
+                      child: ApprovalTrackerWidget(
+                        history: request['approvalHistory'] ?? [],
+                        status: request['status'] ?? 'PENDING_MANAGER',
+                        dk: dk,
+                      ),
+                    ),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: dk ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.info_outline_rounded, color: dk ? Colors.white54 : Colors.black54, size: 20),
+                ),
+              ),
             ]),
 
             const SizedBox(height: 20),
@@ -610,22 +648,32 @@ class _ActionBtn extends StatelessWidget {
 
 class _EmptyView extends StatelessWidget {
   final int tabIndex;
-  const _EmptyView({required this.tabIndex});
+  final bool dk;
+  const _EmptyView({required this.tabIndex, required this.dk});
 
   @override
   Widget build(BuildContext context) {
+    final fg = dk ? Colors.white : const Color(0xFF0F172A);
+    final mt = dk ? Colors.white54 : Colors.black45;
     return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
       Container(
         padding: const EdgeInsets.all(28),
-        decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), shape: BoxShape.circle),
-        child: const Icon(Icons.check_circle_rounded, color: Colors.green, size: 64),
+        decoration: BoxDecoration(
+          color: Colors.green.withValues(alpha: dk ? 0.12 : 0.08),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.green.withValues(alpha: 0.2), width: 2),
+        ),
+        child: Icon(Icons.check_circle_outline_rounded, color: Colors.green.shade400, size: 64),
       ).animate().scale(duration: 600.ms, curve: Curves.elasticOut),
       const SizedBox(height: 20),
-      Text('Tout est à jour ! ✅', style: GoogleFonts.outfit(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)).animate().fadeIn(delay: 300.ms),
+      Text(
+        'Tout est à jour !',
+        style: GoogleFonts.outfit(color: fg, fontSize: 20, fontWeight: FontWeight.w800),
+      ).animate().fadeIn(delay: 300.ms),
       const SizedBox(height: 8),
       Text(
         tabIndex == 0 ? 'Aucune demande de congé en attente' : 'Aucune demande d\'absence en attente',
-        style: GoogleFonts.inter(color: Colors.white54, fontSize: 14),
+        style: GoogleFonts.inter(color: mt, fontSize: 14),
       ).animate().fadeIn(delay: 400.ms),
     ]));
   }
@@ -634,16 +682,27 @@ class _EmptyView extends StatelessWidget {
 class _ErrorView extends StatelessWidget {
   final String error;
   final VoidCallback onRetry;
-  const _ErrorView({required this.error, required this.onRetry});
+  final bool dk;
+  const _ErrorView({required this.error, required this.onRetry, required this.dk});
 
   @override
   Widget build(BuildContext context) {
+    final fg = dk ? Colors.white : const Color(0xFF0F172A);
+    final mt = dk ? Colors.white54 : Colors.black45;
     return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-      const Icon(Icons.wifi_off_rounded, color: Colors.red, size: 48),
+      Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.red.withValues(alpha: 0.08),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.red.withValues(alpha: 0.2), width: 2),
+        ),
+        child: const Icon(Icons.wifi_off_rounded, color: Colors.red, size: 48),
+      ),
       const SizedBox(height: 16),
-      Text('Erreur de connexion', style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700)),
+      Text('Erreur de connexion', style: GoogleFonts.outfit(color: fg, fontSize: 18, fontWeight: FontWeight.w700)),
       const SizedBox(height: 8),
-      Text(error, style: GoogleFonts.inter(color: Colors.white54, fontSize: 12), textAlign: TextAlign.center),
+      Text(error, style: GoogleFonts.inter(color: mt, fontSize: 12), textAlign: TextAlign.center),
       const SizedBox(height: 20),
       ElevatedButton.icon(
         onPressed: onRetry,

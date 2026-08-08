@@ -2,12 +2,14 @@ import { Model, Types } from 'mongoose';
 import { LeaveRequest, LeaveBalance } from './schemas/leave.schema';
 import { NotificationsService } from '../notifications/notifications.service';
 import { HierarchyService } from '../hierarchy/hierarchy.service';
+import { Employee } from '../employees/employee.schema';
 export declare class LeaveService {
     private leaveRequestModel;
     private leaveBalanceModel;
+    private employeeModel;
     private notificationsService;
     private hierarchyService;
-    constructor(leaveRequestModel: Model<LeaveRequest>, leaveBalanceModel: Model<LeaveBalance>, notificationsService: NotificationsService, hierarchyService: HierarchyService);
+    constructor(leaveRequestModel: Model<LeaveRequest>, leaveBalanceModel: Model<LeaveBalance>, employeeModel: Model<Employee>, notificationsService: NotificationsService, hierarchyService: HierarchyService);
     createRequest(employeeId: string, dto: {
         type: string;
         dateDebut: string;

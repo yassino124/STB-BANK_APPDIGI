@@ -22,6 +22,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> with TickerProviderSt
   late Animation<double> _fadeAnimation;
 
   final Map<String, String> _documentIcons = {
+    // Old types (uploaded documents)
     'PAYSLIP': '💰',
     'WORK_CERTIFICATE': '💼',
     'SALARY_CERTIFICATE': '💵',
@@ -30,9 +31,23 @@ class _DocumentsScreenState extends State<DocumentsScreen> with TickerProviderSt
     'CONTRACT': '📝',
     'ID_DOCUMENT': '🆔',
     'OTHER': '📄',
+    // Auto-generated document types
+    'CONTRAT_CDI': '📋',
+    'CONTRAT_CDD': '📋',
+    'ATTESTATION_EMBAUCHE': '🎓',
+    'ATTESTATION_TRAVAIL': '💼',
+    'ATTESTATION_SALAIRE': '💵',
+    'FICHE_PAIE': '💰',
+    'AUTORISATION_CONGE': '🏖️',
+    'DECISION_PRIME': '💎',
+    'CONTRAT_CREDIT': '🏦',
+    'AVENANT_CONTRAT': '📝',
+    'DECISION_PROMOTION': '📈',
+    'DECISION_MUTATION': '🔄',
   };
 
   final Map<String, String> _documentLabels = {
+    // Old types
     'PAYSLIP': 'Fiche de Paie',
     'WORK_CERTIFICATE': 'Attestation de Travail',
     'SALARY_CERTIFICATE': 'Attestation de Salaire',
@@ -41,6 +56,19 @@ class _DocumentsScreenState extends State<DocumentsScreen> with TickerProviderSt
     'CONTRACT': 'Contrat',
     'ID_DOCUMENT': 'Pièce d\'Identité',
     'OTHER': 'Autre',
+    // Auto-generated types
+    'CONTRAT_CDI': 'Contrat CDI',
+    'CONTRAT_CDD': 'Contrat CDD',
+    'ATTESTATION_EMBAUCHE': 'Attestation Embauche',
+    'ATTESTATION_TRAVAIL': 'Attestation Travail',
+    'ATTESTATION_SALAIRE': 'Attestation Salaire',
+    'FICHE_PAIE': 'Fiche de Paie',
+    'AUTORISATION_CONGE': 'Autorisation Congé',
+    'DECISION_PRIME': 'Décision Prime',
+    'CONTRAT_CREDIT': 'Contrat Crédit',
+    'AVENANT_CONTRAT': 'Avenant Contrat',
+    'DECISION_PROMOTION': 'Décision Promotion',
+    'DECISION_MUTATION': 'Décision Mutation',
   };
 
   @override
@@ -118,15 +146,33 @@ class _DocumentsScreenState extends State<DocumentsScreen> with TickerProviderSt
         ),
       );
 
-      // Decode base64
-      final bytes = base64Decode(doc.fileUrl.split(',').last);
-      
-      // Get directory
+      // Check if this is an auto-generated PDF (download from API)
+      final isAutoGen = doc.type.startsWith('CONTRAT_') || 
+                        doc.type.startsWith('ATTESTATION_') || 
+                        doc.type.startsWith('DECISION_') || 
+                        doc.type.startsWith('AUTORISATION_') ||
+                        doc.type == 'FICHE_PAIE' ||
+                        doc.type == 'AVENANT_CONTRAT';
+
+      late final File file;
       final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/${doc.fileName}');
-      
-      // Write file
-      await file.writeAsBytes(bytes);
+
+      if (isAutoGen) {
+        // Download from backend API endpoint
+        final result = await AuthApiService.downloadDocument(doc.id);
+        if (!result.isSuccess || result.data == null) {
+          throw Exception(result.error ?? 'Erreur lors du téléchargement');
+        }
+        
+        // result.data contains the PDF bytes
+        file = File('${dir.path}/${doc.fileName}');
+        await file.writeAsBytes(result.data as List<int>);
+      } else {
+        // Decode base64 from fileUrl (old method)
+        final bytes = base64Decode(doc.fileUrl.split(',').last);
+        file = File('${dir.path}/${doc.fileName}');
+        await file.writeAsBytes(bytes);
+      }
 
       // Mark as read
       await AuthApiService.markDocumentAsRead(doc.id);
@@ -182,12 +228,12 @@ class _DocumentsScreenState extends State<DocumentsScreen> with TickerProviderSt
 
   Widget _buildHeader(bool isDark) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDark
-              ? [AppTheme.bgSecondaryDark, AppTheme.bgPrimaryDark]
-              : [Colors.white, AppTheme.bgPrimaryLight],
+              ? [const Color(0xFF0A1628), const Color(0xFF0D1F40)]
+              : [const Color(0xFF0D47A1), const Color(0xFF0A3D91)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -197,49 +243,58 @@ class _DocumentsScreenState extends State<DocumentsScreen> with TickerProviderSt
         children: [
           Row(
             children: [
-              IconButton(
-                icon: Icon(
-                  Icons.arrow_back_ios,
-                  color: isDark ? Colors.white : AppTheme.textPrimaryLight,
-                ),
-                onPressed: () => Navigator.pop(context),
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                '📄',
-                style: TextStyle(fontSize: 32),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Mes Documents',
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : AppTheme.textPrimaryLight,
-                      ),
-                    ),
-                    Text(
-                      '${_documents.length} document(s)',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: isDark ? Colors.white60 : Colors.black54,
-                      ),
-                    ),
-                  ],
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.white.withOpacity(0.2)),
+                  ),
+                  child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
                 ),
               ),
-              IconButton(
-                icon: Icon(
-                  Icons.refresh,
-                  color: AppTheme.electricBlue,
+              const Spacer(),
+              GestureDetector(
+                onTap: _loadDocuments,
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.white.withOpacity(0.2)),
+                  ),
+                  child: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
                 ),
-                onPressed: _loadDocuments,
               ),
             ],
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            '📄',
+            style: TextStyle(fontSize: 48),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Mes Documents',
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '${_documents.length} document${_documents.length > 1 ? 's' : ''}',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.white.withOpacity(0.7),
+            ),
           ),
         ],
       ),
@@ -250,11 +305,13 @@ class _DocumentsScreenState extends State<DocumentsScreen> with TickerProviderSt
     final allTypes = ['ALL', ..._documentStats.keys.toList()];
     
     return Container(
-      height: 60,
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      height: 64,
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      color: isDark ? const Color(0xFF060D1A) : const Color(0xFFF0F4FB),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20),
+        physics: const BouncingScrollPhysics(),
         itemCount: allTypes.length,
         itemBuilder: (context, index) {
           final type = allTypes[index];
@@ -262,50 +319,76 @@ class _DocumentsScreenState extends State<DocumentsScreen> with TickerProviderSt
           final count = type == 'ALL' ? _documents.length : (_documentStats[type] ?? 0);
           
           return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: FilterChip(
-              selected: isSelected,
-              label: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    type == 'ALL' ? '📂' : (_documentIcons[type] ?? '📄'),
-                    style: const TextStyle(fontSize: 16),
+            padding: const EdgeInsets.only(right: 10),
+            child: GestureDetector(
+              onTap: () => setState(() => _selectedFilter = type),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  gradient: isSelected
+                      ? const LinearGradient(
+                          colors: [AppTheme.electricBlue, AppTheme.royalBlue],
+                        )
+                      : null,
+                  color: isSelected ? null : (isDark ? const Color(0xFF0E1827) : Colors.white),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: isSelected
+                        ? Colors.transparent
+                        : (isDark ? const Color(0xFF1C2D44) : const Color(0xFFE2E8F0)),
                   ),
-                  const SizedBox(width: 6),
-                  Text(
-                    type == 'ALL' ? 'Tous' : (_documentLabels[type] ?? type),
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: AppTheme.electricBlue.withOpacity(0.35),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          )
+                        ]
+                      : [],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      type == 'ALL' ? '📂' : (_documentIcons[type] ?? '📄'),
+                      style: const TextStyle(fontSize: 16),
                     ),
-                  ),
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? Colors.white.withOpacity(0.3)
-                          : (isDark ? Colors.white12 : Colors.black12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      '$count',
+                    const SizedBox(width: 8),
+                    Text(
+                      type == 'ALL' ? 'Tous' : (_documentLabels[type] ?? type),
                       style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: isSelected
+                            ? Colors.white
+                            : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? Colors.white.withOpacity(0.25)
+                            : (isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.06)),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '$count',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: isSelected
+                              ? Colors.white
+                              : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              selectedColor: AppTheme.electricBlue,
-              backgroundColor: isDark ? AppTheme.bgSecondaryDark : Colors.white,
-              checkmarkColor: Colors.white,
-              onSelected: (selected) {
-                setState(() => _selectedFilter = type);
-              },
             ),
           );
         },
@@ -334,21 +417,18 @@ class _DocumentsScreenState extends State<DocumentsScreen> with TickerProviderSt
   Widget _buildDocumentCard(DocumentItem doc, bool isDark) {
     final icon = _documentIcons[doc.type] ?? '📄';
     final label = _documentLabels[doc.type] ?? doc.type;
+    final cardColor = isDark ? const Color(0xFF0E1827) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF1C2D44) : const Color(0xFFE2E8F0);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isDark
-              ? [AppTheme.bgSecondaryDark, AppTheme.bgSecondaryDark.withValues(alpha: 0.8)]
-              : [Colors.white, Colors.white.withOpacity(0.9)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
+        color: cardColor,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black26 : Colors.black12,
+            color: isDark ? Colors.black.withOpacity(0.2) : Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -357,31 +437,40 @@ class _DocumentsScreenState extends State<DocumentsScreen> with TickerProviderSt
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(22),
           onTap: () => _downloadDocument(doc),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(18),
             child: Row(
               children: [
+                // Icon container
                 Container(
-                  width: 60,
-                  height: 60,
+                  width: 64,
+                  height: 64,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [AppTheme.electricBlue, AppTheme.violet],
+                      colors: [AppTheme.electricBlue, AppTheme.royalBlue],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.electricBlue.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: Center(
                     child: Text(
                       icon,
-                      style: const TextStyle(fontSize: 28),
+                      style: const TextStyle(fontSize: 30),
                     ),
                   ),
                 ),
                 const SizedBox(width: 16),
+                // Content
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -393,53 +482,66 @@ class _DocumentsScreenState extends State<DocumentsScreen> with TickerProviderSt
                               doc.title,
                               style: TextStyle(
                                 fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                                fontWeight: FontWeight.w800,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                letterSpacing: -0.2,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          if (!doc.isRead)
+                          if (!doc.isRead) ...[
+                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: Colors.red,
-                                borderRadius: BorderRadius.circular(10),
+                                color: AppTheme.coralRed,
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppTheme.coralRed.withOpacity(0.3),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
                               child: const Text(
                                 'Nouveau',
                                 style: TextStyle(
                                   fontSize: 10,
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: FontWeight.w800,
                                   color: Colors.white,
                                 ),
                               ),
                             ),
+                          ],
                         ],
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Text(
                         label,
                         style: TextStyle(
                           fontSize: 13,
-                          color: isDark ? Colors.white60 : Colors.black54,
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 10),
                       Row(
                         children: [
                           Icon(
                             Icons.insert_drive_file_outlined,
-                            size: 14,
-                            color: isDark ? Colors.white38 : Colors.black38,
+                            size: 13,
+                            color: isDark ? const Color(0xFF475569) : const Color(0xFF94A3B8),
                           ),
                           const SizedBox(width: 4),
-                          Expanded(
+                          Flexible(
                             child: Text(
                               doc.fileName,
                               style: TextStyle(
                                 fontSize: 11,
-                                color: isDark ? Colors.white38 : Colors.black38,
+                                fontWeight: FontWeight.w500,
+                                color: isDark ? const Color(0xFF475569) : const Color(0xFF94A3B8),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -448,17 +550,16 @@ class _DocumentsScreenState extends State<DocumentsScreen> with TickerProviderSt
                           const SizedBox(width: 12),
                           Icon(
                             Icons.calendar_today_outlined,
-                            size: 14,
-                            color: isDark ? Colors.white38 : Colors.black38,
+                            size: 13,
+                            color: isDark ? const Color(0xFF475569) : const Color(0xFF94A3B8),
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            doc.month != null
-                                ? '${doc.month}/${doc.year}'
-                                : '${doc.year}',
+                            doc.month != null ? '${doc.month}/${doc.year}' : '${doc.year}',
                             style: TextStyle(
                               fontSize: 11,
-                              color: isDark ? Colors.white38 : Colors.black38,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? const Color(0xFF475569) : const Color(0xFF94A3B8),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -466,7 +567,8 @@ class _DocumentsScreenState extends State<DocumentsScreen> with TickerProviderSt
                             '${(doc.fileSize / 1024).toStringAsFixed(1)} KB',
                             style: TextStyle(
                               fontSize: 11,
-                              color: isDark ? Colors.white38 : Colors.black38,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? const Color(0xFF475569) : const Color(0xFF94A3B8),
                             ),
                           ),
                         ],
@@ -475,16 +577,20 @@ class _DocumentsScreenState extends State<DocumentsScreen> with TickerProviderSt
                   ),
                 ),
                 const SizedBox(width: 12),
+                // Download button
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppTheme.electricBlue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
+                    color: AppTheme.electricBlue.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: AppTheme.electricBlue.withOpacity(0.2),
+                    ),
                   ),
                   child: const Icon(
                     Icons.download_rounded,
                     color: AppTheme.electricBlue,
-                    size: 24,
+                    size: 22,
                   ),
                 ),
               ],
@@ -556,16 +662,18 @@ class DocumentItem {
 
   factory DocumentItem.fromJson(Map<String, dynamic> json) {
     return DocumentItem(
-      id: json['_id'],
-      title: json['title'],
-      type: json['type'],
-      fileName: json['fileName'],
-      fileSize: json['fileSize'],
-      fileUrl: json['fileUrl'],
-      year: json['year'],
-      month: json['month'],
+      id: (json['_id'] ?? '').toString(),
+      title: (json['title'] ?? 'Document sans titre').toString(),
+      type: (json['type'] ?? 'OTHER').toString(),
+      fileName: (json['fileName'] ?? 'document.pdf').toString(),
+      fileSize: (json['fileSize'] as num?)?.toInt() ?? 0,
+      fileUrl: (json['fileUrl'] ?? '').toString(),
+      year: (json['year'] as num?)?.toInt() ?? DateTime.now().year,
+      month: (json['month'] as num?)?.toInt(),
       isRead: json['isRead'] ?? false,
-      createdAt: DateTime.parse(json['createdAt']),
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'].toString())
+          : DateTime.now(),
     );
   }
 }

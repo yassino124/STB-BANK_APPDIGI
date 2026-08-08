@@ -4,6 +4,7 @@ export enum Role {
   MANAGER = 'MANAGER',
   FINANCE = 'FINANCE',
   AGENCE = 'AGENCE',
+  IT = 'IT',           // ← IT Admin / System Administrator
   ADMIN = 'ADMIN',
   SUPER_ADMIN = 'SUPER_ADMIN',
 

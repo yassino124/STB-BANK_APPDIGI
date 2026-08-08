@@ -11,9 +11,29 @@ export class PrimesController {
   constructor(private readonly primesService: PrimesService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Request a prime' })
+  @ApiOperation({ summary: 'Request a prime (Employee)' })
   create(@Request() req, @Body() dto: { type: string; montant: number; description: string }) {
     return this.primesService.create(req.user.sub, dto);
+  }
+
+  /** Finance/Admin: attribuer une prime individuelle et la créditer directement */
+  @Post('admin-create')
+  @ApiOperation({ summary: 'Attribuer une prime à un employé (Finance/Admin) — créditée immédiatement' })
+  adminCreate(
+    @Request() req,
+    @Body() dto: { employeeId: string; type: string; montant: number; description: string },
+  ) {
+    return this.primesService.adminCreate(req.user.sub, dto);
+  }
+
+  /** Finance/Admin: distribuer une prime à TOUS les employés actifs */
+  @Post('distribute')
+  @ApiOperation({ summary: 'Distribuer une prime à tous les employés actifs (Finance/Admin)' })
+  distribute(
+    @Request() req,
+    @Body() dto: { type: string; montant: number; description: string },
+  ) {
+    return this.primesService.distributeToAll(req.user.sub, dto);
   }
 
   @Get('my')
@@ -23,7 +43,7 @@ export class PrimesController {
   }
 
   @Get('all')
-  @ApiOperation({ summary: 'All primes (RH)' })
+  @ApiOperation({ summary: 'All primes (RH/Finance)' })
   getAll() {
     return this.primesService.getAllPrimes();
   }

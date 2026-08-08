@@ -21,6 +21,10 @@ export declare class CreateEmployeeDto {
     managerId?: string;
     departmentId?: string;
     branchId?: string;
+    service?: string;
+    direction?: string;
+    directorId?: string;
+    centralDirectorId?: string;
 }
 export declare class UpdateEmployeeFinancialsDto {
     soldeConges?: number;

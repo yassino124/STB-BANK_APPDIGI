@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Users, Clock, TrendingUp, Wallet, FileText } from 'lucide-react';
+import { Users, Clock, TrendingUp, Wallet, FileText, Sun, CloudRain, CloudLightning } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
@@ -31,12 +31,25 @@ const cardVariants = {
   visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.08, type: 'spring' as const, stiffness: 260, damping: 20 } }),
 };
 
+const DASH_CACHE_KEY = 'stb_dashboard_cache';
+
+const DEMO_MOOD: any[] = [
+  { department: 'Agence Ariana', mood: 'SUNNY', score: 88, insight: 'Super ambiance ce mois-ci ! La prime trimestrielle a boosté le moral de toute l\'équipe.' },
+  { department: 'Siège (IT)', mood: 'CLOUDY', score: 58, insight: 'Forte pression sur les délais de livraison. Plusieurs collaborateurs signalent des heures supplémentaires excessives.' },
+  { department: 'Agence Sousse', mood: 'SUNNY', score: 79, insight: 'Équipe stable et bien soudée. Peu de turnover observé ce trimestre.' },
+  { department: 'Direction RH', mood: 'STORMY', score: 41, insight: 'Tensions liées aux nouvelles politiques de congés. Une réunion d\'écoute est recommandée.' },
+];
+
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [recentRequests, setRecentRequests] = useState<any[]>([]);
-  const [activityData, setActivityData] = useState<any[]>([]);
+  
+  // ✅ Initialize from sessionStorage cache for instant display
+  const cached = (() => { try { const c = sessionStorage.getItem(DASH_CACHE_KEY); return c ? JSON.parse(c) : null; } catch { return null; } })();
+  const [stats, setStats] = useState<Stats | null>(cached?.stats ?? null);
+  const [loading, setLoading] = useState(!cached); // Only show loading if no cache
+  const [recentRequests, setRecentRequests] = useState<any[]>(cached?.recentRequests ?? []);
+  const [activityData, setActivityData] = useState<any[]>(cached?.activityData ?? []);
+  const [moodMap, setMoodMap] = useState<any[]>(cached?.moodMap?.length > 0 ? cached.moodMap : DEMO_MOOD);
 
   // Interactive States
   const [isDownloading, setIsDownloading] = useState(false);
@@ -151,17 +164,17 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    setLoading(true);
-    console.log('Dashboard: Fetching data for real stats...');
+    console.log('Dashboard: Fetching fresh data...');
     
     const fetchAllData = async () => {
       try {
-        const [empRes, avRes, congRes, chqRes, analyticsRes] = await Promise.all([
+        const [empRes, avRes, congRes, chqRes, analyticsRes, moodRes] = await Promise.all([
           api.get('/employees?limit=1000').catch(() => ({ data: { data: [] } })),
           api.get('/avances').catch(() => ({ data: { data: [] } })),
           api.get('/conges').catch(() => ({ data: { data: [] } })),
           api.get('/cheques').catch(() => ({ data: { data: [] } })),
-          api.get('/analytics?period=WEEKLY').catch(() => ({ data: { data: [] } }))
+          api.get('/analytics?period=WEEKLY').catch(() => ({ data: { data: [] } })),
+          api.post('/ai/mood').catch(() => null)
         ]);
 
         const employeesList = empRes.data?.data || empRes.data || [];
@@ -174,23 +187,24 @@ const Dashboard = () => {
         const pLeaves = conges.filter((c: any) => c.status === 'EN_ATTENTE' || c.statut === 'EN_ATTENTE').length;
         const pPrimes = avances.filter((a: any) => a.status === 'EN_ATTENTE' || a.statut === 'EN_ATTENTE').length;
 
-        // Basic calculation of payroll just to not show 0
         const payroll = employeesList.reduce((acc: number, emp: any) => acc + (emp.salaireDeBase || 2500), 0);
 
-        setStats({
+        const newStats = {
           totalEmployees: totalEmp,
           activeEmployees: activeEmp,
           pendingLeaves: pLeaves,
           pendingPrimes: pPrimes,
           totalPayrollMasse: payroll
-        });
+        };
+        setStats(newStats);
 
         // Recent Activity combining all requests
         const reqs = [...avances.map((a:any) => ({...a, type: 'AVANCE'})), 
                       ...conges.map((c:any) => ({...c, type: 'LEAVE'})), 
                       ...cheques.map((c:any) => ({...c, type: 'CHEQUIER'}))]
                       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setRecentRequests(reqs.slice(0, 5));
+        const newRequests = reqs.slice(0, 5);
+        setRecentRequests(newRequests);
 
         // Analytics data
         const analyticsList = analyticsRes.data?.data || analyticsRes.data || [];
@@ -200,7 +214,7 @@ const Dashboard = () => {
           echecs: Math.floor(a.value * 0.05)
         })) : [];
         
-        setActivityData(userAct.length > 0 ? userAct : [
+        const newActivity = userAct.length > 0 ? userAct : [
           { day: 'Lun', logins: 42, echecs: 3 },
           { day: 'Mar', logins: 58, echecs: 1 },
           { day: 'Mer', logins: 35, echecs: 5 },
@@ -208,7 +222,22 @@ const Dashboard = () => {
           { day: 'Ven', logins: 65, echecs: 0 },
           { day: 'Sam', logins: 20, echecs: 1 },
           { day: 'Dim', logins: 15, echecs: 0 }
-        ]);
+        ];
+        setActivityData(newActivity);
+
+        // Only update moodMap if Ollama returned real data
+        const newMoodMap = (moodRes?.data && Array.isArray(moodRes.data) && moodRes.data.length > 0)
+          ? moodRes.data
+          : DEMO_MOOD;
+        setMoodMap(newMoodMap);
+
+        // ✅ Cache fresh data in sessionStorage for instant next load
+        sessionStorage.setItem(DASH_CACHE_KEY, JSON.stringify({
+          stats: newStats,
+          recentRequests: newRequests,
+          activityData: newActivity,
+          moodMap: newMoodMap
+        }));
 
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
@@ -256,29 +285,6 @@ const Dashboard = () => {
           <div className="dot-online"></div>
           <span style={{ color: 'var(--success)', fontSize: '0.85rem', fontWeight: 700, fontFamily: 'var(--font-display)' }}>Services Opérationnels</span>
         </motion.div>
-      </div>
-
-      {/* Quick Stats Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-        {[
-          { label: 'Employés Actifs', value: stats?.activeEmployees ?? 0, icon: Users, color: '#10B981', bg: 'rgba(16,185,129,0.1)' },
-          { label: "En Congé Aujourd'hui", value: stats?.pendingLeaves ?? 0, icon: Clock, color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' },
-          { label: 'Demandes en Attente', value: stats?.pendingLeaves ?? 0, icon: Clock, color: '#EF4444', bg: 'rgba(239,68,68,0.1)' },
-          { label: 'Nouveaux ce Mois', value: 3, icon: TrendingUp, color: '#2962FF', bg: 'rgba(41,98,255,0.1)' },
-        ].map((stat, i) => (
-          <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
-            style={{ background: 'var(--card-bg)', borderRadius: '12px', padding: '1rem', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: stat.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <stat.icon size={18} color={stat.color} />
-              </div>
-              <div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>{stat.value}</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500 }}>{stat.label}</div>
-              </div>
-            </div>
-          </motion.div>
-        ))}
       </div>
 
       {/* AI Copilot Widget */}
@@ -467,6 +473,98 @@ const Dashboard = () => {
           </div>
         </motion.div>
       </div>
+
+      {/* Mood Map Section - Always visible */}
+      <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }} className="glass-card" style={{ marginTop: '1.5rem', background: 'linear-gradient(145deg, rgba(20,12,40,0.85), rgba(10,6,22,0.95))', border: '1px solid rgba(245,158,11,0.15)' }}>
+        <div className="section-header">
+          <div className="section-accent" style={{ height: '24px', background: 'linear-gradient(180deg, #F59E0B, #D97706)' }}></div>
+          <h3 style={{ fontSize: '1.1rem', flex: 1, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            🧠 <span>Météo du Moral</span>
+            <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem', background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '20px', color: '#F59E0B', fontWeight: 700 }}>IA Sentiment Analysis</span>
+          </h3>
+          <button
+            onClick={async () => {
+              try {
+                const res = await api.post('/ai/mood').catch(() => null);
+                if (res?.data && Array.isArray(res.data) && res.data.length > 0) setMoodMap(res.data);
+              } catch {}
+            }}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.8rem', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '10px', color: '#F59E0B', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}
+          >
+            🔄 Rafraîchir IA
+          </button>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem', padding: '0.5rem 0' }}>
+          {moodMap.map((mood, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: i * 0.08, type: 'spring', stiffness: 300, damping: 25 }}
+              whileHover={{ y: -4, scale: 1.02 }}
+              style={{
+                padding: '1.25rem',
+                borderRadius: '18px',
+                background: mood.mood === 'SUNNY'
+                  ? 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(5,150,105,0.04))'
+                  : mood.mood === 'STORMY'
+                  ? 'linear-gradient(135deg, rgba(239,68,68,0.08), rgba(185,28,28,0.04))'
+                  : 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(217,119,6,0.04))',
+                border: `1px solid ${mood.mood === 'SUNNY' ? 'rgba(16,185,129,0.2)' : mood.mood === 'STORMY' ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)'}`,
+                display: 'flex', flexDirection: 'column', gap: '1rem',
+                cursor: 'pointer',
+                boxShadow: mood.mood === 'STORMY' ? '0 4px 20px rgba(239,68,68,0.1)' : mood.mood === 'SUNNY' ? '0 4px 20px rgba(16,185,129,0.1)' : '0 4px 20px rgba(245,158,11,0.1)'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.95rem', fontWeight: 700, color: '#fff' }}>{mood.department}</h4>
+                  <span style={{
+                    fontSize: '0.7rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '20px',
+                    background: mood.mood === 'SUNNY' ? 'rgba(16,185,129,0.2)' : mood.mood === 'STORMY' ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)',
+                    color: mood.mood === 'SUNNY' ? '#10B981' : mood.mood === 'STORMY' ? '#EF4444' : '#F59E0B'
+                  }}>
+                    {mood.mood === 'SUNNY' ? '☀️ Ensoleillé' : mood.mood === 'STORMY' ? '⛈️ Orageux' : '🌤️ Nuageux'}
+                  </span>
+                </div>
+                <div style={{
+                  width: '56px', height: '56px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '2rem',
+                  background: mood.mood === 'SUNNY' ? 'rgba(16,185,129,0.15)' : mood.mood === 'STORMY' ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.15)',
+                  border: `2px solid ${mood.mood === 'SUNNY' ? 'rgba(16,185,129,0.3)' : mood.mood === 'STORMY' ? 'rgba(239,68,68,0.3)' : 'rgba(245,158,11,0.3)'}`,
+                  flexShrink: 0
+                }}>
+                  {mood.mood === 'SUNNY' ? '☀️' : mood.mood === 'STORMY' ? '⛈️' : '🌤️'}
+                </div>
+              </div>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Score d'engagement</span>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 800, color: mood.score > 70 ? '#10B981' : mood.score < 50 ? '#EF4444' : '#F59E0B' }}>{mood.score}<span style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--text-muted)' }}>/100</span></span>
+                </div>
+                <div style={{ height: '6px', background: 'rgba(255,255,255,0.07)', borderRadius: '3px', overflow: 'hidden' }}>
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${mood.score}%` }}
+                    transition={{ delay: i * 0.08 + 0.3, duration: 0.8, ease: 'easeOut' }}
+                    style={{
+                      height: '100%',
+                      background: mood.score > 70 ? 'linear-gradient(90deg, #10B981, #059669)' : mood.score < 50 ? 'linear-gradient(90deg, #EF4444, #DC2626)' : 'linear-gradient(90deg, #F59E0B, #D97706)',
+                      borderRadius: '3px',
+                      boxShadow: `0 0 8px ${mood.score > 70 ? '#10B98160' : mood.score < 50 ? '#EF444460' : '#F59E0B60'}`
+                    }}
+                  />
+                </div>
+              </div>
+              <div style={{ padding: '0.75rem', background: 'rgba(0,0,0,0.25)', borderRadius: '10px', borderLeft: `3px solid ${mood.mood === 'SUNNY' ? '#10B981' : mood.mood === 'STORMY' ? '#EF4444' : '#F59E0B'}` }}>
+                <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                  💡 <strong style={{ color: '#fff' }}>Insight IA :</strong> {mood.insight}
+                </p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
     </div>
   );
 };

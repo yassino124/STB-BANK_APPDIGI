@@ -44,7 +44,7 @@ class _EmployeeProfileScreenState extends State<EmployeeProfileScreen>
   @override
   void initState() {
     super.initState();
-    _tabCtrl = TabController(length: 3, vsync: this);
+    _tabCtrl = TabController(length: 2, vsync: this); // Changed from 3 to 2 tabs (removed Credits tab)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadTransactionsIfNeeded();
     });
@@ -114,7 +114,6 @@ class _EmployeeProfileScreenState extends State<EmployeeProfileScreen>
           children: [
             _buildRHTab(emp, fg, mt, cd, bd, dk),
             _buildTransactionsTab(emp, fg, mt, cd, bd, dk),
-            _buildCreditsTab(emp, fg, mt, cd, bd, dk),
           ],
         ),
       ),
@@ -247,8 +246,6 @@ class _EmployeeProfileScreenState extends State<EmployeeProfileScreen>
                   _divider(),
                   _heroStat("${emp['soldeConges'] ?? 0} j", "Congé", const Color(0xFF00BFA5)),
                   _divider(),
-                  _heroStat("${((emp['creditsEnCours'] as num?) ?? 0).toStringAsFixed(0)} TND", "Crédits", AppTheme.coralRed),
-                  _divider(),
                   _heroStat("${((emp['prime'] as num?) ?? 0).toStringAsFixed(0)} TND", "Primes", const Color(0xFFF59E0B)),
                 ]),
               ),
@@ -322,7 +319,6 @@ class _EmployeeProfileScreenState extends State<EmployeeProfileScreen>
           tabs: const [
             Tab(text: 'RH & Infos'),
             Tab(text: 'Transactions'),
-            Tab(text: 'Crédits'),
           ],
         ),
       ),
@@ -331,23 +327,62 @@ class _EmployeeProfileScreenState extends State<EmployeeProfileScreen>
 
   // ── TAB: RH & INFOS ─────────────────────────────────────────────────────
   Widget _buildRHTab(Map<String, dynamic> emp, Color fg, Color mt, Color cd, Color bd, bool dk) {
+    final p = Provider.of<AppProvider>(context, listen: false);
+    final isRH = p.isRH;
+    
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
       children: [
-        _infoCard("Informations Personnelles", [
+        // Public information - visible to everyone
+        _infoCard("Informations Publiques", [
           [Icons.person_rounded, 'Nom Complet', "${emp['prenom'] ?? ''} ${emp['nom'] ?? ''}"],
           [Icons.badge_rounded, 'Matricule', emp['matricule']?.toString() ?? "N/A"],
           [Icons.work_rounded, 'Poste', emp['poste'] as String? ?? "Employé"],
           [Icons.business_rounded, 'Direction', emp['departement'] as String? ?? "STB"],
-          [Icons.email_rounded, 'Email', emp['email'] as String? ?? "-"],
         ], fg, mt, cd, bd, dk, AppTheme.electricBlue),
-        const SizedBox(height: 14),
-        _infoCard("Compte & Rémunération", [
-          [Icons.account_balance_rounded, 'RIB', emp['rib']?.toString() ?? "N/A"],
-          [Icons.beach_access_rounded, 'Solde Congé', '${emp['soldeConges'] ?? 0} jours'],
-          [Icons.payments_rounded, 'Salaire Net', '${((emp['salaireBase'] as num?) ?? 0).toStringAsFixed(3)} TND'],
-          [Icons.star_rounded, 'Total Primes', '${((emp['prime'] as num?) ?? 0).toStringAsFixed(3)} TND'],
-        ], fg, mt, cd, bd, dk, AppTheme.emerald),
+        
+        // Private information - visible only to RH
+        if (isRH) ...[
+          const SizedBox(height: 14),
+          _infoCard("Informations Personnelles (RH)", [
+            [Icons.email_rounded, 'Email', emp['email'] as String? ?? "-"],
+          ], fg, mt, cd, bd, dk, AppTheme.royalBlue),
+          const SizedBox(height: 14),
+          _infoCard("Compte & Rémunération (RH)", [
+            [Icons.account_balance_rounded, 'RIB', emp['rib']?.toString() ?? "N/A"],
+            [Icons.beach_access_rounded, 'Solde Congé', '${emp['soldeConges'] ?? 0} jours'],
+            [Icons.payments_rounded, 'Salaire Net', '${((emp['salaireBase'] as num?) ?? 0).toStringAsFixed(3)} TND'],
+            [Icons.star_rounded, 'Total Primes', '${((emp['prime'] as num?) ?? 0).toStringAsFixed(3)} TND'],
+          ], fg, mt, cd, bd, dk, AppTheme.emerald),
+        ] else ...[
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: cd,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: bd),
+              boxShadow: AppTheme.cardShadow(dk),
+            ),
+            child: Column(
+              children: [
+                Icon(Icons.lock_rounded, size: 48, color: mt.withValues(alpha: 0.4)),
+                const SizedBox(height: 12),
+                Text(
+                  "Informations Confidentielles",
+                  style: TextStyle(color: fg, fontSize: 16, fontWeight: FontWeight.w800),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "Les informations personnelles et financières de ce collaborateur sont privées.",
+                  style: TextStyle(color: mt, fontSize: 12),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -461,80 +496,6 @@ class _EmployeeProfileScreenState extends State<EmployeeProfileScreen>
             ]),
           ).animate().fadeIn(delay: (e.key * 50).ms);
         }),
-      ]),
-    );
-  }
-
-  // ── TAB: CREDITS ─────────────────────────────────────────────────────────
-  Widget _buildCreditsTab(Map<String, dynamic> emp, Color fg, Color mt, Color cd, Color bd, bool dk) {
-    final totalCredits = (emp['creditsEnCours'] as num?)?.toDouble() ?? 0.0;
-    final salaire = (emp['salaireBase'] as num?)?.toDouble() ?? 1200.0;
-    final mensualite = totalCredits > 0 ? totalCredits / 24 : 0.0; // Estimate
-    final hasCredits = totalCredits > 0;
-
-    return SingleChildScrollView(
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-      child: Column(children: [
-        if (!hasCredits)
-          Container(
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(color: cd, borderRadius: BorderRadius.circular(24), border: Border.all(color: bd)),
-            child: Column(children: [
-              const Icon(Icons.check_circle_rounded, color: AppTheme.emerald, size: 48),
-              const SizedBox(height: 12),
-              Text("Aucun crédit en cours", style: TextStyle(color: fg, fontSize: 16, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 6),
-              Text("Ce collaborateur n'a pas de crédit actif.", style: TextStyle(color: mt, fontSize: 12)),
-            ]),
-          )
-        else ...[
-          Container(
-            padding: const EdgeInsets.all(22),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [AppTheme.royalBlue, AppTheme.electricBlue], begin: Alignment.topLeft, end: Alignment.bottomRight),
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: AppTheme.primaryShadow,
-            ),
-            child: Column(children: [
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                const Text("Total Crédits", style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
-                  child: const Text("Actif", style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
-                ),
-              ]),
-              const SizedBox(height: 10),
-              Text("${totalCredits.toStringAsFixed(0)} TND", style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: -1)),
-              const SizedBox(height: 16),
-              // Progress bar
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: LinearProgressIndicator(
-                  value: mensualite > 0 ? (mensualite / (salaire > 0 ? salaire : 1)).clamp(0.0, 1.0) : 0,
-                  minHeight: 7,
-                  backgroundColor: Colors.white.withValues(alpha: 0.2),
-                  valueColor: const AlwaysStoppedAnimation(Colors.white),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Row(children: [
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text("Mensualité", style: TextStyle(color: Colors.white60, fontSize: 11)),
-                  Text("${mensualite.toStringAsFixed(0)} TND/mois", style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800)),
-                ])),
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                  const Text("Ratio Salaire", style: TextStyle(color: Colors.white60, fontSize: 11)),
-                  Text(
-                    "${salaire > 0 ? ((mensualite / salaire) * 100).toStringAsFixed(0) : 0}%",
-                    style: TextStyle(color: mensualite / (salaire > 0 ? salaire : 1) > 0.35 ? AppTheme.coralRed : AppTheme.emerald, fontSize: 14, fontWeight: FontWeight.w800),
-                  ),
-                ])),
-              ]),
-            ]),
-          ),
-        ],
       ]),
     );
   }

@@ -9,9 +9,9 @@ interface LeaveEvent {
   _id: string;
   employeeId: {
     _id: string;
-    firstName: string;
-    lastName: string;
-    department?: string;
+    prenom: string;
+    nom: string;
+    poste?: string;
   };
   startDate: string;
   endDate: string;
@@ -41,7 +41,7 @@ const TeamCalendar = () => {
     try {
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth() + 1;
-      const res = await api.get(`/leave?year=${year}&month=${month}`);
+      const res = await api.get(`/leave/my-team`);
       setLeaves(res.data?.data || res.data || []);
     } catch (err: any) {
       console.error('Error fetching leaves:', err);
@@ -101,7 +101,7 @@ const TeamCalendar = () => {
   };
 
   const handleDragStart = (leave: LeaveEvent, e: React.DragEvent) => {
-    if (leave.status !== 'PENDING' && leave.status !== 'PENDING_N1') {
+    if (leave.status !== 'PENDING' && leave.status !== 'PENDING_MANAGER') {
       e.preventDefault();
       toast.error('Impossible de déplacer un congé déjà validé');
       return;
@@ -151,7 +151,7 @@ const TeamCalendar = () => {
       case 'REJECTED':
         return { bg: 'rgba(239,68,68,0.15)', border: '#EF4444', text: '#EF4444' };
       case 'PENDING':
-      case 'PENDING_N1':
+      case 'PENDING_MANAGER':
       case 'PENDING_RH':
         return { bg: 'rgba(245,158,11,0.15)', border: '#F59E0B', text: '#F59E0B' };
       default:
@@ -329,7 +329,7 @@ const TeamCalendar = () => {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         {dayLeaves.slice(0, 3).map((leave) => {
                           const colors = getStatusColor(leave.status);
-                          const isDraggable = leave.status === 'PENDING' || leave.status === 'PENDING_N1';
+                          const isDraggable = leave.status === 'PENDING' || leave.status === 'PENDING_MANAGER';
                           
                           return (
                             <div
@@ -354,11 +354,11 @@ const TeamCalendar = () => {
                                 gap: '4px',
                                 cursor: isDraggable ? 'grab' : 'pointer',
                               }}
-                              title={`${leave.employeeId.firstName} ${leave.employeeId.lastName} - ${leave.type}`}
+                              title={`${leave.employeeId.prenom} ${leave.employeeId.nom} - ${leave.type}`}
                             >
                               {getStatusIcon(leave.status)}
                               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {leave.employeeId.firstName[0]}. {leave.employeeId.lastName}
+                                {leave.employeeId.prenom[0]}. {leave.employeeId.nom}
                               </span>
                             </div>
                           );
@@ -421,10 +421,10 @@ const TeamCalendar = () => {
                 </div>
                 <div style={{ flex: 1 }}>
                   <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
-                    {selectedLeave.employeeId.firstName} {selectedLeave.employeeId.lastName}
+                    {selectedLeave.employeeId.prenom} {selectedLeave.employeeId.nom}
                   </h3>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    {selectedLeave.employeeId.department || 'Aucun département'}
+                    {selectedLeave.employeeId.poste || 'Aucun poste renseigné'}
                   </div>
                 </div>
                 <div style={{

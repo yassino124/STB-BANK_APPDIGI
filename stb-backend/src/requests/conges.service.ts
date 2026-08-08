@@ -289,6 +289,27 @@ export class CongesService {
   }
 
   /**
+   * Demandes EN_ATTENTE des subordonnés directs d'un manager
+   */
+  async getPendingTeam(managerId: string): Promise<Conge[]> {
+    // Trouver tous les employés qui ont ce manager
+    const teamMembers = await this.employeeModel
+      .find({ managerId: new Types.ObjectId(managerId) })
+      .select('_id');
+
+    const teamIds = teamMembers.map((e) => e._id);
+
+    return this.congeModel
+      .find({
+        employeeId: { $in: teamIds },
+        status: CongeStatus.EN_ATTENTE,
+      })
+      .populate('employeeId', 'matricule nom prenom email')
+      .sort({ createdAt: -1 })
+      .exec();
+  }
+
+  /**
    * Calendrier équipe (pour managers)
    */
   async getTeamCalendar(

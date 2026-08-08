@@ -202,6 +202,20 @@ let CongesService = class CongesService {
             .sort({ createdAt: -1 })
             .exec();
     }
+    async getPendingTeam(managerId) {
+        const teamMembers = await this.employeeModel
+            .find({ managerId: new mongoose_2.Types.ObjectId(managerId) })
+            .select('_id');
+        const teamIds = teamMembers.map((e) => e._id);
+        return this.congeModel
+            .find({
+            employeeId: { $in: teamIds },
+            status: conge_schema_1.CongeStatus.EN_ATTENTE,
+        })
+            .populate('employeeId', 'matricule nom prenom email')
+            .sort({ createdAt: -1 })
+            .exec();
+    }
     async getTeamCalendar(managerId, month, year) {
         const teamMembers = await this.employeeModel
             .find({ managerId: new mongoose_2.Types.ObjectId(managerId) })

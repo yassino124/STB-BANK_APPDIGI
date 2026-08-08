@@ -31,6 +31,12 @@ export class AbsenceController {
     return this.absenceService.getPendingForManager(req.user.sub);
   }
 
+  @Get('my-team')
+  @ApiOperation({ summary: 'All absence requests from my direct reports' })
+  getMyTeamAbsences(@Request() req) {
+    return this.absenceService.getMyTeamAbsences(req.user.sub);
+  }
+
   @Get('pending-rh')
   @Roles(Role.RH, Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOperation({ summary: 'Pending RH validation' })
@@ -46,7 +52,7 @@ export class AbsenceController {
   }
 
   @Patch(':id/handle-manager')
-  @Roles(Role.MANAGER)
+  @Roles(Role.MANAGER, Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOperation({ summary: 'Manager approves or rejects absence (N+1)' })
   handleManagerApproval(
     @Param('id') id: string,

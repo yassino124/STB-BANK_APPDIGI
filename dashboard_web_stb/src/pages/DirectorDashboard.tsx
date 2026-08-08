@@ -53,37 +53,69 @@ const DirectorDashboard = () => {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      // Fetch team members (subordinates)
-      const employeesRes = await api.get('/employees/my-team').catch(() => ({ data: [] }));
-      const employees = employeesRes.data?.data || employeesRes.data || [];
-      setTeamMembers(employees);
+      // Fetch employees who have this manager as their managerId
+      const [empRes, pendingRes, teamLeavesRes] = await Promise.all([
+        api.get('/employees', { params: { limit: 100 } }).catch(() => ({ data: { data: [] } })),
+        api.get('/leave/pending-manager').catch(() => ({ data: [] })),
+        api.get('/leave/my-team').catch(() => ({ data: [] })),
+      ]);
 
-      // Fetch leaves for today
+      // employees: filter those where managerId matches current user (unless admin)
+      const empData = empRes.data?.data || empRes.data;
+      const allEmployees: any[] = Array.isArray(empData) ? empData : [];
+      const myEmployees = allEmployees.filter((e: any) => {
+        const isUserAdmin = user?.roles?.includes('SUPER_ADMIN') || user?.roles?.includes('ADMIN');
+        if (isUserAdmin) return true;
+        
+        const mid = e.managerId?._id || e.managerId;
+        const did = e.directorId?._id || e.directorId;
+        const cid = e.centralDirectorId?._id || e.centralDirectorId;
+        
+        const userId = user?.sub?.toString() || (user as any)?._id?.toString() || (user as any)?.id?.toString();
+        if (!userId) return false;
+
+        return (mid && mid.toString() === userId) || 
+               (did && did.toString() === userId) || 
+               (cid && cid.toString() === userId);
+      });
+
+      setTeamMembers(myEmployees.map((e: any) => ({
+        _id: e._id,
+        firstName: e.prenom || '',
+        lastName: e.nom || '',
+        department: e.departmentId?.name || e.departement || '',
+        position: e.poste || '',
+        salary: e.salaireBase || 0,
+        status: e.status === 'ACTIVE' ? 'active' : 'inactive',
+      })));
+
+      const pendingData = pendingRes.data?.data || pendingRes.data;
+      const pendingRequests: any[] = Array.isArray(pendingData) ? pendingData : [];
+      
+      const teamLeavesData = teamLeavesRes.data?.data || teamLeavesRes.data;
+      const teamLeaves: any[] = Array.isArray(teamLeavesData) ? teamLeavesData : [];
+
+      // Leaves today
       const today = new Date().toISOString().split('T')[0];
-      const leavesRes = await api.get(`/leave?date=${today}`).catch(() => ({ data: [] }));
-      const todayLeaves = leavesRes.data?.data || leavesRes.data || [];
+      const todayLeaves = teamLeaves.filter((l: any) => {
+        if (!l.dateDebut || !l.dateFin) return false;
+        try {
+          const start = new Date(l.dateDebut).toISOString().split('T')[0];
+          const end = new Date(l.dateFin).toISOString().split('T')[0];
+          return today >= start && today <= end && l.status === 'APPROVED';
+        } catch (e) {
+          return false;
+        }
+      });
 
-      // Fetch budget data
-      const budgetsRes = await api.get('/budgets/department').catch(() => ({ data: { total: 0, spent: 0 } }));
-      const budgetData = budgetsRes.data || {};
-
-      // Fetch pending requests
-      const requestsRes = await api.get('/leave?status=PENDING_N1,PENDING_N2').catch(() => ({ data: [] }));
-      const pendingRequests = requestsRes.data?.data || requestsRes.data || [];
-
-      // Calculate KPIs
-      const totalEmployees = employees.length;
-      const activeEmployees = employees.filter((e: EmployeeData) => e.status === 'active').length;
+      const totalEmployees = myEmployees.length;
+      const activeEmployees = myEmployees.filter((e: any) => e.status === 'ACTIVE').length;
       const onLeaveToday = todayLeaves.length;
-      const totalSalary = employees.reduce((sum: number, e: EmployeeData) => sum + (e.salary || 0), 0);
+      const totalSalary = myEmployees.reduce((sum: number, e: any) => sum + (e.salaireBase || 0), 0);
       const averageSalary = totalEmployees > 0 ? totalSalary / totalEmployees : 0;
-
-      // Calculate absenteeism rate (simplified: leaves today / total employees)
       const absenteeismRate = totalEmployees > 0 ? (onLeaveToday / totalEmployees) * 100 : 0;
-
-      // Budget calculations
-      const departmentBudget = budgetData.total || totalSalary * 1.3; // Estimate if not available
-      const actualExpenses = budgetData.spent || totalSalary;
+      const departmentBudget = totalSalary * 1.3;
+      const actualExpenses = totalSalary;
       const budgetUtilization = departmentBudget > 0 ? (actualExpenses / departmentBudget) * 100 : 0;
 
       setKpis({
@@ -96,7 +128,7 @@ const DirectorDashboard = () => {
         absenteeismRate,
         averageSalary,
         pendingRequests: pendingRequests.length,
-        avgProductivity: 85 + Math.random() * 10, // Mock productivity
+        avgProductivity: 85 + Math.random() * 10,
       });
     } catch (err: any) {
       console.error('Error fetching dashboard data:', err);

@@ -9,6 +9,13 @@ export declare class CardsController {
     } & {
         id: string;
     })[]>;
+    getAll(): Promise<(import("mongoose").Document<unknown, {}, import("./schemas/card.schema").Card, {}, import("mongoose").DefaultSchemaOptions> & import("./schemas/card.schema").Card & {
+        _id: import("mongoose").Types.ObjectId;
+    } & {
+        __v: number;
+    } & {
+        id: string;
+    })[]>;
     freeze(id: string): Promise<(import("mongoose").Document<unknown, {}, import("./schemas/card.schema").Card, {}, import("mongoose").DefaultSchemaOptions> & import("./schemas/card.schema").Card & {
         _id: import("mongoose").Types.ObjectId;
     } & {

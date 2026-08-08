@@ -16,6 +16,13 @@ export declare class CardsService {
     } & {
         id: string;
     })[]>;
+    getAllCards(): Promise<(import("mongoose").Document<unknown, {}, Card, {}, import("mongoose").DefaultSchemaOptions> & Card & {
+        _id: Types.ObjectId;
+    } & {
+        __v: number;
+    } & {
+        id: string;
+    })[]>;
     findOne(id: string): Promise<import("mongoose").Document<unknown, {}, Card, {}, import("mongoose").DefaultSchemaOptions> & Card & {
         _id: Types.ObjectId;
     } & {

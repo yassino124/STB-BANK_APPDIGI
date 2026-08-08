@@ -25,6 +25,12 @@ let PrimesController = class PrimesController {
     create(req, dto) {
         return this.primesService.create(req.user.sub, dto);
     }
+    adminCreate(req, dto) {
+        return this.primesService.adminCreate(req.user.sub, dto);
+    }
+    distribute(req, dto) {
+        return this.primesService.distributeToAll(req.user.sub, dto);
+    }
     getMine(req) {
         return this.primesService.getMyPrimes(req.user.sub);
     }
@@ -41,13 +47,31 @@ let PrimesController = class PrimesController {
 exports.PrimesController = PrimesController;
 __decorate([
     (0, common_1.Post)(),
-    (0, swagger_1.ApiOperation)({ summary: 'Request a prime' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Request a prime (Employee)' }),
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", void 0)
 ], PrimesController.prototype, "create", null);
+__decorate([
+    (0, common_1.Post)('admin-create'),
+    (0, swagger_1.ApiOperation)({ summary: 'Attribuer une prime à un employé (Finance/Admin) — créditée immédiatement' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", void 0)
+], PrimesController.prototype, "adminCreate", null);
+__decorate([
+    (0, common_1.Post)('distribute'),
+    (0, swagger_1.ApiOperation)({ summary: 'Distribuer une prime à tous les employés actifs (Finance/Admin)' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", void 0)
+], PrimesController.prototype, "distribute", null);
 __decorate([
     (0, common_1.Get)('my'),
     (0, swagger_1.ApiOperation)({ summary: 'My primes' }),
@@ -58,7 +82,7 @@ __decorate([
 ], PrimesController.prototype, "getMine", null);
 __decorate([
     (0, common_1.Get)('all'),
-    (0, swagger_1.ApiOperation)({ summary: 'All primes (RH)' }),
+    (0, swagger_1.ApiOperation)({ summary: 'All primes (RH/Finance)' }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)

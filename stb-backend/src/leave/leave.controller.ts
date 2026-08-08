@@ -37,8 +37,13 @@ export class LeaveController {
     return this.leaveService.getPendingForManager(req.user.sub);
   }
 
+  @Get('pending-team')
+  @ApiOperation({ summary: 'All pending leave requests from my team (alias for pending-manager)' })
+  getPendingTeam(@Request() req) {
+    return this.leaveService.getPendingForManager(req.user.sub);
+  }
+
   @Get('my-team')
-  @Roles(Role.MANAGER)
   @ApiOperation({ summary: 'All leave requests from my direct reports' })
   getMyTeamRequests(@Request() req) {
     return this.leaveService.getMyTeamRequests(req.user.sub);
@@ -55,12 +60,11 @@ export class LeaveController {
   @Roles(Role.RH, Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOperation({ summary: 'Pending RH validation' })
   getPendingRh() {
-    return this.leaveService.getAllRequests('APPROVED_N1');
+    return this.leaveService.getAllRequests('PENDING_RH');
   }
 
   @Patch(':id/handle-manager')
-  @Roles(Role.MANAGER)
-  @ApiOperation({ summary: 'Manager approves or rejects leave (N+1)' })
+  @ApiOperation({ summary: 'Manager/Director approves or rejects leave (any level in chain)' })
   handleManagerApproval(
     @Param('id') id: string,
     @Request() req,
@@ -81,23 +85,22 @@ export class LeaveController {
   }
 
   @Post(':id/manager-approve')
-  @Roles(Role.MANAGER)
-  @ApiOperation({ summary: '✅ Manager approves leave (simplified endpoint for mobile)' })
-  managerApprove(@Param('id') id: string, @Request() req, @Body() body: { commentaire?: string }) {
-    return this.leaveService.handleManagerApproval(id, req.user.sub, 'APPROVED', body.commentaire || '');
+  @ApiOperation({ summary: '✅ Manager/Director approves leave (mobile endpoint)' })
+  managerApprove(@Param('id') id: string, @Request() req, @Body() body?: { commentaire?: string }) {
+    return this.leaveService.handleManagerApproval(id, req.user.sub, 'APPROVED', body?.commentaire || '');
   }
 
   @Post(':id/manager-reject')
-  @Roles(Role.MANAGER)
-  @ApiOperation({ summary: '❌ Manager rejects leave (simplified endpoint for mobile)' })
-  managerReject(@Param('id') id: string, @Request() req, @Body() body: { commentaire?: string }) {
-    return this.leaveService.handleManagerApproval(id, req.user.sub, 'REJECTED', body.commentaire || 'Refusé par le manager');
+  @ApiOperation({ summary: '❌ Manager/Director rejects leave (mobile endpoint)' })
+  managerReject(@Param('id') id: string, @Request() req, @Body() body?: { reason?: string; commentaire?: string }) {
+    return this.leaveService.handleManagerApproval(id, req.user.sub, 'REJECTED', body?.commentaire || body?.reason || 'Refusé');
   }
 
-  @Get('pending-team')
-  @Roles(Role.MANAGER)
-  @ApiOperation({ summary: '📋 Get all pending leave requests from my team (for swipe UI)' })
-  getPendingTeam(@Request() req) {
-    return this.leaveService.getPendingForManager(req.user.sub);
+  @Get('debug-all')
+  @ApiOperation({ summary: '🔧 DEBUG: Get all leaves (no filter)' })
+  async debugAll() {
+    const all = await this.leaveService.getAllRequests();
+    console.log('🔧 [DEBUG] Total leaves in DB:', all.length);
+    return { total: all.length, data: all };
   }
 }

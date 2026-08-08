@@ -20,6 +20,7 @@ const activity_logs_service_1 = require("../activity_logs/activity-logs.service"
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../common/guards/roles.guard");
 const roles_decorator_1 = require("../common/decorators/roles.decorator");
+const public_decorator_1 = require("../common/decorators/public.decorator");
 const role_enum_1 = require("../common/enums/role.enum");
 const employee_dto_1 = require("./dto/employee.dto");
 let EmployeesController = class EmployeesController {
@@ -34,6 +35,9 @@ let EmployeesController = class EmployeesController {
     }
     findAll(page = 1, limit = 20, search) {
         return this.employeesService.findAll(+page, +limit, search);
+    }
+    getDirectory(search) {
+        return this.employeesService.getDirectory(search);
     }
     searchDirectory(query) {
         return this.employeesService.searchDirectory(query);
@@ -92,7 +96,7 @@ __decorate([
 ], EmployeesController.prototype, "create", null);
 __decorate([
     (0, common_1.Get)(),
-    (0, roles_decorator_1.Roles)(role_enum_1.Role.RH, role_enum_1.Role.ADMIN, role_enum_1.Role.SUPER_ADMIN, role_enum_1.Role.MANAGER),
+    (0, roles_decorator_1.Roles)(role_enum_1.Role.RH, role_enum_1.Role.ADMIN, role_enum_1.Role.SUPER_ADMIN, role_enum_1.Role.MANAGER, role_enum_1.Role.FINANCE, role_enum_1.Role.AGENCE, role_enum_1.Role.IT),
     (0, swagger_1.ApiOperation)({ summary: '📋 List all employees (paginated)' }),
     (0, swagger_1.ApiQuery)({ name: 'page', required: false, type: Number, example: 1 }),
     (0, swagger_1.ApiQuery)({ name: 'limit', required: false, type: Number, example: 20 }),
@@ -104,6 +108,15 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object, String]),
     __metadata("design:returntype", void 0)
 ], EmployeesController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)('directory'),
+    (0, swagger_1.ApiOperation)({ summary: '📋 Get all employees for hierarchy dropdowns (name, matricule, poste, roles)' }),
+    (0, swagger_1.ApiQuery)({ name: 'search', required: false, type: String }),
+    __param(0, (0, common_1.Query)('search')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], EmployeesController.prototype, "getDirectory", null);
 __decorate([
     (0, common_1.Get)('directory/search'),
     (0, swagger_1.ApiOperation)({ summary: '🔍 Search employee directory (Accessible to all authenticated users)' }),
@@ -133,7 +146,8 @@ __decorate([
 ], EmployeesController.prototype, "getMyActivityTimeline", null);
 __decorate([
     (0, common_1.Get)(':id/avatar'),
-    (0, swagger_1.ApiOperation)({ summary: '🖼️ Get employee avatar as image' }),
+    (0, public_decorator_1.Public)(),
+    (0, swagger_1.ApiOperation)({ summary: '🖼️ Get employee avatar as image (public)' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
@@ -142,7 +156,7 @@ __decorate([
 ], EmployeesController.prototype, "getAvatar", null);
 __decorate([
     (0, common_1.Get)(':id/finance-profile'),
-    (0, roles_decorator_1.Roles)(role_enum_1.Role.RH, role_enum_1.Role.ADMIN, role_enum_1.Role.SUPER_ADMIN, role_enum_1.Role.MANAGER),
+    (0, roles_decorator_1.Roles)(role_enum_1.Role.RH, role_enum_1.Role.ADMIN, role_enum_1.Role.SUPER_ADMIN, role_enum_1.Role.MANAGER, role_enum_1.Role.FINANCE, role_enum_1.Role.AGENCE),
     (0, swagger_1.ApiOperation)({
         summary: '💰 Get employee finance profile with REAL calculations',
         description: 'Returns salaire net AFTER credit/avance deductions, not just raw data'
@@ -154,7 +168,7 @@ __decorate([
 ], EmployeesController.prototype, "getFinanceProfile", null);
 __decorate([
     (0, common_1.Get)(':id'),
-    (0, roles_decorator_1.Roles)(role_enum_1.Role.RH, role_enum_1.Role.ADMIN, role_enum_1.Role.SUPER_ADMIN, role_enum_1.Role.MANAGER),
+    (0, roles_decorator_1.Roles)(role_enum_1.Role.RH, role_enum_1.Role.ADMIN, role_enum_1.Role.SUPER_ADMIN, role_enum_1.Role.MANAGER, role_enum_1.Role.FINANCE, role_enum_1.Role.AGENCE),
     (0, swagger_1.ApiOperation)({ summary: '🔍 Get employee by ID' }),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
@@ -188,7 +202,7 @@ __decorate([
 ], EmployeesController.prototype, "updateStatus", null);
 __decorate([
     (0, common_1.Patch)(':id/financials'),
-    (0, roles_decorator_1.Roles)(role_enum_1.Role.RH, role_enum_1.Role.ADMIN, role_enum_1.Role.SUPER_ADMIN),
+    (0, roles_decorator_1.Roles)(role_enum_1.Role.RH, role_enum_1.Role.ADMIN, role_enum_1.Role.SUPER_ADMIN, role_enum_1.Role.FINANCE),
     (0, swagger_1.ApiOperation)({
         summary: '💰 Update employee financials (Congés, Crédits, Prime)',
     }),

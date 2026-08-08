@@ -13,6 +13,7 @@ const absence_schema_1 = require("./schemas/absence.schema");
 const absence_service_1 = require("./absence.service");
 const absence_controller_1 = require("./absence.controller");
 const employees_module_1 = require("../employees/employees.module");
+const notifications_module_1 = require("../notifications/notifications.module");
 let AbsenceModule = class AbsenceModule {
 };
 exports.AbsenceModule = AbsenceModule;
@@ -21,6 +22,7 @@ exports.AbsenceModule = AbsenceModule = __decorate([
         imports: [
             mongoose_1.MongooseModule.forFeature([{ name: absence_schema_1.Absence.name, schema: absence_schema_1.AbsenceSchema }]),
             employees_module_1.EmployeesModule,
+            notifications_module_1.NotificationsModule,
         ],
         controllers: [absence_controller_1.AbsenceController],
         providers: [absence_service_1.AbsenceService],

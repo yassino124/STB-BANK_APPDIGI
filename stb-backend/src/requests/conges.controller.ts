@@ -88,6 +88,20 @@ export class CongesController {
   }
 
   /**
+   * Demandes en attente pour un manager (ses subordonnés directs)
+   * GET /api/v1/conges/pending-team
+   */
+  @Get('pending-team')
+  async getPendingTeam(@Request() req) {
+    const managerId = req.user.sub;
+    const conges = await this.congesService.getPendingTeam(managerId);
+    return {
+      success: true,
+      data: conges,
+    };
+  }
+
+  /**
    * Calendrier équipe (managers)
    * GET /api/v1/conges/team-calendar?month=7&year=2026
    */
@@ -184,15 +198,16 @@ export class CongesController {
     const { statut, rejectionReason } = body;
 
     if (statut === 'APPROUVE') {
-      // Auto-approve as RH
-      const conge = await this.congesService.approveConge(congeId, approverId, 'RH');
+      // Detect role from user (if manager, use MANAGER role, else RH)
+      const role = (req.user.roles || []).includes('MANAGER') ? 'MANAGER' : 'RH';
+      const conge = await this.congesService.approveConge(congeId, approverId, role);
       return {
         success: true,
         message: 'Congé approuvé',
         data: conge,
       };
     } else if (statut === 'REFUSE') {
-      const conge = await this.congesService.refuseConge(congeId, rejectionReason || 'Refusé par RH');
+      const conge = await this.congesService.refuseConge(congeId, rejectionReason || 'Refusé');
       return {
         success: true,
         message: 'Congé refusé',

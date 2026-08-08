@@ -49,6 +49,20 @@ class DashboardViewModel extends ChangeNotifier {
     return '${v.toStringAsFixed(3)} TND';
   }
 
+  // ── Clear All (Logout) ───────────────────────────────────────────────────
+  void clearAll() {
+    _accounts.clear();
+    _transactions.clear();
+    _cards.clear();
+    _spending.clear();
+    _monthlyIncome = 0;
+    _monthlyExpenses = 0;
+    _monthlyHistory = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+    _activityTimeline.clear();
+    _error = null;
+    notifyListeners();
+  }
+
   // ── Load ───────────────────────────────────────────────────────────────────
   Future<void> load({bool silent = false}) async {
     if (!silent) {

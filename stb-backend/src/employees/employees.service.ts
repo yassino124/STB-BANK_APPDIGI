@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Employee, EmployeeDocument } from './employee.schema';
 import { EmployeeStatus } from '../common/enums/employee-status.enum';
 import {
@@ -14,6 +15,7 @@ import {
   UpdateEmployeeRolesDto,
   UpdateEmployeeStatusDto,
 } from './dto/employee.dto';
+import { Role } from '../common/enums/role.enum';
 import { AccountsService } from '../accounts/accounts.service';
 import { AccountType } from '../accounts/schemas/account.schema';
 import * as bcrypt from 'bcrypt';
@@ -26,6 +28,7 @@ export class EmployeesService {
     private employeeModel: Model<EmployeeDocument>,
     @Inject(forwardRef(() => AccountsService))
     private accountsService: AccountsService,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   async create(dto: CreateEmployeeDto) {
@@ -75,6 +78,21 @@ export class EmployeesService {
       // Don't fail employee creation if account creation fails
     }
 
+    // 👔 Automatically assign MANAGER role to anyone placed in the hierarchy
+    const managerIds = [dto.managerId, dto.directorId, dto.centralDirectorId].filter(Boolean) as string[];
+    if (managerIds.length > 0) {
+      await this.employeeModel.updateMany(
+        { _id: { $in: managerIds } },
+        { $addToSet: { roles: Role.MANAGER } }
+      ).exec();
+    }
+
+    // 📄 Emit event for automatic document generation
+    this.eventEmitter.emit('employee.created', {
+      employeeId: employee._id.toString(),
+      employee: employee,
+    });
+
     return { employee, defaultPassword, matricule: finalMatricule };
   }
 
@@ -105,6 +123,24 @@ export class EmployeesService {
     ]);
 
     return { data, total, page, pages: Math.ceil(total / limit) };
+  }
+
+  async getDirectory(search?: string): Promise<Partial<EmployeeDocument>[]> {
+    const query: any = {}; // Fetch all employees for RH hierarchy assignment
+    
+    if (search && search.length >= 2) {
+      query.$or = [
+        { matricule: { $regex: search, $options: 'i' } },
+        { nom: { $regex: search, $options: 'i' } },
+        { prenom: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    return this.employeeModel
+      .find(query)
+      .select('matricule nom prenom poste roles _id')
+      .limit(1000) // Need a high limit to fetch all potential managers/directors
+      .exec();
   }
 
   async searchDirectory(search: string): Promise<Partial<EmployeeDocument>[]> {
