@@ -1,9 +1,13 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, INestApplication } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { WinstonModule } from 'nest-winston';
+import * as winston from 'winston';
+
 import { AppModule } from './app.module';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { SecurityConfig } from './common/constants/security.config';
 import { RealtimeGateway } from './realtime/realtime.gateway';
@@ -12,7 +16,17 @@ import * as express from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+    logger: WinstonModule.createLogger({
+      transports: [
+        new winston.transports.Console({
+          format: winston.format.combine(
+            winston.format.timestamp(),
+            winston.format.ms(),
+            winston.format.json(), // Structured JSON logging
+          ),
+        }),
+      ],
+    }),
     bodyParser: false,
   });
 
@@ -70,7 +84,11 @@ async function bootstrap() {
   );
 
   // ─── Global Interceptors ─────────────────────────────────────
-  app.useGlobalInterceptors(new TransformInterceptor(), new LoggingInterceptor());
+  app.useGlobalInterceptors(
+    new TransformInterceptor(), 
+    new LoggingInterceptor(),
+    new TimeoutInterceptor() // Global Circuit Breaker (10s timeout)
+  );
 
   // ─── Global Exception Filter ─────────────────────────────────
   app.useGlobalFilters(new AllExceptionsFilter());

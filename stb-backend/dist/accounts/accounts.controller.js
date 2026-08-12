@@ -16,6 +16,9 @@ exports.AccountsController = void 0;
 const common_1 = require("@nestjs/common");
 const accounts_service_1 = require("./accounts.service");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const roles_guard_1 = require("../common/guards/roles.guard");
+const roles_decorator_1 = require("../common/decorators/roles.decorator");
+const role_enum_1 = require("../common/enums/role.enum");
 const swagger_1 = require("@nestjs/swagger");
 let AccountsController = class AccountsController {
     accountsService;
@@ -52,6 +55,7 @@ __decorate([
 ], AccountsController.prototype, "getMine", null);
 __decorate([
     (0, common_1.Get)('all'),
+    (0, roles_decorator_1.Roles)(role_enum_1.Role.RH, role_enum_1.Role.ADMIN, role_enum_1.Role.SUPER_ADMIN),
     (0, swagger_1.ApiOperation)({ summary: 'All accounts (RH)' }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
@@ -59,6 +63,7 @@ __decorate([
 ], AccountsController.prototype, "getAll", null);
 __decorate([
     (0, common_1.Post)('employee/:id'),
+    (0, roles_decorator_1.Roles)(role_enum_1.Role.RH, role_enum_1.Role.ADMIN, role_enum_1.Role.SUPER_ADMIN),
     (0, swagger_1.ApiOperation)({ summary: 'Create account for employee (RH)' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
@@ -68,6 +73,7 @@ __decorate([
 ], AccountsController.prototype, "createForEmployee", null);
 __decorate([
     (0, common_1.Patch)(':id/freeze'),
+    (0, roles_decorator_1.Roles)(role_enum_1.Role.RH, role_enum_1.Role.AGENCE, role_enum_1.Role.ADMIN, role_enum_1.Role.SUPER_ADMIN),
     (0, swagger_1.ApiOperation)({ summary: 'Freeze account' }),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
@@ -76,6 +82,7 @@ __decorate([
 ], AccountsController.prototype, "freeze", null);
 __decorate([
     (0, common_1.Patch)(':id/unfreeze'),
+    (0, roles_decorator_1.Roles)(role_enum_1.Role.RH, role_enum_1.Role.AGENCE, role_enum_1.Role.ADMIN, role_enum_1.Role.SUPER_ADMIN),
     (0, swagger_1.ApiOperation)({ summary: 'Unfreeze account' }),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
@@ -84,6 +91,7 @@ __decorate([
 ], AccountsController.prototype, "unfreeze", null);
 __decorate([
     (0, common_1.Post)(':id/deposit'),
+    (0, roles_decorator_1.Roles)(role_enum_1.Role.AGENCE, role_enum_1.Role.FINANCE, role_enum_1.Role.ADMIN, role_enum_1.Role.SUPER_ADMIN),
     (0, swagger_1.ApiOperation)({ summary: 'Deposit money to account (AGENCE)' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
@@ -94,7 +102,7 @@ __decorate([
 exports.AccountsController = AccountsController = __decorate([
     (0, swagger_1.ApiTags)('Accounts'),
     (0, swagger_1.ApiBearerAuth)(),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, common_1.Controller)('accounts'),
     __metadata("design:paramtypes", [accounts_service_1.AccountsService])
 ], AccountsController);

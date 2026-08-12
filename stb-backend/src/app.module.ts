@@ -6,6 +6,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { BullModule } from '@nestjs/bull';
 
 // Core
+import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { EmployeesModule } from './employees/employees.module';
 import { DevicesModule } from './devices/devices.module';
@@ -193,6 +194,7 @@ import { DatabaseModule } from './database/database.module';
     // ─── Infrastructure ─────────────────────────────────────────────
     FirebaseModule,
     RealtimeModule,
+    HealthModule,
   ],
 })
 export class AppModule {}

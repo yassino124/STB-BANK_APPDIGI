@@ -15,7 +15,7 @@ const rxjs_1 = require("rxjs");
 const operators_1 = require("rxjs/operators");
 let TimeoutInterceptor = class TimeoutInterceptor {
     milliseconds;
-    constructor(milliseconds = 30000) {
+    constructor(milliseconds = 10000) {
         this.milliseconds = milliseconds;
     }
     intercept(context, next) {

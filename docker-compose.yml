@@ -29,6 +29,23 @@ services:
       retries: 5
       start_period: 40s
 
+  # ── Redis (Caching & Queues) ────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: stb_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - stb_redis_data:/data
+    networks:
+      - stb_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # ── NestJS Backend ───────────────────────────────────────────────────────────
   backend:
     build:
@@ -40,6 +57,8 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
       MONGODB_URI: mongodb://${MONGO_ROOT_USER:-stb_admin}:${MONGO_ROOT_PASS:-stb_secure_pass_2024}@mongodb:27017/stb_db?authSource=admin
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-stb_access_super_secret_key_2024_enterprise}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-stb_refresh_super_secret_key_2024_enterprise}
@@ -123,3 +142,5 @@ volumes:
     name: stb_mongo_data
   stb_mongo_config:
     name: stb_mongo_config
+  stb_redis_data:
+    name: stb_redis_data

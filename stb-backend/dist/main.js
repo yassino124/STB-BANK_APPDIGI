@@ -36,16 +36,25 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const core_1 = require("@nestjs/core");
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
+const nest_winston_1 = require("nest-winston");
+const winston = __importStar(require("winston"));
 const app_module_1 = require("./app.module");
 const transform_interceptor_1 = require("./common/interceptors/transform.interceptor");
 const logging_interceptor_1 = require("./common/interceptors/logging.interceptor");
+const timeout_interceptor_1 = require("./common/interceptors/timeout.interceptor");
 const all_exceptions_filter_1 = require("./common/filters/all-exceptions.filter");
 const security_config_1 = require("./common/constants/security.config");
 const realtime_gateway_1 = require("./realtime/realtime.gateway");
 const express = __importStar(require("express"));
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule, {
-        logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+        logger: nest_winston_1.WinstonModule.createLogger({
+            transports: [
+                new winston.transports.Console({
+                    format: winston.format.combine(winston.format.timestamp(), winston.format.ms(), winston.format.json()),
+                }),
+            ],
+        }),
         bodyParser: false,
     });
     app.use(express.json({ limit: '50mb' }));
@@ -88,7 +97,7 @@ async function bootstrap() {
             enableImplicitConversion: true,
         },
     }));
-    app.useGlobalInterceptors(new transform_interceptor_1.TransformInterceptor(), new logging_interceptor_1.LoggingInterceptor());
+    app.useGlobalInterceptors(new transform_interceptor_1.TransformInterceptor(), new logging_interceptor_1.LoggingInterceptor(), new timeout_interceptor_1.TimeoutInterceptor());
     app.useGlobalFilters(new all_exceptions_filter_1.AllExceptionsFilter());
     const realtimeGateway = app.get(realtime_gateway_1.RealtimeGateway);
     const server = app.getHttpAdapter().getInstance();

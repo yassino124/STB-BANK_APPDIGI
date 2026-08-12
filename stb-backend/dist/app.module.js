@@ -45,6 +45,7 @@ const config_1 = require("@nestjs/config");
 const mongoose_1 = require("@nestjs/mongoose");
 const throttler_1 = require("@nestjs/throttler");
 const event_emitter_1 = require("@nestjs/event-emitter");
+const health_module_1 = require("./health/health.module");
 const auth_module_1 = require("./auth/auth.module");
 const employees_module_1 = require("./employees/employees.module");
 const devices_module_1 = require("./devices/devices.module");
@@ -196,6 +197,7 @@ exports.AppModule = AppModule = __decorate([
             tickets_module_1.TicketsModule,
             firebase_module_1.FirebaseModule,
             realtime_module_1.RealtimeModule,
+            health_module_1.HealthModule,
         ],
     })
 ], AppModule);
