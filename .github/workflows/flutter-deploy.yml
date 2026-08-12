@@ -1,0 +1,203 @@
+name: 📱 STB Mobile — Build & Deploy
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'lib/**'
+      - 'pubspec.yaml'
+      - 'android/**'
+      - 'ios/**'
+      - '.github/workflows/flutter-deploy.yml'
+  workflow_dispatch:  # Permet de lancer manuellement depuis GitHub
+
+env:
+  FLUTTER_VERSION: '3.24.0'
+  JAVA_VERSION: '17'
+
+jobs:
+  # ────────────────────────────────────────────────────────────────────────────
+  # JOB 1: Tests Flutter
+  # ────────────────────────────────────────────────────────────────────────────
+  test:
+    name: 🧪 Flutter Tests & Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🐦 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: 📦 Get dependencies
+        run: flutter pub get
+
+      - name: 🔍 Analyze code (static analysis)
+        run: flutter analyze --no-fatal-infos
+        continue-on-error: true
+
+      - name: 🧪 Run tests
+        run: flutter test --coverage
+        continue-on-error: true
+
+      - name: 📊 Upload coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flutter-coverage-${{ github.run_number }}
+          path: coverage/
+          retention-days: 14
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # JOB 2: Build Android AAB (Release)
+  # ────────────────────────────────────────────────────────────────────────────
+  build-android:
+    name: 🤖 Build Android Release (AAB)
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup Java ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: 🐦 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: 📦 Get dependencies
+        run: flutter pub get
+
+      # ── Decode le Keystore depuis le secret GitHub ────────────────────────
+      - name: 🔑 Decode Keystore from Secret
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/stb_release.keystore
+        shell: bash
+
+      # ── Créer key.properties depuis les secrets ───────────────────────────
+      - name: 🔑 Create key.properties
+        run: |
+          cat > android/key.properties << EOF
+          storePassword=${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          keyPassword=${{ secrets.KEYSTORE_KEY_PASSWORD }}
+          keyAlias=${{ secrets.KEYSTORE_KEY_ALIAS }}
+          storeFile=stb_release.keystore
+          EOF
+
+      # ── Build AAB Release signé ───────────────────────────────────────────
+      - name: 🏗️ Build Release AAB
+        run: |
+          flutter build appbundle \
+            --release \
+            --build-number=${{ github.run_number }} \
+            --dart-define=API_URL=${{ secrets.PROD_API_URL || 'https://api.stb.com.tn' }}
+
+      # ── Upload l'AAB comme artifact du workflow ───────────────────────────
+      - name: 📤 Upload AAB Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: stb-release-${{ github.run_number }}.aab
+          path: build/app/outputs/bundle/release/app-release.aab
+          retention-days: 30
+
+      # ── Calculer le hash SHA256 du bundle ────────────────────────────────
+      - name: 🔐 Generate SHA256 checksum
+        run: |
+          sha256sum build/app/outputs/bundle/release/app-release.aab > build/app/outputs/bundle/release/checksum.sha256
+          cat build/app/outputs/bundle/release/checksum.sha256
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # JOB 3: Deploy vers Google Play Internal Testing
+  # ────────────────────────────────────────────────────────────────────────────
+  deploy-play-store:
+    name: 🚀 Deploy to Google Play (Internal Testing)
+    needs: build-android
+    runs-on: ubuntu-latest
+    environment:
+      name: play-store-internal
+      url: https://play.google.com/console
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📥 Download AAB artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: stb-release-${{ github.run_number }}.aab
+          path: release/
+
+      # ── Créer les notes de mise à jour pour le Play Store ────────────────
+      - name: 📝 Create release notes
+        run: |
+          mkdir -p whatsnew
+          cat > whatsnew/whatsnew-fr-FR << EOF
+          ✨ Mise à jour STB Banking - Build ${{ github.run_number }}
+          
+          Améliorations :
+          - Performance optimisée
+          - Corrections de bugs
+          - Nouvelles fonctionnalités IA
+          
+          Commit: ${{ github.sha }}
+          EOF
+          
+          cat > whatsnew/whatsnew-en-US << EOF
+          ✨ STB Banking Update - Build ${{ github.run_number }}
+          
+          Improvements:
+          - Optimized performance
+          - Bug fixes
+          - New AI features
+          
+          Commit: ${{ github.sha }}
+          EOF
+
+      # ── Upload vers Google Play ───────────────────────────────────────────
+      - name: 🚀 Upload to Google Play Internal Testing
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT }}
+          packageName: com.stb.bank.mobile
+          releaseFiles: release/app-release.aab
+          track: internal
+          status: completed
+          whatsNewDirectory: whatsnew/
+          mappingFile: ''  # Si tu as ProGuard, ajouter ici
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # JOB 4: Notification de résultat
+  # ────────────────────────────────────────────────────────────────────────────
+  notify:
+    name: 📢 Notify Result
+    needs: [deploy-play-store]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: ✅ Success notification
+        if: needs.deploy-play-store.result == 'success'
+        run: |
+          echo "✅ BUILD SUCCESS"
+          echo "📱 Build #${{ github.run_number }} deployed to Play Store Internal Testing"
+          echo "🔗 SHA: ${{ github.sha }}"
+
+      - name: ❌ Failure notification
+        if: needs.deploy-play-store.result == 'failure'
+        run: |
+          echo "❌ BUILD FAILED"
+          echo "📱 Build #${{ github.run_number }} failed"
+          echo "🔗 Check: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
