@@ -11,7 +11,7 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
   ComposedChart, Bar, Line
 } from 'recharts';
-import AIAssistantWidget from '../components/AIAssistantWidget';
+
 
 interface Stats {
   totalEmployees: number;
@@ -287,8 +287,6 @@ const Dashboard = () => {
         </motion.div>
       </div>
 
-      {/* AI Copilot Widget */}
-      <AIAssistantWidget />
 
       {/* KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
@@ -474,97 +472,7 @@ const Dashboard = () => {
         </motion.div>
       </div>
 
-      {/* Mood Map Section - Always visible */}
-      <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }} className="glass-card" style={{ marginTop: '1.5rem', background: 'linear-gradient(145deg, rgba(20,12,40,0.85), rgba(10,6,22,0.95))', border: '1px solid rgba(245,158,11,0.15)' }}>
-        <div className="section-header">
-          <div className="section-accent" style={{ height: '24px', background: 'linear-gradient(180deg, #F59E0B, #D97706)' }}></div>
-          <h3 style={{ fontSize: '1.1rem', flex: 1, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            🧠 <span>Météo du Moral</span>
-            <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem', background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '20px', color: '#F59E0B', fontWeight: 700 }}>IA Sentiment Analysis</span>
-          </h3>
-          <button
-            onClick={async () => {
-              try {
-                const res = await api.post('/ai/mood').catch(() => null);
-                if (res?.data && Array.isArray(res.data) && res.data.length > 0) setMoodMap(res.data);
-              } catch {}
-            }}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.8rem', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '10px', color: '#F59E0B', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}
-          >
-            🔄 Rafraîchir IA
-          </button>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem', padding: '0.5rem 0' }}>
-          {moodMap.map((mood, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: i * 0.08, type: 'spring', stiffness: 300, damping: 25 }}
-              whileHover={{ y: -4, scale: 1.02 }}
-              style={{
-                padding: '1.25rem',
-                borderRadius: '18px',
-                background: mood.mood === 'SUNNY'
-                  ? 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(5,150,105,0.04))'
-                  : mood.mood === 'STORMY'
-                  ? 'linear-gradient(135deg, rgba(239,68,68,0.08), rgba(185,28,28,0.04))'
-                  : 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(217,119,6,0.04))',
-                border: `1px solid ${mood.mood === 'SUNNY' ? 'rgba(16,185,129,0.2)' : mood.mood === 'STORMY' ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)'}`,
-                display: 'flex', flexDirection: 'column', gap: '1rem',
-                cursor: 'pointer',
-                boxShadow: mood.mood === 'STORMY' ? '0 4px 20px rgba(239,68,68,0.1)' : mood.mood === 'SUNNY' ? '0 4px 20px rgba(16,185,129,0.1)' : '0 4px 20px rgba(245,158,11,0.1)'
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.95rem', fontWeight: 700, color: '#fff' }}>{mood.department}</h4>
-                  <span style={{
-                    fontSize: '0.7rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '20px',
-                    background: mood.mood === 'SUNNY' ? 'rgba(16,185,129,0.2)' : mood.mood === 'STORMY' ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)',
-                    color: mood.mood === 'SUNNY' ? '#10B981' : mood.mood === 'STORMY' ? '#EF4444' : '#F59E0B'
-                  }}>
-                    {mood.mood === 'SUNNY' ? '☀️ Ensoleillé' : mood.mood === 'STORMY' ? '⛈️ Orageux' : '🌤️ Nuageux'}
-                  </span>
-                </div>
-                <div style={{
-                  width: '56px', height: '56px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '2rem',
-                  background: mood.mood === 'SUNNY' ? 'rgba(16,185,129,0.15)' : mood.mood === 'STORMY' ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.15)',
-                  border: `2px solid ${mood.mood === 'SUNNY' ? 'rgba(16,185,129,0.3)' : mood.mood === 'STORMY' ? 'rgba(239,68,68,0.3)' : 'rgba(245,158,11,0.3)'}`,
-                  flexShrink: 0
-                }}>
-                  {mood.mood === 'SUNNY' ? '☀️' : mood.mood === 'STORMY' ? '⛈️' : '🌤️'}
-                </div>
-              </div>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Score d'engagement</span>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 800, color: mood.score > 70 ? '#10B981' : mood.score < 50 ? '#EF4444' : '#F59E0B' }}>{mood.score}<span style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--text-muted)' }}>/100</span></span>
-                </div>
-                <div style={{ height: '6px', background: 'rgba(255,255,255,0.07)', borderRadius: '3px', overflow: 'hidden' }}>
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${mood.score}%` }}
-                    transition={{ delay: i * 0.08 + 0.3, duration: 0.8, ease: 'easeOut' }}
-                    style={{
-                      height: '100%',
-                      background: mood.score > 70 ? 'linear-gradient(90deg, #10B981, #059669)' : mood.score < 50 ? 'linear-gradient(90deg, #EF4444, #DC2626)' : 'linear-gradient(90deg, #F59E0B, #D97706)',
-                      borderRadius: '3px',
-                      boxShadow: `0 0 8px ${mood.score > 70 ? '#10B98160' : mood.score < 50 ? '#EF444460' : '#F59E0B60'}`
-                    }}
-                  />
-                </div>
-              </div>
-              <div style={{ padding: '0.75rem', background: 'rgba(0,0,0,0.25)', borderRadius: '10px', borderLeft: `3px solid ${mood.mood === 'SUNNY' ? '#10B981' : mood.mood === 'STORMY' ? '#EF4444' : '#F59E0B'}` }}>
-                <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                  💡 <strong style={{ color: '#fff' }}>Insight IA :</strong> {mood.insight}
-                </p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
+
     </div>
   );
 };

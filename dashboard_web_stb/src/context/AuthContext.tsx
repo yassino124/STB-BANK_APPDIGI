@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
+import { socketService } from '../api/socket';
 
 interface User {
   sub: string;
+  _id?: string;
   matricule: string;
   prenom?: string;
   nom?: string;
@@ -100,6 +102,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(u);
           // ✅ Update cache with fresh data from server
           sessionStorage.setItem(CACHED_USER_KEY, JSON.stringify(u));
+          socketService.connect(tok); // Connect to realtime socket
         } else {
           toast.error('Accès refusé. Rôle non autorisé pour le portail web.');
           logout();
@@ -139,6 +142,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(u);
         // ✅ Cache immediately on login
         sessionStorage.setItem(CACHED_USER_KEY, JSON.stringify(u));
+        socketService.connect(accessToken); // Connect to realtime socket
         toast.success(`Bienvenue, ${employee.prenom} ${employee.nom} 👋`);
         navigate(getDefaultPath(roles), { replace: true });
       } else {
@@ -155,6 +159,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem('stb_rh_token');
     sessionStorage.removeItem(CACHED_USER_KEY);
     setUser(null);
+    socketService.disconnect(); // Disconnect socket on logout
     navigate('/login');
   };
 

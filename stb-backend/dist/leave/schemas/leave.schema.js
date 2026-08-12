@@ -39,6 +39,7 @@ let LeaveRequest = class LeaveRequest extends mongoose_2.Document {
     status;
     managerId;
     currentApproverId;
+    currentApproverRole;
     approvalHistory;
     rhApprovedBy;
     rhApprovedAt;
@@ -89,7 +90,11 @@ __decorate([
     __metadata("design:type", Object)
 ], LeaveRequest.prototype, "currentApproverId", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ type: [{ approverId: { type: mongoose_2.Types.ObjectId, ref: 'Employee' }, approverName: String, level: Number, decision: String, date: Date, comment: String }], default: [] }),
+    (0, mongoose_1.Prop)({ type: String, default: null }),
+    __metadata("design:type", Object)
+], LeaveRequest.prototype, "currentApproverRole", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: [{ approverId: { type: mongoose_2.Types.ObjectId, ref: 'Employee' }, approverRole: String, approverName: String, level: Number, decision: String, date: Date, comment: String }], default: [] }),
     __metadata("design:type", Array)
 ], LeaveRequest.prototype, "approvalHistory", void 0);
 __decorate([

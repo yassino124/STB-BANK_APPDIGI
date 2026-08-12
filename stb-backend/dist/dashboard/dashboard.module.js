@@ -32,6 +32,7 @@ exports.DashboardModule = DashboardModule = __decorate([
                 { name: card_schema_1.Card.name, schema: card_schema_1.CardSchema },
                 { name: credit_schema_1.Credit.name, schema: credit_schema_1.CreditSchema },
                 { name: leave_schema_1.LeaveBalance.name, schema: leave_schema_1.LeaveBalanceSchema },
+                { name: leave_schema_1.LeaveRequest.name, schema: leave_schema_1.LeaveRequestSchema },
                 { name: prime_schema_1.Prime.name, schema: prime_schema_1.PrimeSchema },
                 { name: payroll_schema_1.Payroll.name, schema: payroll_schema_1.PayrollSchema },
                 { name: notification_schema_1.Notification.name, schema: notification_schema_1.NotificationSchema },

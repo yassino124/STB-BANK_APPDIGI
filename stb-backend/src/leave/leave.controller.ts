@@ -64,39 +64,43 @@ export class LeaveController {
   }
 
   @Patch(':id/handle-manager')
-  @ApiOperation({ summary: 'Manager/Director approves or rejects leave (any level in chain)' })
+  @Roles(Role.MANAGER, Role.ADMIN, Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Process approval (any role in workflow)' })
   handleManagerApproval(
     @Param('id') id: string,
     @Request() req,
     @Body() body: { decision: 'APPROVED' | 'REJECTED'; commentaire?: string },
   ) {
-    return this.leaveService.handleManagerApproval(id, req.user.sub, body.decision, body.commentaire);
+    return this.leaveService.processApproval(id, req.user.sub, req.user.roles, body.decision, body.commentaire);
   }
 
   @Patch(':id/handle-rh')
   @Roles(Role.RH, Role.ADMIN, Role.SUPER_ADMIN)
-  @ApiOperation({ summary: 'RH validates or rejects approved leave request' })
+  @ApiOperation({ summary: 'Process RH approval' })
   handleRhApproval(
     @Param('id') id: string,
     @Request() req,
     @Body() body: { decision: 'APPROVED' | 'REJECTED'; commentaire?: string },
   ) {
-    return this.leaveService.handleRhApproval(id, req.user.sub, body.decision, body.commentaire);
+    return this.leaveService.processApproval(id, req.user.sub, req.user.roles, body.decision, body.commentaire);
   }
 
   @Post(':id/manager-approve')
+  @Roles(Role.MANAGER, Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOperation({ summary: '✅ Manager/Director approves leave (mobile endpoint)' })
   managerApprove(@Param('id') id: string, @Request() req, @Body() body?: { commentaire?: string }) {
-    return this.leaveService.handleManagerApproval(id, req.user.sub, 'APPROVED', body?.commentaire || '');
+    return this.leaveService.processApproval(id, req.user.sub, req.user.roles, 'APPROVED', body?.commentaire || '');
   }
 
   @Post(':id/manager-reject')
+  @Roles(Role.MANAGER, Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOperation({ summary: '❌ Manager/Director rejects leave (mobile endpoint)' })
   managerReject(@Param('id') id: string, @Request() req, @Body() body?: { reason?: string; commentaire?: string }) {
-    return this.leaveService.handleManagerApproval(id, req.user.sub, 'REJECTED', body?.commentaire || body?.reason || 'Refusé');
+    return this.leaveService.processApproval(id, req.user.sub, req.user.roles, 'REJECTED', body?.commentaire || body?.reason || 'Refusé');
   }
 
   @Get('debug-all')
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOperation({ summary: '🔧 DEBUG: Get all leaves (no filter)' })
   async debugAll() {
     const all = await this.leaveService.getAllRequests();

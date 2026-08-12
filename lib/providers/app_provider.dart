@@ -12,6 +12,18 @@ import '../viewmodels/rh_viewmodel.dart';
 
 class AppProvider extends ChangeNotifier {
   Timer? _pollingTimer;
+
+  // ── Session Idle Timeout ──────────────────────────────────────────
+  Timer? _idleTimer;
+  Timer? _warningCountdownTimer;
+  bool _showingIdleWarning = false;
+  int _idleWarningCountdown = 60;
+  static const Duration _idleTimeout = Duration(minutes: 5);
+  static const Duration _warningDuration = Duration(seconds: 60);
+
+  bool get showingIdleWarning => _showingIdleWarning;
+  int get idleWarningCountdown => _idleWarningCountdown;
+
   ThemeMode _themeMode = ThemeMode.light;
   String _currentLanguage = 'en';
   Map<String, dynamic>? _userProfile;
@@ -20,6 +32,61 @@ class AppProvider extends ChangeNotifier {
 
   AppProvider() {
     _loadSettings(); // ✅ Load theme + language immediately at construction
+  }
+
+  // ── Idle Timeout API ─────────────────────────────────────────────
+
+  /// Called on every user interaction to reset the idle timer.
+  void resetIdleTimer() {
+    if (_userProfile == null) return; // Only track when logged in
+    _idleTimer?.cancel();
+    // If the warning was showing, dismiss it
+    if (_showingIdleWarning) {
+      _showingIdleWarning = false;
+      _warningCountdownTimer?.cancel();
+      _idleWarningCountdown = 60;
+      notifyListeners();
+    }
+    _idleTimer = Timer(_idleTimeout, _onIdleTimeout);
+  }
+
+  void _onIdleTimeout() {
+    _showingIdleWarning = true;
+    _idleWarningCountdown = 60;
+    notifyListeners();
+
+    _warningCountdownTimer?.cancel();
+    _warningCountdownTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      _idleWarningCountdown--;
+      notifyListeners();
+      if (_idleWarningCountdown <= 0) {
+        t.cancel();
+        _showingIdleWarning = false;
+        notifyListeners();
+        // Auto-logout — navigate via navigator key
+        if (STBSuperApp.navigatorKey.currentContext != null) {
+          final ctx = STBSuperApp.navigatorKey.currentContext!;
+          handleSessionExpired(ctx);
+        }
+      }
+    });
+  }
+
+  void cancelIdleWarning() {
+    _idleTimer?.cancel();
+    _warningCountdownTimer?.cancel();
+    _showingIdleWarning = false;
+    _idleWarningCountdown = 60;
+    notifyListeners();
+    // Restart idle timer after user chose to stay
+    resetIdleTimer();
+  }
+
+  void stopIdleTracking() {
+    _idleTimer?.cancel();
+    _warningCountdownTimer?.cancel();
+    _showingIdleWarning = false;
+    _idleWarningCountdown = 60;
   }
 
   // ── RH Data ──────────────────────────────────────────────────────
@@ -414,8 +481,9 @@ class AppProvider extends ChangeNotifier {
   Future<void> _applyFallbackProfile() async {
     final matricule = await AuthApiService.getMatricule();
     _userProfile = {
-      'nom': 'Ouertani',
-      'prenom': 'Yassine',
+      'nom': '',
+      'prenom': '',
+      'fullName': 'Utilisateur STB',
       'matricule': matricule ?? 'EMP001',
       'poste': 'Collaborateur STB',
       'departement': 'Direction Générale',
@@ -489,7 +557,7 @@ class AppProvider extends ChangeNotifier {
       'cards': 'Cards',
       'invest': 'Invest',
       'profile': 'Profile',
-      'copilot_greeting': 'Hello Yassine! 👋\nI\'m your STB Copilot. I can analyze your spending, suggest savings, and help you reach your financial goals.',
+      'copilot_greeting_template': 'Hello {name}! 👋\nI\'m your STB Copilot. I can analyze your spending, suggest savings, and help you reach your financial goals.',
       'analytics': 'Analytics',
       'goals': 'Goals',
       'rewards': 'Rewards',
@@ -526,7 +594,7 @@ class AppProvider extends ChangeNotifier {
       'cards': 'Cartes',
       'invest': 'Investir',
       'profile': 'Profil',
-      'copilot_greeting': 'Salut Yassine! 👋\nJe suis votre copilote STB. Je peux analyser vos dépenses et vous aider à atteindre vos objectifs.',
+      'copilot_greeting_template': 'Salut {name}! 👋\nJe suis votre copilote STB. Je peux analyser vos dépenses et vous aider à atteindre vos objectifs.',
       'analytics': 'Statistiques',
       'goals': 'Objectifs',
       'rewards': 'Fidélité',
@@ -563,7 +631,7 @@ class AppProvider extends ChangeNotifier {
       'cards': 'بطاقاتي',
       'invest': 'إستثمار',
       'profile': 'حسابي',
-      'copilot_greeting': 'عسلامة ياسين! 👋\nأنا المساعد المالي متاعك. نجم نحلل مصاريفك وتعاونك توصل لأهدافك.',
+      'copilot_greeting_template': 'عسلامة {name}! 👋\nأنا المساعد المالي متاعك. نجم نحلل مصاريفك وتعاونك توصل لأهدافك.',
       'analytics': 'مصاريفي',
       'goals': 'أهدافي',
       'rewards': 'نقاطي',
@@ -589,9 +657,22 @@ class AppProvider extends ChangeNotifier {
 
   String translate(String key) => _dict[_currentLanguage]?[key] ?? key;
 
+  /// Returns the Copilot greeting with the real user first name injected.
+  String get copilotGreeting {
+    final template = _dict[_currentLanguage]?['copilot_greeting_template'] ?? 'Hello {name}! 👋';
+    final firstName = (_userProfile?['prenom'] as String?)?.trim();
+    final displayName = (firstName != null && firstName.isNotEmpty)
+        ? firstName
+        : ((_userProfile?['fullName'] as String?)?.trim().isNotEmpty == true
+            ? _userProfile!['fullName'] as String
+            : 'Collaborateur');
+    return template.replaceAll('{name}', displayName);
+  }
+
   Future<void> logout() async {
     _pollingTimer?.cancel();
     _pollingTimer = null;
+    stopIdleTracking();
     await AuthApiService.logout();
     _userProfile = null;
     _payrolls = [];

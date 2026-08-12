@@ -3,7 +3,7 @@ import { Employee } from '../employees/employee.schema';
 import { Account } from '../accounts/schemas/account.schema';
 import { Card } from '../cards/schemas/card.schema';
 import { Credit } from '../credits/schemas/credit.schema';
-import { LeaveBalance } from '../leave/schemas/leave.schema';
+import { LeaveBalance, LeaveRequest } from '../leave/schemas/leave.schema';
 import { Prime } from '../primes/schemas/prime.schema';
 import { Payroll } from '../payroll/schemas/payroll.schema';
 import { Notification } from '../notifications/schemas/notification.schema';
@@ -14,11 +14,12 @@ export declare class DashboardService {
     private cardModel;
     private creditModel;
     private leaveBalanceModel;
+    private leaveRequestModel;
     private primeModel;
     private payrollModel;
     private notifModel;
     private txModel;
-    constructor(empModel: Model<Employee>, accountModel: Model<Account>, cardModel: Model<Card>, creditModel: Model<Credit>, leaveBalanceModel: Model<LeaveBalance>, primeModel: Model<Prime>, payrollModel: Model<Payroll>, notifModel: Model<Notification>, txModel: Model<Transaction>);
+    constructor(empModel: Model<Employee>, accountModel: Model<Account>, cardModel: Model<Card>, creditModel: Model<Credit>, leaveBalanceModel: Model<LeaveBalance>, leaveRequestModel: Model<LeaveRequest>, primeModel: Model<Prime>, payrollModel: Model<Payroll>, notifModel: Model<Notification>, txModel: Model<Transaction>);
     getEmployeeDashboard(employeeId: string): Promise<{
         employee: (import("mongoose").Document<unknown, {}, Employee, {}, import("mongoose").DefaultSchemaOptions> & Employee & {
             _id: Types.ObjectId;
@@ -99,6 +100,60 @@ export declare class DashboardService {
             blockedAccounts: number;
             suspiciousActivity: number;
             lastBackup: string;
+        };
+    }>;
+    getAdvancedAnalytics(): Promise<{
+        hr: {
+            headcount: number;
+            turnover: number;
+            leaveTrends: {
+                name: string;
+                leaves: number;
+                sickness: number;
+            }[];
+            skillsRadar: {
+                subject: string;
+                A: number;
+                B: number;
+                fullMark: number;
+            }[];
+            salaryVsExperience: {
+                experience: number;
+                salary: number;
+                role: string;
+            }[];
+            salaryDist: {
+                name: string;
+                value: any;
+            }[];
+        };
+        finance: {
+            payrollTotal: any;
+            creditExposure: any;
+            advancesTotal: number;
+            financialRisk: {
+                name: string;
+                riskScore: number;
+                repayments: number;
+            }[];
+        };
+        agency: {
+            totalAccounts: number;
+            totalCards: number;
+            transactionsTrend: {
+                name: string;
+                volume: number;
+                alerts: number;
+            }[];
+            customerActivity: {
+                name: string;
+                value: number;
+            }[];
+            activityHeatmap: {
+                day: string;
+                hour: string;
+                value: number;
+            }[];
         };
     }>;
 }

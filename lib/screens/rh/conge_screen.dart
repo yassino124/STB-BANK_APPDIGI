@@ -106,7 +106,11 @@ class _CongeScreenState extends State<CongeScreen> with TickerProviderStateMixin
           final remaining = (p.userProfile?['soldeConges'] as num?)?.toInt() ?? 30;
           Navigator.push(context, MaterialPageRoute(
             builder: (_) => AILeavePlannerScreen(remainingDays: remaining),
-          ));
+          )).then((val) {
+            if (val == true && mounted) {
+              context.read<RhViewModel>().loadConges();
+            }
+          });
         },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 15),
@@ -406,7 +410,11 @@ class _CongeScreenState extends State<CongeScreen> with TickerProviderStateMixin
           child: GestureDetector(
             onTap: () {
               HapticFeedback.lightImpact();
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const AbsenceRequestScreen()));
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const AbsenceRequestScreen())).then((val) {
+                if (val == true && mounted) {
+                  context.read<RhViewModel>().loadConges();
+                }
+              });
             },
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 16),

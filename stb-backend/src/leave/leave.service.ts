@@ -6,6 +6,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/schemas/notification.schema';
 import { HierarchyService } from '../hierarchy/hierarchy.service';
 import { Employee } from '../employees/employee.schema';
+import { RulesService } from '../rules/rules.service';
 
 @Injectable()
 export class LeaveService {
@@ -15,6 +16,7 @@ export class LeaveService {
     @InjectModel(Employee.name) private employeeModel: Model<Employee>,
     private notificationsService: NotificationsService,
     private hierarchyService: HierarchyService,
+    private rulesService: RulesService,
   ) {}
 
   async createRequest(employeeId: string, dto: { type: string; dateDebut: string; dateFin: string; motif: string }) {
@@ -35,40 +37,49 @@ export class LeaveService {
     const approvalHistory: any[] = [];
     const approvalChain: string[] = [];
 
-    if (employee.managerId) {
-      const manager: any = employee.managerId;
-      approvalChain.push(manager._id.toString());
-      approvalHistory.push({
-        approverId: manager._id,
-        approverName: `${manager.nom} ${manager.prenom}`,
-        level: 1,
-        decision: 'PENDING',
-      });
-    }
-    if (employee.directorId) {
-      const director: any = employee.directorId;
-      approvalChain.push(director._id.toString());
-      approvalHistory.push({
-        approverId: director._id,
-        approverName: `${director.nom} ${director.prenom}`,
-        level: 2,
-        decision: 'PENDING',
-      });
-    }
-    if (employee.centralDirectorId) {
-      const centralDirector: any = employee.centralDirectorId;
-      approvalChain.push(centralDirector._id.toString());
-      approvalHistory.push({
-        approverId: centralDirector._id,
-        approverName: `${centralDirector.nom} ${centralDirector.prenom}`,
-        level: 3,
-        decision: 'PENDING',
-      });
+    // Dynamic Workflow Engine
+    // 1. First, check if there's a dynamic workflow defined
+    let requiredApprovers = this.rulesService.getRule('leave.workflow', null);
+    
+    // 2. Fallback to old Policies engine if no workflow exists
+    if (!requiredApprovers) {
+      requiredApprovers = this.rulesService.evaluatePolicy('leave', { days: nombreJours });
     }
 
-    const hasManagers = approvalChain.length > 0;
-    const initialStatus = hasManagers ? LeaveStatus.PENDING_MANAGER : LeaveStatus.PENDING_RH;
-    const initialApprover = hasManagers ? new Types.ObjectId(approvalChain[0]) : null;
+    let level = 1;
+    
+    for (const role of requiredApprovers) {
+      if (role === 'MANAGER' && employee.managerId) {
+        const manager: any = employee.managerId;
+        approvalChain.push(manager._id.toString());
+        approvalHistory.push({ approverId: manager._id, approverRole: 'MANAGER', approverName: `${manager.nom} ${manager.prenom}`, level: level++, decision: 'PENDING' });
+      } else if (role === 'DIRECTOR' && employee.directorId) {
+        const director: any = employee.directorId;
+        approvalChain.push(director._id.toString());
+        approvalHistory.push({ approverId: director._id, approverRole: 'DIRECTOR', approverName: `${director.nom} ${director.prenom}`, level: level++, decision: 'PENDING' });
+      } else if (role === 'DG' && employee.centralDirectorId) {
+        const dg: any = employee.centralDirectorId;
+        approvalChain.push(dg._id.toString());
+        approvalHistory.push({ approverId: dg._id, approverRole: 'DG', approverName: `${dg.nom} ${dg.prenom}`, level: level++, decision: 'PENDING' });
+      } else if (role === 'RH' || role === 'FINANCE') {
+        // Group queue (any RH/Finance can approve)
+        approvalHistory.push({ approverId: null, approverRole: role, approverName: `Équipe ${role}`, level: level++, decision: 'PENDING' });
+      }
+    }
+
+    // Fallback: Never auto-approve if no managers were found. Route to RH instead.
+    if (approvalHistory.length === 0) {
+      approvalHistory.push({ approverId: null, approverRole: 'RH', approverName: 'Équipe RH (Fallback)', level: 1, decision: 'PENDING' });
+    }
+
+    const firstStep = approvalHistory[0];
+    let initialStatus = LeaveStatus.PENDING_MANAGER;
+    if (firstStep.approverRole === 'RH') {
+      initialStatus = LeaveStatus.PENDING_RH;
+    }
+
+    const initialApproverId = firstStep.approverId ? new Types.ObjectId(firstStep.approverId) : null;
+    const initialApproverRole = !firstStep.approverId ? firstStep.approverRole : null;
 
     const createData: any = {
       employeeId: new Types.ObjectId(employeeId),
@@ -78,7 +89,8 @@ export class LeaveService {
       nombreJours,
       motif: dto.motif,
       status: initialStatus,
-      currentApproverId: initialApprover,
+      currentApproverId: initialApproverId,
+      currentApproverRole: initialApproverRole,
       approvalHistory: approvalHistory,
     };
     if (employee.managerId) {
@@ -131,110 +143,102 @@ export class LeaveService {
       .exec();
   }
 
-  async handleManagerApproval(id: string, managerId: string, decision: 'APPROVED' | 'REJECTED', commentaire = '') {
+  async processApproval(id: string, userId: string, userRoles: string[], decision: 'APPROVED' | 'REJECTED', commentaire = '') {
     const request = await this.leaveRequestModel.findById(id).exec();
     if (!request) throw new NotFoundException('Demande de congé introuvable');
 
-    if (request.status !== LeaveStatus.PENDING_MANAGER) {
-      throw new BadRequestException(`Demande déjà traitée. Statut actuel: ${request.status}`);
+    if (request.status === LeaveStatus.APPROVED || request.status === LeaveStatus.REJECTED) {
+      throw new BadRequestException(`Demande déjà traitée (Statut: ${request.status})`);
     }
 
-    const historyStepIndex = request.approvalHistory.findIndex(h => h.approverId?.toString() === managerId);
+    // Find the current pending step in the workflow
+    const historyStepIndex = request.approvalHistory.findIndex(h => h.decision === 'PENDING');
     if (historyStepIndex === -1) {
-      throw new ForbiddenException('Vous n\'êtes pas dans la chaîne de validation de cette demande');
+      throw new BadRequestException('Aucune étape en attente pour cette demande');
     }
     const historyStep = request.approvalHistory[historyStepIndex];
 
-    if (decision === 'APPROVED') {
-      request.approvalHistory[historyStepIndex].decision = 'APPROVED';
-      request.approvalHistory[historyStepIndex].date = new Date();
-      request.approvalHistory[historyStepIndex].comment = commentaire;
-      request.markModified('approvalHistory');
+    // Authorization Check
+    const isDirectApprover = historyStep.approverId && historyStep.approverId.toString() === userId;
+    const isRoleApprover = !historyStep.approverId && historyStep.approverRole && userRoles.includes(historyStep.approverRole);
+    const isSuperAdmin = userRoles.includes('SUPER_ADMIN');
 
+    if (!isDirectApprover && !isRoleApprover && !isSuperAdmin) {
+      throw new ForbiddenException(`Vous n'êtes pas autorisé à valider cette étape (Requise: ${historyStep.approverRole || historyStep.approverName})`);
+    }
+
+    // Process Decision
+    request.approvalHistory[historyStepIndex].decision = decision;
+    request.approvalHistory[historyStepIndex].date = new Date();
+    request.approvalHistory[historyStepIndex].comment = commentaire;
+    
+    // If a generic role approved it, record who actually did it
+    if (!historyStep.approverId) {
+       const user = await this.employeeModel.findById(userId).select('nom prenom').exec();
+       if (user) {
+         request.approvalHistory[historyStepIndex].approverName = `${user.nom} ${user.prenom} (Équipe ${historyStep.approverRole})`;
+         request.approvalHistory[historyStepIndex].approverId = new Types.ObjectId(userId);
+       }
+    }
+    request.markModified('approvalHistory');
+
+    if (decision === 'APPROVED') {
       const nextStep = request.approvalHistory.find(h => h.level > historyStep.level && h.decision === 'PENDING');
       
       if (nextStep) {
-        request.currentApproverId = new Types.ObjectId(nextStep.approverId.toString());
+        request.currentApproverId = nextStep.approverId ? new Types.ObjectId(nextStep.approverId.toString()) : null;
+        request.currentApproverRole = !nextStep.approverId ? nextStep.approverRole : null;
+        
+        // Ensure status reflects the current queue (for backward compatibility on frontend)
+        if (nextStep.approverRole === 'RH' || nextStep.approverRole === 'FINANCE') {
+          request.status = LeaveStatus.PENDING_RH;
+        } else {
+          request.status = LeaveStatus.PENDING_MANAGER;
+        }
+
         await this.notificationsService.sendToEmployee(
           request.employeeId.toString(),
-          `✅ Validé par ${historyStep.approverName}`,
-          `Votre demande est maintenant en attente de validation par ${nextStep.approverName}.`,
+          `✅ Validé (Étape ${historyStep.level})`,
+          `Votre demande a passé l'étape ${historyStep.level}. En attente de : ${nextStep.approverName}.`,
           NotificationType.HR_REQUEST,
         );
       } else {
-        request.status = LeaveStatus.PENDING_RH;
+        // Workflow completed successfully !
+        request.status = LeaveStatus.APPROVED;
         request.currentApproverId = null;
+        request.currentApproverRole = null;
+        request.validatedBy = new Types.ObjectId(userId);
+        request.validatedAt = new Date();
+
+        // Deduct balance
+        const balance = await this.getOrCreateBalance(request.employeeId.toString());
+        balance.soldeUtilise += request.nombreJours;
+        await balance.save();
+
+        const soldeDisponible = balance.soldeAnnuel - balance.soldeUtilise;
+        await this.employeeModel.updateOne(
+          { _id: request.employeeId },
+          { $set: { soldeConges: soldeDisponible } }
+        ).exec();
+
         await this.notificationsService.sendToEmployee(
           request.employeeId.toString(),
-          `✅ Validation managers terminée`,
-          `Votre demande de congé a passé l'étape manager. En attente de validation finale des RH.`,
+          '✅ Congé entièrement validé',
+          `Votre demande de congé du ${request.dateDebut.toLocaleDateString('fr-FR')} est validée. Solde mis à jour.`,
           NotificationType.HR_REQUEST,
         );
       }
     } else {
+      // Workflow rejected
       request.status = LeaveStatus.REJECTED;
       request.currentApproverId = null;
-      request.approvalHistory[historyStepIndex].decision = 'REJECTED';
-      request.approvalHistory[historyStepIndex].date = new Date();
-      request.approvalHistory[historyStepIndex].comment = commentaire;
-      request.markModified('approvalHistory');
-      
+      request.currentApproverRole = null;
       request.commentaire = commentaire;
 
       await this.notificationsService.sendToEmployee(
         request.employeeId.toString(),
-        `❌ Congé refusé par ${historyStep.approverName}`,
+        `❌ Congé refusé à l'étape ${historyStep.level}`,
         `Votre demande de congé a été refusée. ${commentaire}`,
-        NotificationType.HR_REQUEST,
-      );
-    }
-
-    return request.save();
-  }
-
-  async handleRhApproval(id: string, rhId: string, decision: 'APPROVED' | 'REJECTED', commentaire = '') {
-    const request = await this.leaveRequestModel.findById(id).exec();
-    if (!request) throw new NotFoundException('Demande de congé introuvable');
-
-    if (request.status !== LeaveStatus.PENDING_RH) {
-      throw new BadRequestException(`Demande ne peut pas être traitée par la RH. Statut: ${request.status}`);
-    }
-
-    if (decision === 'APPROVED') {
-      request.status = LeaveStatus.APPROVED;
-      request.rhApprovedBy = new Types.ObjectId(rhId);
-      request.rhApprovedAt = new Date();
-      request.rhCommentaire = commentaire;
-      request.validatedBy = new Types.ObjectId(rhId);
-      request.validatedAt = new Date();
-
-      const balance = await this.getOrCreateBalance(request.employeeId.toString());
-      balance.soldeUtilise += request.nombreJours;
-      await balance.save();
-
-      const soldeDisponible = balance.soldeAnnuel - balance.soldeUtilise;
-      await this.employeeModel.updateOne(
-        { _id: request.employeeId },
-        { $set: { soldeConges: soldeDisponible } }
-      ).exec();
-
-      await this.notificationsService.sendToEmployee(
-        request.employeeId.toString(),
-        '✅ Congé validé',
-        `Votre demande de congé du ${request.dateDebut.toLocaleDateString('fr-FR')} est maintenant entièrement validée. Solde mis à jour.`,
-        NotificationType.HR_REQUEST,
-      );
-    } else {
-      request.status = LeaveStatus.REJECTED;
-      request.rhCommentaire = commentaire;
-      request.commentaire = commentaire;
-      request.validatedBy = new Types.ObjectId(rhId);
-      request.validatedAt = new Date();
-
-      await this.notificationsService.sendToEmployee(
-        request.employeeId.toString(),
-        '❌ Congé refusé par les RH',
-        `Votre demande de congé a été refusée par les RH. ${commentaire}`,
         NotificationType.HR_REQUEST,
       );
     }
@@ -267,9 +271,10 @@ export class LeaveService {
   private async getOrCreateBalance(employeeId: string) {
     let balance = await this.leaveBalanceModel.findOne({ employeeId: new Types.ObjectId(employeeId) }).exec();
     if (!balance) {
+      const maxDays = this.rulesService.getRule('leave.maxDays', 30);
       balance = await this.leaveBalanceModel.create({
         employeeId: new Types.ObjectId(employeeId),
-        soldeAnnuel: 30,
+        soldeAnnuel: maxDays,
         soldeUtilise: 0,
       });
     }

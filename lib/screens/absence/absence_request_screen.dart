@@ -93,7 +93,7 @@ class _AbsenceRequestScreenState extends State<AbsenceRequestScreen> {
               backgroundColor: AppTheme.emerald,
             ),
           );
-          Navigator.pop(context);
+          Navigator.pop(context, true);
         }
       } else {
         if (mounted) {

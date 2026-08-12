@@ -70,6 +70,7 @@ import { HierarchyModule } from './hierarchy/hierarchy.module';
 // New Modules
 import { AbsenceModule } from './absence/absence.module';
 import { FinanceModule } from './finance/finance.module';
+import { RulesModule } from './rules/rules.module';
 
 
 // Infrastructure
@@ -137,6 +138,7 @@ import { DatabaseModule } from './database/database.module';
     HierarchyModule,
     AbsenceModule,
     FinanceModule,
+    RulesModule,
 
 
     // ─── HR & Finance ───────────────────────────────────────────────

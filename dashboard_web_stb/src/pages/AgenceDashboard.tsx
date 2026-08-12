@@ -124,7 +124,6 @@ const AgenceDashboard = () => {
             initial="hidden"
             animate="visible"
             whileHover={{ scale: 1.04, y: -4 }}
-            animate2={stat.urgent ? { scale: [1, 1.02, 1] } : {}}
             style={{
               background: `${stat.color}10`,
               border: `1px solid ${stat.color}30`,

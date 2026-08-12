@@ -50,16 +50,16 @@ let LeaveController = class LeaveController {
         return this.leaveService.getAllRequests('PENDING_RH');
     }
     handleManagerApproval(id, req, body) {
-        return this.leaveService.handleManagerApproval(id, req.user.sub, body.decision, body.commentaire);
+        return this.leaveService.processApproval(id, req.user.sub, req.user.roles, body.decision, body.commentaire);
     }
     handleRhApproval(id, req, body) {
-        return this.leaveService.handleRhApproval(id, req.user.sub, body.decision, body.commentaire);
+        return this.leaveService.processApproval(id, req.user.sub, req.user.roles, body.decision, body.commentaire);
     }
     managerApprove(id, req, body) {
-        return this.leaveService.handleManagerApproval(id, req.user.sub, 'APPROVED', body?.commentaire || '');
+        return this.leaveService.processApproval(id, req.user.sub, req.user.roles, 'APPROVED', body?.commentaire || '');
     }
     managerReject(id, req, body) {
-        return this.leaveService.handleManagerApproval(id, req.user.sub, 'REJECTED', body?.commentaire || body?.reason || 'Refusé');
+        return this.leaveService.processApproval(id, req.user.sub, req.user.roles, 'REJECTED', body?.commentaire || body?.reason || 'Refusé');
     }
     async debugAll() {
         const all = await this.leaveService.getAllRequests();
@@ -136,7 +136,8 @@ __decorate([
 ], LeaveController.prototype, "getPendingRh", null);
 __decorate([
     (0, common_1.Patch)(':id/handle-manager'),
-    (0, swagger_1.ApiOperation)({ summary: 'Manager/Director approves or rejects leave (any level in chain)' }),
+    (0, roles_decorator_1.Roles)(role_enum_1.Role.MANAGER, role_enum_1.Role.ADMIN, role_enum_1.Role.SUPER_ADMIN),
+    (0, swagger_1.ApiOperation)({ summary: 'Process approval (any role in workflow)' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Request)()),
     __param(2, (0, common_1.Body)()),
@@ -147,7 +148,7 @@ __decorate([
 __decorate([
     (0, common_1.Patch)(':id/handle-rh'),
     (0, roles_decorator_1.Roles)(role_enum_1.Role.RH, role_enum_1.Role.ADMIN, role_enum_1.Role.SUPER_ADMIN),
-    (0, swagger_1.ApiOperation)({ summary: 'RH validates or rejects approved leave request' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Process RH approval' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Request)()),
     __param(2, (0, common_1.Body)()),
@@ -157,6 +158,7 @@ __decorate([
 ], LeaveController.prototype, "handleRhApproval", null);
 __decorate([
     (0, common_1.Post)(':id/manager-approve'),
+    (0, roles_decorator_1.Roles)(role_enum_1.Role.MANAGER, role_enum_1.Role.ADMIN, role_enum_1.Role.SUPER_ADMIN),
     (0, swagger_1.ApiOperation)({ summary: '✅ Manager/Director approves leave (mobile endpoint)' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Request)()),
@@ -167,6 +169,7 @@ __decorate([
 ], LeaveController.prototype, "managerApprove", null);
 __decorate([
     (0, common_1.Post)(':id/manager-reject'),
+    (0, roles_decorator_1.Roles)(role_enum_1.Role.MANAGER, role_enum_1.Role.ADMIN, role_enum_1.Role.SUPER_ADMIN),
     (0, swagger_1.ApiOperation)({ summary: '❌ Manager/Director rejects leave (mobile endpoint)' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Request)()),
@@ -177,6 +180,7 @@ __decorate([
 ], LeaveController.prototype, "managerReject", null);
 __decorate([
     (0, common_1.Get)('debug-all'),
+    (0, roles_decorator_1.Roles)(role_enum_1.Role.ADMIN, role_enum_1.Role.SUPER_ADMIN),
     (0, swagger_1.ApiOperation)({ summary: '🔧 DEBUG: Get all leaves (no filter)' }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),

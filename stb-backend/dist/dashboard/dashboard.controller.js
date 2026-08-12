@@ -31,6 +31,9 @@ let DashboardController = class DashboardController {
     getItDashboard() {
         return this.dashboardService.getItDashboard();
     }
+    getAdvancedAnalytics() {
+        return this.dashboardService.getAdvancedAnalytics();
+    }
 };
 exports.DashboardController = DashboardController;
 __decorate([
@@ -55,6 +58,13 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], DashboardController.prototype, "getItDashboard", null);
+__decorate([
+    (0, common_1.Get)('advanced-analytics'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get full advanced analytics data for all roles' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], DashboardController.prototype, "getAdvancedAnalytics", null);
 exports.DashboardController = DashboardController = __decorate([
     (0, swagger_1.ApiTags)('Dashboard'),
     (0, swagger_1.ApiBearerAuth)(),

@@ -12,11 +12,13 @@ import Audit from './pages/Audit';
 import Documents from './pages/Documents';
 import Recrutement from './pages/Recrutement';
 import Settings from './pages/Settings';
+import { BusinessRules } from './pages/BusinessRules';
 import Employee360 from './pages/Employee360';
 import EmployeeFinancials from './pages/EmployeeFinancials';
 import Requests from './pages/Requests';
 import Departments from './pages/Departments';
 import Branches from './pages/Branches';
+import Organigramme from './pages/Organigramme';
 import Analytics from './pages/Analytics';
 import SecurityCenter from './pages/SecurityCenter';
 import Reports from './pages/Reports';
@@ -40,6 +42,8 @@ import FinancePayroll from './pages/FinancePayroll';
 import FinanceBudgets from './pages/FinanceBudgets';
 import FinanceAvances from './pages/FinanceAvances';
 import Attendance from './pages/Attendance';
+import FraudDetection from './pages/FraudDetection';
+import RiskAlerts from './pages/RiskAlerts';
 
 const RH_ROLES = ['RH', 'ADMIN', 'SUPER_ADMIN'];
 const AGENCE_ROLES = ['AGENCE', 'ADMIN', 'SUPER_ADMIN'];
@@ -47,6 +51,7 @@ const FINANCE_ROLES = ['FINANCE', 'ADMIN', 'SUPER_ADMIN'];
 const MANAGER_ROLES = ['MANAGER', 'RH', 'ADMIN', 'SUPER_ADMIN'];
 const ALL_STAFF = ['RH', 'AGENCE', 'FINANCE', 'MANAGER', 'ADMIN', 'SUPER_ADMIN', 'IT'];
 const ADMIN_ONLY = ['ADMIN', 'SUPER_ADMIN', 'IT'];  // IT can see security + audit too
+const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN'];
 
 function App() {
   return (
@@ -65,6 +70,8 @@ function App() {
             <Route path="departments" element={<ProtectedRoute allowedRoles={RH_ROLES}><Departments /></ProtectedRoute>} />
             <Route path="branches" element={<ProtectedRoute allowedRoles={RH_ROLES}><Branches /></ProtectedRoute>} />
             <Route path="audit" element={<ProtectedRoute allowedRoles={ADMIN_ONLY}><Audit /></ProtectedRoute>} />
+            <Route path="rules" element={<ProtectedRoute allowedRoles={RH_ROLES}><BusinessRules /></ProtectedRoute>} />
+            <Route path="organigramme" element={<ProtectedRoute allowedRoles={ALL_STAFF}><Organigramme /></ProtectedRoute>} />
             <Route path="documents" element={<ProtectedRoute allowedRoles={[...RH_ROLES, ...FINANCE_ROLES]}><Documents /></ProtectedRoute>} />
             <Route path="requests" element={<ProtectedRoute allowedRoles={ALL_STAFF}><Requests /></ProtectedRoute>} />
             <Route path="amicale" element={<ProtectedRoute allowedRoles={ALL_STAFF}><Amicale /></ProtectedRoute>} />
@@ -88,6 +95,7 @@ function App() {
             <Route path="agence" element={<ProtectedRoute allowedRoles={AGENCE_ROLES}><AgenceDashboard /></ProtectedRoute>} />
             <Route path="agence/accounts" element={<ProtectedRoute allowedRoles={AGENCE_ROLES}><AgenceAccounts /></ProtectedRoute>} />
             <Route path="agence/cards" element={<ProtectedRoute allowedRoles={AGENCE_ROLES}><AgenceCards /></ProtectedRoute>} />
+            <Route path="agence/credits" element={<ProtectedRoute allowedRoles={AGENCE_ROLES}><AgenceCredits /></ProtectedRoute>} />
 
             {/* ── Finance Portal ───────────────────────────────────── */}
             <Route path="finance" element={<ProtectedRoute allowedRoles={FINANCE_ROLES}><FinanceDashboard /></ProtectedRoute>} />
@@ -101,6 +109,10 @@ function App() {
 
             {/* ── Manager / Director Portal ─────────────────────────── */}
             <Route path="director" element={<ProtectedRoute allowedRoles={MANAGER_ROLES}><DirectorDashboard /></ProtectedRoute>} />
+
+            {/* ── Admin / Risk & Fraud ──────────────────────────────── */}
+            <Route path="fraud-detection" element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><FraudDetection /></ProtectedRoute>} />
+            <Route path="risk-alerts" element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><RiskAlerts /></ProtectedRoute>} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

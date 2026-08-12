@@ -4,6 +4,7 @@ import { Account } from '../accounts/schemas/account.schema';
 import { Employee } from '../employees/employee.schema';
 import { Transaction } from '../transactions/schemas/transaction.schema';
 import { NotificationsService } from '../notifications/notifications.service';
+import { RulesService } from '../rules/rules.service';
 export declare class CreditsService {
     private creditModel;
     private paymentModel;
@@ -11,7 +12,8 @@ export declare class CreditsService {
     private employeeModel;
     private transactionModel;
     private notificationsService;
-    constructor(creditModel: Model<Credit>, paymentModel: Model<CreditPayment>, accountModel: Model<Account>, employeeModel: Model<Employee>, transactionModel: Model<Transaction>, notificationsService: NotificationsService);
+    private rulesService;
+    constructor(creditModel: Model<Credit>, paymentModel: Model<CreditPayment>, accountModel: Model<Account>, employeeModel: Model<Employee>, transactionModel: Model<Transaction>, notificationsService: NotificationsService, rulesService: RulesService);
     create(employeeId: string, data: {
         title: string;
         type: string;

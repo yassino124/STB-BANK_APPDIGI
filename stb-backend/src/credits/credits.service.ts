@@ -7,6 +7,7 @@ import { Employee } from '../employees/employee.schema';
 import { Transaction, TransactionType, TransactionStatus, TransactionCategory } from '../transactions/schemas/transaction.schema';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/schemas/notification.schema';
+import { RulesService } from '../rules/rules.service';
 import { StringUtil } from '../common/utils/string.util';
 
 @Injectable()
@@ -18,9 +19,22 @@ export class CreditsService {
     @InjectModel(Employee.name) private employeeModel: Model<Employee>,
     @InjectModel(Transaction.name) private transactionModel: Model<Transaction>,
     private notificationsService: NotificationsService,
+    private rulesService: RulesService,
   ) {}
 
   async create(employeeId: string, data: { title: string; type: string; montantInitial: number; tauxInteret: number; nombreMois: number; dateDebut: Date }) {
+    const employee = await this.employeeModel.findById(employeeId).exec();
+    if (!employee) throw new NotFoundException('Employé introuvable');
+
+    const formula = this.rulesService.getRule('credit.formula', 'salary * 6');
+    const maxCredit = this.rulesService.evaluateFormula(formula, { salary: employee.salaireBase || 1000 });
+
+    if (data.montantInitial > maxCredit) {
+      throw new BadRequestException(
+        `Montant du crédit trop élevé. Le maximum autorisé selon votre profil est de ${maxCredit.toFixed(2)} TND.`
+      );
+    }
+
     const { montantInitial, tauxInteret, nombreMois, dateDebut } = data;
     // Calculate monthly payment: M = P * [r(1+r)^n] / [(1+r)^n - 1]
     const r = tauxInteret / 100 / 12;

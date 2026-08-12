@@ -84,4 +84,58 @@ export declare class DashboardController {
             lastBackup: string;
         };
     }>;
+    getAdvancedAnalytics(): Promise<{
+        hr: {
+            headcount: number;
+            turnover: number;
+            leaveTrends: {
+                name: string;
+                leaves: number;
+                sickness: number;
+            }[];
+            skillsRadar: {
+                subject: string;
+                A: number;
+                B: number;
+                fullMark: number;
+            }[];
+            salaryVsExperience: {
+                experience: number;
+                salary: number;
+                role: string;
+            }[];
+            salaryDist: {
+                name: string;
+                value: any;
+            }[];
+        };
+        finance: {
+            payrollTotal: any;
+            creditExposure: any;
+            advancesTotal: number;
+            financialRisk: {
+                name: string;
+                riskScore: number;
+                repayments: number;
+            }[];
+        };
+        agency: {
+            totalAccounts: number;
+            totalCards: number;
+            transactionsTrend: {
+                name: string;
+                volume: number;
+                alerts: number;
+            }[];
+            customerActivity: {
+                name: string;
+                value: number;
+            }[];
+            activityHeatmap: {
+                day: string;
+                hour: string;
+                value: number;
+            }[];
+        };
+    }>;
 }

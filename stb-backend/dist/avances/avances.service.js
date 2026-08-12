@@ -22,18 +22,21 @@ const account_schema_1 = require("../accounts/schemas/account.schema");
 const transaction_schema_1 = require("../transactions/schemas/transaction.schema");
 const notifications_service_1 = require("../notifications/notifications.service");
 const notification_schema_1 = require("../notifications/schemas/notification.schema");
+const rules_service_1 = require("../rules/rules.service");
 let AvancesService = class AvancesService {
     avanceModel;
     employeeModel;
     accountModel;
     transactionModel;
     notificationsService;
-    constructor(avanceModel, employeeModel, accountModel, transactionModel, notificationsService) {
+    rulesService;
+    constructor(avanceModel, employeeModel, accountModel, transactionModel, notificationsService, rulesService) {
         this.avanceModel = avanceModel;
         this.employeeModel = employeeModel;
         this.accountModel = accountModel;
         this.transactionModel = transactionModel;
         this.notificationsService = notificationsService;
+        this.rulesService = rulesService;
     }
     async create(employeeId, data) {
         console.log('🔍 Creating avance for employeeId:', employeeId);
@@ -43,9 +46,10 @@ let AvancesService = class AvancesService {
             throw new common_1.NotFoundException('Employé introuvable');
         }
         if (data.type === avance_schema_1.AvanceType.SALAIRE) {
-            const maxAvance = employee.salaireBase * 0.5;
+            const maxPercent = this.rulesService.getRule('advance.maxPercent', 50);
+            const maxAvance = (employee.salaireBase || 1000) * (maxPercent / 100);
             if (data.montant > maxAvance) {
-                throw new common_1.BadRequestException(`Montant trop élevé. Maximum autorisé: ${maxAvance.toFixed(2)} TND (50% du salaire)`);
+                throw new common_1.BadRequestException(`Montant trop élevé. Le maximum autorisé est de ${maxPercent}% de votre salaire, soit ${maxAvance.toFixed(2)} TND.`);
             }
         }
         const avance = await this.avanceModel.create({
@@ -180,6 +184,7 @@ exports.AvancesService = AvancesService = __decorate([
         mongoose_2.Model,
         mongoose_2.Model,
         mongoose_2.Model,
-        notifications_service_1.NotificationsService])
+        notifications_service_1.NotificationsService,
+        rules_service_1.RulesService])
 ], AvancesService);
 //# sourceMappingURL=avances.service.js.map

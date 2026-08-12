@@ -44,6 +44,7 @@ class MainScreenState extends State<MainScreen> {
   static MainScreenState? _instance;
   int _index = 0;
   int _pendingTeamCount = 0;
+  bool _idleDialogShown = false;
 
   /// Global navigation — works from any screen (dialogs, pushed routes, etc.)
   static void navigateGlobal(int i) => _instance?.navigateTo(i);
@@ -101,6 +102,10 @@ class MainScreenState extends State<MainScreen> {
     super.initState();
     _instance = this;
     _loadPendingTeamCount();
+    // Start idle session tracking
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AppProvider>().resetIdleTimer();
+    });
   }
 
   Future<void> _loadPendingTeamCount() async {
@@ -122,6 +127,7 @@ class MainScreenState extends State<MainScreen> {
   @override
   void dispose() {
     if (_instance == this) _instance = null;
+    context.read<AppProvider>().stopIdleTracking();
     super.dispose();
   }
 
@@ -164,47 +170,236 @@ class MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     final p = Provider.of<AppProvider>(context);
     final dk = p.themeMode == ThemeMode.dark;
-    
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: dk ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
-      child: Scaffold(
-        extendBody: false, // Fixed solid bottom navigation
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        drawer: _buildDrawer(context, p, dk),
-        body: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 350),
-          switchInCurve: Curves.easeOutCubic,
-          switchOutCurve: Curves.easeInCubic,
-          transitionBuilder: (child, animation) {
-            return FadeTransition(
-              opacity: animation,
-              child: child,
-            );
-          },
-          child: KeyedSubtree(
-            key: ValueKey<int>(_index),
-            child: _screens[_index],
+
+    // Show idle warning dialog when state changes
+    if (p.showingIdleWarning && !_idleDialogShown) {
+      _idleDialogShown = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showIdleWarningDialog(context);
+      });
+    } else if (!p.showingIdleWarning && _idleDialogShown) {
+      _idleDialogShown = false;
+    }
+
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (_) => p.resetIdleTimer(),
+      onPointerMove: (_) => p.resetIdleTimer(),
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: dk ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+        child: Scaffold(
+          extendBody: false, // Fixed solid bottom navigation
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          drawer: _buildDrawer(context, p, dk),
+          body: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 350),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            transitionBuilder: (child, animation) {
+              return FadeTransition(
+                opacity: animation,
+                child: child,
+              );
+            },
+            child: KeyedSubtree(
+              key: ValueKey<int>(_index),
+              child: _screens[_index],
+            ),
           ),
+          bottomNavigationBar: _buildSolidBottomNav(dk, p),
+          floatingActionButton: _index == 0
+              ? Padding(
+                  padding: const EdgeInsets.only(bottom: 84.0),
+                  child: FloatingActionButton(
+                    heroTag: 'main_voice_fab',
+                    onPressed: () {
+                      HapticFeedback.heavyImpact();
+                      _showVoiceSiri(context, dk);
+                    },
+                    backgroundColor: AppTheme.electricBlue,
+                    elevation: 10,
+                    shape: const CircleBorder(),
+                    child: const Icon(Icons.mic_rounded, color: Colors.white, size: 28),
+                  ).animate(onPlay: (c) => c.repeat(reverse: true)).scale(begin: const Offset(0.95, 0.95), end: const Offset(1.05, 1.05), duration: 1500.ms),
+                )
+              : null,
         ),
-        bottomNavigationBar: _buildSolidBottomNav(dk, p),
-        floatingActionButton: _index == 0 
-            ? Padding(
-                padding: const EdgeInsets.only(bottom: 84.0),
-                child: FloatingActionButton(
-                  heroTag: 'main_voice_fab',
-                  onPressed: () {
-                    HapticFeedback.heavyImpact();
-                    _showVoiceSiri(context, dk);
-                  },
-                  backgroundColor: AppTheme.electricBlue,
-                  elevation: 10,
-                  shape: const CircleBorder(),
-                  child: const Icon(Icons.mic_rounded, color: Colors.white, size: 28),
-                ).animate(onPlay: (c) => c.repeat(reverse: true)).scale(begin: const Offset(0.95, 0.95), end: const Offset(1.05, 1.05), duration: 1500.ms),
-              )
-            : null,
       ),
     );
+  }
+
+  void _showIdleWarningDialog(BuildContext context) {
+    final p = context.read<AppProvider>();
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black.withOpacity(0.75),
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            // Listen to provider changes for the countdown
+            return ListenableBuilder(
+              listenable: p,
+              builder: (ctx, _) {
+                // Auto-close dialog when provider says warning ended
+                if (!p.showingIdleWarning && Navigator.of(ctx).canPop()) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (Navigator.of(ctx).canPop()) Navigator.of(ctx).pop();
+                  });
+                }
+                return Dialog(
+                  backgroundColor: Colors.transparent,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(28),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                      child: Container(
+                        padding: const EdgeInsets.all(32),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1A1A2E).withOpacity(0.95),
+                          borderRadius: BorderRadius.circular(28),
+                          border: Border.all(
+                            color: const Color(0xFFFF8C00).withOpacity(0.4),
+                            width: 1.5,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFFF8C00).withOpacity(0.15),
+                              blurRadius: 40,
+                              spreadRadius: 5,
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Pulsing warning icon
+                            TweenAnimationBuilder<double>(
+                              tween: Tween(begin: 0.9, end: 1.1),
+                              duration: const Duration(milliseconds: 800),
+                              curve: Curves.easeInOut,
+                              onEnd: () {},
+                              builder: (ctx, scale, child) {
+                                return Transform.scale(
+                                  scale: scale,
+                                  child: child,
+                                );
+                              },
+                              child: Container(
+                                width: 80,
+                                height: 80,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: const Color(0xFFFF8C00).withOpacity(0.15),
+                                  border: Border.all(
+                                    color: const Color(0xFFFF8C00).withOpacity(0.6),
+                                    width: 2,
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.timer_outlined,
+                                  color: Color(0xFFFF8C00),
+                                  size: 40,
+                                ),
+                              ).animate(onPlay: (c) => c.repeat(reverse: true))
+                                  .scale(begin: const Offset(0.9, 0.9), end: const Offset(1.1, 1.1), duration: 900.ms, curve: Curves.easeInOut),
+                            ),
+                            const SizedBox(height: 24),
+                            const Text(
+                              'Session inactive',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            const Text(
+                              'Votre session va expirer dans',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Color(0xFFB0B0C8),
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            // Countdown
+                            TweenAnimationBuilder<double>(
+                              key: ValueKey(p.idleWarningCountdown),
+                              tween: Tween(begin: 0.0, end: 1.0),
+                              duration: const Duration(milliseconds: 400),
+                              builder: (ctx, v, child) => Opacity(opacity: v, child: child),
+                              child: Text(
+                                '${p.idleWarningCountdown}s',
+                                style: const TextStyle(
+                                  color: Color(0xFFFF8C00),
+                                  fontSize: 56,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -1,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 28),
+                            // Buttons
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: () {
+                                      Navigator.of(ctx).pop();
+                                      p.handleSessionExpired(ctx);
+                                    },
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: const Color(0xFFFF4444),
+                                      side: const BorderSide(color: Color(0xFFFF4444), width: 1.5),
+                                      padding: const EdgeInsets.symmetric(vertical: 14),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Se déconnecter',
+                                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      Navigator.of(ctx).pop();
+                                      p.cancelIdleWarning();
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF00C47D),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 14),
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Rester connecté',
+                                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    ).then((_) => _idleDialogShown = false);
   }
 
   Widget _buildSolidBottomNav(bool dk, AppProvider p) {

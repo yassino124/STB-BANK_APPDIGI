@@ -27,7 +27,9 @@ const Topbar = () => {
           placeholder="Rechercher par nom, matricule..."
           onFocus={() => setIsSearchFocused(true)}
           onBlur={() => setIsSearchFocused(false)}
-          style={{ width: '100%' }}
+          onClick={() => window.dispatchEvent(new Event('open-command-palette'))}
+          readOnly
+          style={{ width: '100%', cursor: 'pointer' }}
         />
         <div style={{
           background: 'rgba(255,255,255,0.06)',

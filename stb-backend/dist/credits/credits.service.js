@@ -22,6 +22,7 @@ const employee_schema_1 = require("../employees/employee.schema");
 const transaction_schema_1 = require("../transactions/schemas/transaction.schema");
 const notifications_service_1 = require("../notifications/notifications.service");
 const notification_schema_1 = require("../notifications/schemas/notification.schema");
+const rules_service_1 = require("../rules/rules.service");
 const string_util_1 = require("../common/utils/string.util");
 let CreditsService = class CreditsService {
     creditModel;
@@ -30,15 +31,25 @@ let CreditsService = class CreditsService {
     employeeModel;
     transactionModel;
     notificationsService;
-    constructor(creditModel, paymentModel, accountModel, employeeModel, transactionModel, notificationsService) {
+    rulesService;
+    constructor(creditModel, paymentModel, accountModel, employeeModel, transactionModel, notificationsService, rulesService) {
         this.creditModel = creditModel;
         this.paymentModel = paymentModel;
         this.accountModel = accountModel;
         this.employeeModel = employeeModel;
         this.transactionModel = transactionModel;
         this.notificationsService = notificationsService;
+        this.rulesService = rulesService;
     }
     async create(employeeId, data) {
+        const employee = await this.employeeModel.findById(employeeId).exec();
+        if (!employee)
+            throw new common_1.NotFoundException('Employé introuvable');
+        const formula = this.rulesService.getRule('credit.formula', 'salary * 6');
+        const maxCredit = this.rulesService.evaluateFormula(formula, { salary: employee.salaireBase || 1000 });
+        if (data.montantInitial > maxCredit) {
+            throw new common_1.BadRequestException(`Montant du crédit trop élevé. Le maximum autorisé selon votre profil est de ${maxCredit.toFixed(2)} TND.`);
+        }
         const { montantInitial, tauxInteret, nombreMois, dateDebut } = data;
         const r = tauxInteret / 100 / 12;
         const mensualite = r === 0 ? montantInitial / nombreMois : Math.round(montantInitial * r * Math.pow(1 + r, nombreMois) / (Math.pow(1 + r, nombreMois) - 1) * 100) / 100;
@@ -563,6 +574,7 @@ exports.CreditsService = CreditsService = __decorate([
         mongoose_2.Model,
         mongoose_2.Model,
         mongoose_2.Model,
-        notifications_service_1.NotificationsService])
+        notifications_service_1.NotificationsService,
+        rules_service_1.RulesService])
 ], CreditsService);
 //# sourceMappingURL=credits.service.js.map

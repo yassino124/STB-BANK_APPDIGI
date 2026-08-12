@@ -4,6 +4,7 @@ import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import { useAuth } from '../context/AuthContext';
 import CopilotWidget from './CopilotWidget';
+import CommandPalette from './CommandPalette';
 
 const Layout = () => {
   const { user, isLoading } = useAuth();
@@ -44,6 +45,7 @@ const Layout = () => {
         </main>
       </div>
       <CopilotWidget />
+      <CommandPalette />
     </div>
   );
 };

@@ -75,7 +75,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
 const AVATARS_COLORS = ['#2962FF','#10B981','#F59E0B','#EF4444','#8B5CF6','#EC4899','#06B6D4'];
 
 const Requests = ({ typeFilter }: { typeFilter?: string }) => {
-  const { isManager, isFinance, isRH } = useAuth();
+  const { user, isManager, isFinance, isRH } = useAuth();
   const [requests, setRequests] = useState<RequestEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('EN_ATTENTE');
@@ -87,6 +87,10 @@ const Requests = ({ typeFilter }: { typeFilter?: string }) => {
   const [expandedReq, setExpandedReq] = useState<string | null>(null);
   const [aiAnalysis, setAiAnalysis] = useState<Record<string, any>>({});
   const [aiLoading, setAiLoading] = useState<Record<string, boolean>>({});
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const analyzeRequest = async (req: RequestEntry) => {
     if (expandedReq === req._id) {
@@ -357,7 +361,7 @@ const Requests = ({ typeFilter }: { typeFilter?: string }) => {
     return () => clearInterval(interval);
   }, [fetchRequests]);
 
-  const updateStatus = async (id: string, status: string, type?: string) => {
+  const updateStatus = async (id: string, status: string, type?: string, dbStatus?: string) => {
     setUpdating(id);
     try {
       const t = (type || '').toUpperCase();
@@ -365,35 +369,45 @@ const Requests = ({ typeFilter }: { typeFilter?: string }) => {
       const isAbsence = ['ABSENCE', 'RETARD', 'DELEGATION', 'MISSION'].includes(t);
       const isAvance = ['AVANCE', 'ADVANCE', 'SALAIRE', 'PRIME', 'PRIME_AID'].includes(t);
       const isPrime = ['PERFORMANCE', 'AID'].includes(t);
+      const decision = status === 'APPROUVE' ? 'APPROVED' : 'REJECTED';
 
-      if (isManager && !isRH && isConge) {
-        // Manager (NOT RH) approves leave via dedicated endpoint
-        if (status === 'APPROUVE') {
-          await api.post(`/leave/${id}/manager-approve`);
+      if (isConge) {
+        // Route strictly based on the current workflow step, NOT just user role
+        const isAtManagerStep = dbStatus === 'PENDING_MANAGER';
+        const isAtRhStep = dbStatus === 'PENDING_RH';
+
+        if (isAtManagerStep) {
+          // Must go through manager endpoint regardless of who is approving
+          if (status === 'APPROUVE') {
+            await api.post(`/leave/${id}/manager-approve`);
+          } else {
+            await api.post(`/leave/${id}/manager-reject`, { reason: 'Refusé' });
+          }
+        } else if (isAtRhStep) {
+          // Only at RH step can RH/Admin approve
+          await api.patch(`/leave/${id}/handle-rh`, { decision, commentaire: status === 'APPROUVE' ? 'Approuvé par RH' : 'Refusé par RH' });
         } else {
-          await api.post(`/leave/${id}/manager-reject`, { reason: 'Refusé par le manager' });
+          // Fallback for older requests without dbStatus
+          if (isManager && !isRH) {
+            if (status === 'APPROUVE') await api.post(`/leave/${id}/manager-approve`);
+            else await api.post(`/leave/${id}/manager-reject`);
+          } else {
+            await api.patch(`/leave/${id}/handle-rh`, { decision, commentaire: status === 'APPROUVE' ? 'Approuvé par RH' : 'Refusé' });
+          }
         }
-      } else if (isRH && isConge) {
-        // RH approves leave via RH endpoint
-        const decision = status === 'APPROUVE' ? 'APPROVED' : 'REJECTED';
-        await api.patch(`/leave/${id}/handle-rh`, { decision, commentaire: status === 'APPROUVE' ? 'Approuvé par RH' : 'Refusé par RH' });
-      } else if (isRH && isAbsence) {
-        // RH approves absence via RH endpoint
-        const decision = status === 'APPROUVE' ? 'APPROVED' : 'REJECTED';
-        await api.patch(`/absences/${id}/handle-rh`, { decision, commentaire: status === 'APPROUVE' ? 'Approuvé par RH' : 'Refusé par RH' });
-      } else if (isManager && !isRH && isAbsence) {
-        await api.patch(`/absences/${id}/handle-manager`, { decision: status === 'APPROUVE' ? 'APPROVED' : 'REJECTED' });
+      } else if (isAbsence) {
+        const isAtManagerStep = dbStatus === 'PENDING_N1';
+        if (isAtManagerStep || (isManager && !isRH)) {
+          await api.patch(`/absences/${id}/handle-manager`, { decision });
+        } else {
+          await api.patch(`/absences/${id}/handle-rh`, { decision, commentaire: status === 'APPROUVE' ? 'Approuvé par RH' : 'Refusé par RH' });
+        }
       } else if (isAvance) {
         await api.patch(`/avances/${id}/status`, { statut: status });
       } else if (isPrime) {
-        const decision = status === 'APPROUVE' ? 'APPROVED' : 'REJECTED';
         await api.patch(`/primes/${id}/handle`, { decision });
       } else if (t === 'CREDIT') {
-        const decision = status === 'APPROUVE' ? 'APPROVED' : 'REJECTED';
         await api.patch(`/credits/${id}/decision`, { decision });
-      } else if (isConge) {
-        // RH approves
-        await api.patch(`/leave/${id}/status`, { statut: status });
       } else {
         await api.patch(`/requests/${id}/status`, { status });
       }
@@ -412,6 +426,9 @@ const Requests = ({ typeFilter }: { typeFilter?: string }) => {
       setUpdating(null);
     }
   };
+
+
+
 
   const ABSENCE_TYPES = ['ABSENCE', 'RETARD', 'DELEGATION', 'MISSION'];
   const CONGE_TYPES = ['CONGE', 'LEAVE', 'REPOS', 'MALADIE', 'MARIAGE', 'NAISSANCE', 'DECES', 'PELERINAGE', 'SANS_SOLDE'];
@@ -621,7 +638,7 @@ const Requests = ({ typeFilter }: { typeFilter?: string }) => {
               </thead>
               <tbody>
                 <AnimatePresence>
-                  {filteredRequests.map((req, idx) => {
+                  {filteredRequests.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((req, idx) => {
                     const statusCfg = STATUS_CONFIG[req.status] || STATUS_CONFIG['EN_ATTENTE'];
                     const avatarColor = AVATARS_COLORS[(req.employeeId?.nom?.charCodeAt(0) || 0) % AVATARS_COLORS.length];
                     const isUpdating = updating === req._id;
@@ -781,7 +798,6 @@ const Requests = ({ typeFilter }: { typeFilter?: string }) => {
                               const isAbsenceReadyForRH = isAbsenceType && req.payload?.dbStatus === 'APPROVED_N1';
                               const isCongeWaitingManagers = isCongeType && req.payload?.dbStatus === 'PENDING_MANAGER';
                               const isCongeReadyForRH = isCongeType && req.payload?.dbStatus === 'PENDING_RH';
-
                               // RH cannot approve absence still at manager level
                               if (isRH && isAbsenceWaitingManagers) return null;
                               if (isRH && isCongeWaitingManagers) return null;
@@ -799,7 +815,7 @@ const Requests = ({ typeFilter }: { typeFilter?: string }) => {
                                     <motion.button
                                       whileHover={{ scale: 1.15, background: 'rgba(16,185,129,0.25)' }}
                                       whileTap={{ scale: 0.9 }}
-                                      onClick={() => updateStatus(req._id, 'APPROUVE', req.type)}
+                                      onClick={() => updateStatus(req._id, 'APPROUVE', req.type, req.payload?.dbStatus)}
                                       disabled={isUpdating}
                                       title="Approuver"
                                       style={{
@@ -814,7 +830,7 @@ const Requests = ({ typeFilter }: { typeFilter?: string }) => {
                                     <motion.button
                                       whileHover={{ scale: 1.15, background: 'rgba(239,68,68,0.25)' }}
                                       whileTap={{ scale: 0.9 }}
-                                      onClick={() => updateStatus(req._id, 'REFUSE', req.type)}
+                                      onClick={() => updateStatus(req._id, 'REFUSE', req.type, req.payload?.dbStatus)}
                                       disabled={isUpdating}
                                       title="Refuser"
                                       style={{
@@ -897,6 +913,35 @@ const Requests = ({ typeFilter }: { typeFilter?: string }) => {
                 </AnimatePresence>
               </tbody>
             </table>
+          </div>
+        )}
+        
+        {/* Pagination Controls */}
+        {filteredRequests.length > itemsPerPage && (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', padding: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <button 
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              style={{
+                padding: '0.5rem 1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '8px', color: currentPage === 1 ? 'rgba(255,255,255,0.2)' : '#fff', cursor: currentPage === 1 ? 'not-allowed' : 'pointer'
+              }}
+            >
+              Précédent
+            </button>
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+              Page <strong style={{ color: '#fff' }}>{currentPage}</strong> sur {Math.ceil(filteredRequests.length / itemsPerPage)}
+            </span>
+            <button 
+              onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredRequests.length / itemsPerPage), p + 1))}
+              disabled={currentPage === Math.ceil(filteredRequests.length / itemsPerPage)}
+              style={{
+                padding: '0.5rem 1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '8px', color: currentPage === Math.ceil(filteredRequests.length / itemsPerPage) ? 'rgba(255,255,255,0.2)' : '#fff', cursor: currentPage === Math.ceil(filteredRequests.length / itemsPerPage) ? 'not-allowed' : 'pointer'
+              }}
+            >
+              Suivant
+            </button>
           </div>
         )}
       </div>

@@ -734,9 +734,8 @@ export default function Documents() {
               </div>
 
               <div style={{ padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '2rem', maxHeight: '70vh', overflowY: 'auto' }} className="scrollbar-thin">
-                
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.95rem', fontWeight: 700, color: '#fff', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <label style={{ fontSize: '0.95rem', fontWeight: 700, color: '#fff', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <FileCheck size={18} />
                     Type de Document à Générer
                   </label>

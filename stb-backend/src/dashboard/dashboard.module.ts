@@ -6,7 +6,7 @@ import { Employee, EmployeeSchema } from '../employees/employee.schema';
 import { Account, AccountSchema } from '../accounts/schemas/account.schema';
 import { Card, CardSchema } from '../cards/schemas/card.schema';
 import { Credit, CreditSchema } from '../credits/schemas/credit.schema';
-import { LeaveBalance, LeaveBalanceSchema } from '../leave/schemas/leave.schema';
+import { LeaveBalance, LeaveBalanceSchema, LeaveRequest, LeaveRequestSchema } from '../leave/schemas/leave.schema';
 import { Prime, PrimeSchema } from '../primes/schemas/prime.schema';
 import { Payroll, PayrollSchema } from '../payroll/schemas/payroll.schema';
 import { Notification, NotificationSchema } from '../notifications/schemas/notification.schema';
@@ -20,6 +20,7 @@ import { Transaction, TransactionSchema } from '../transactions/schemas/transact
       { name: Card.name, schema: CardSchema },
       { name: Credit.name, schema: CreditSchema },
       { name: LeaveBalance.name, schema: LeaveBalanceSchema },
+      { name: LeaveRequest.name, schema: LeaveRequestSchema },
       { name: Prime.name, schema: PrimeSchema },
       { name: Payroll.name, schema: PayrollSchema },
       { name: Notification.name, schema: NotificationSchema },

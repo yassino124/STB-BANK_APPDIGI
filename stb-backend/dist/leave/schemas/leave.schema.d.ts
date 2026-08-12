@@ -25,6 +25,7 @@ export declare class LeaveRequest extends Document {
     status: LeaveStatus;
     managerId: Types.ObjectId | null;
     currentApproverId: Types.ObjectId | null;
+    currentApproverRole: string | null;
     approvalHistory: any[];
     rhApprovedBy: Types.ObjectId;
     rhApprovedAt: Date;
@@ -133,6 +134,15 @@ export declare const LeaveRequestSchema: import("mongoose").Schema<LeaveRequest,
         id: string;
     }>> | undefined;
     currentApproverId?: import("mongoose").SchemaDefinitionProperty<Types.ObjectId | null, LeaveRequest, Document<unknown, {}, LeaveRequest, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<LeaveRequest & Required<{
+        _id: Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & import("mongoose").HydratedDocumentOverrides<{
+        id: string;
+    }>> | undefined;
+    currentApproverRole?: import("mongoose").SchemaDefinitionProperty<string | null, LeaveRequest, Document<unknown, {}, LeaveRequest, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<LeaveRequest & Required<{
         _id: Types.ObjectId;

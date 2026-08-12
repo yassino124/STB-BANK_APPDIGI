@@ -65,6 +65,8 @@ export class EmployeesService {
       status: EmployeeStatus.ACTIVE,
       isActivated: true,
       managerId: dto.managerId || null,
+      directorId: dto.directorId || null,
+      centralDirectorId: dto.centralDirectorId || null,
       departmentId: dto.departmentId || null,
       branchId: dto.branchId || null,
     });

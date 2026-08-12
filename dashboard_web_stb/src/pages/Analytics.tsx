@@ -1,278 +1,394 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar
+  ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, Legend, ComposedChart,
+  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
+  ScatterChart, Scatter, ZAxis
 } from 'recharts';
 import {
   Activity, TrendingUp, Users, ShieldAlert, ArrowUpRight,
-  ArrowDownRight, Calendar
+  ArrowDownRight, Calendar, DollarSign, CreditCard, Building, Briefcase, Zap
 } from 'lucide-react';
 import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
 
-const COLORS = ['#2962FF', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
-
-const cardVariants: any = {
-  hidden: { opacity: 0, y: 24 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.08, duration: 0.45, ease: 'easeOut' } }),
+const COLORS = {
+  primary: ['#3B82F6', '#60A5FA', '#93C5FD'],
+  success: ['#10B981', '#34D399', '#6EE7B7'],
+  warning: ['#F59E0B', '#FBBF24', '#FCD34D'],
+  danger: ['#EF4444', '#F87171', '#FCA5A5'],
+  purple: ['#8B5CF6', '#A78BFA', '#C4B5FD'],
+  pie: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899']
 };
 
 const tooltipStyle = {
-  contentStyle: { backgroundColor: '#0A1121', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' },
-  labelStyle: { color: '#F8FAFC', fontWeight: 700 },
-  itemStyle: { color: '#94A3B8' },
+  contentStyle: { background: 'rgba(15,23,42,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', backdropFilter: 'blur(10px)' },
+  itemStyle: { fontSize: '1rem', fontWeight: 700 },
+  labelStyle: { color: '#94A3B8', marginBottom: '0.5rem', fontWeight: 600 }
 };
 
 const Analytics: React.FC = () => {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState('MONTHLY');
+  
+  // Determine allowed tabs based on roles
+  const canSeeHR = user?.roles?.some((r: string) => ['RH', 'ADMIN', 'SUPER_ADMIN', 'MANAGER'].includes(r));
+  const canSeeFinance = user?.roles?.some((r: string) => ['FINANCE', 'ADMIN', 'SUPER_ADMIN'].includes(r));
+  const canSeeAgency = user?.roles?.some((r: string) => ['AGENCE', 'ADMIN', 'SUPER_ADMIN'].includes(r));
+  
+  const [activeTab, setActiveTab] = useState<'HR' | 'FINANCE' | 'AGENCE'>(
+    canSeeHR ? 'HR' : canSeeFinance ? 'FINANCE' : 'AGENCE'
+  );
 
-  const [dynamicStats, setDynamicStats] = useState({
-    areaData: [] as any[],
-    barData: [] as any[],
-    pieData: [] as any[],
-    totalTransactions: 0,
-    totalVolume: 0,
-    totalUsers: 0,
-    fraudAlerts: 0
+  const [data, setData] = useState({
+    hr: { headcount: 0, turnover: 0, leaveTrends: [] as any[], salaryDist: [] as any[], skillsRadar: [] as any[], salaryVsExperience: [] as any[] },
+    finance: { payrollTotal: 0, creditExposure: 0, advancesTotal: 0, financialRisk: [] as any[] },
+    agency: { totalAccounts: 0, totalCards: 0, transactionsTrend: [] as any[], customerActivity: [] as any[], activityHeatmap: [] as any[] }
   });
 
-  useEffect(() => { fetchAnalytics(); }, [period]);
+  useEffect(() => { fetchAnalytics(); }, [activeTab]);
 
   const fetchAnalytics = async () => {
     setLoading(true);
     try {
-      const [empRes, avRes, congRes, chqRes] = await Promise.all([
-        api.get('/employees?limit=1000').catch(() => ({ data: { data: [] } })),
-        api.get('/avances').catch(() => ({ data: { data: [] } })),
-        api.get('/conges').catch(() => ({ data: { data: [] } })),
-        api.get('/cheques').catch(() => ({ data: { data: [] } }))
-      ]);
-
-      const employees = empRes.data?.data || empRes.data || [];
-      const avances = avRes.data?.data || avRes.data || [];
-      const conges = congRes.data?.data || congRes.data || [];
-      const cheques = chqRes.data?.data || chqRes.data || [];
-
-      // 1. Total Utilisateurs
-      const totalUsers = employees.length;
-
-      // 2. Répartition (Pie Chart)
-      const pieData = [
-        { name: 'Congés', value: conges.length || 1 },
-        { name: 'Avances / Crédits', value: avances.length || 1 },
-        { name: 'Chéquiers', value: cheques.length || 1 }
-      ];
-
-      // 3. Transactions / Volume
-      // Simulation of past months using actual data scale
-      const baseSalarySum = employees.reduce((acc: number, e: any) => acc + (e.salaireDeBase || 2500), 0);
-      const baseRequestsCount = conges.length + avances.length + cheques.length;
-      
-      const areaData = Array.from({ length: 6 }).map((_, i) => {
-        const d = new Date();
-        d.setMonth(d.getMonth() - (5 - i));
-        return {
-          name: d.toLocaleDateString('fr-TN', { month: 'short' }),
-          volume: baseSalarySum * (1 + (Math.random() * 0.1 - 0.05)) // +/- 5% variance
-        };
-      });
-
-      // 4. Bar Data (Activity)
-      const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-      const barData = days.map(d => ({
-        name: d,
-        users: Math.floor((totalUsers * 0.8) + (Math.random() * totalUsers * 0.2)) // 80-100% activity
-      }));
-
-      const totalTransactions = baseRequestsCount * 12; // Extrapolated
-      const totalVolume = areaData.reduce((acc, curr) => acc + curr.volume, 0) * 2; // Extrapolated to 12 months
-
-      setDynamicStats({
-        areaData,
-        barData,
-        pieData,
-        totalTransactions,
-        totalVolume,
-        totalUsers,
-        fraudAlerts: Math.floor(Math.random() * 3) // Minor random alerts based on real system
-      });
-      
-    } catch(err) {
-      console.error(err);
-    } finally { 
-      setLoading(false); 
+      const response = await api.get('/dashboard/advanced-analytics');
+      setData(response.data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const { areaData, barData, pieData, totalTransactions, totalVolume, totalUsers, fraudAlerts } = dynamicStats;
+  const StatCard = ({ title, value, subtitle, icon: Icon, color, trend }: any) => (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ background: 'linear-gradient(180deg, rgba(30,30,40,0.8), rgba(20,20,30,0.9))', padding: '1.5rem', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <p style={{ color: 'rgba(255,255,255,0.5)', margin: '0 0 0.5rem 0', fontSize: '0.9rem', fontWeight: 600 }}>{title}</p>
+          <h3 style={{ color: '#fff', margin: 0, fontSize: '1.8rem', fontWeight: 800 }}>{value}</h3>
+        </div>
+        <div style={{ padding: '0.75rem', background: `rgba(${color}, 0.1)`, borderRadius: '12px', color: `rgb(${color})` }}>
+          <Icon size={24} />
+        </div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1rem', fontSize: '0.85rem' }}>
+        <span style={{ color: trend > 0 ? '#10B981' : '#EF4444', display: 'flex', alignItems: 'center', fontWeight: 700 }}>
+          {trend > 0 ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />} {Math.abs(trend)}%
+        </span>
+        <span style={{ color: 'rgba(255,255,255,0.4)' }}>{subtitle}</span>
+      </div>
+    </motion.div>
+  );
 
-  const kpis = [
-    { label: 'Total Requêtes RH', value: totalTransactions.toLocaleString('fr-TN'), delta: '+12.4%', up: true, icon: Activity, color: '#2962FF', bg: 'rgba(41,98,255,0.12)' },
-    { label: 'Volume (TND)', value: (totalVolume / 1_000_000).toFixed(2) + 'M', delta: '+8.7%', up: true, icon: TrendingUp, color: '#10B981', bg: 'rgba(16,185,129,0.12)' },
-    { label: 'Utilisateurs Actifs', value: totalUsers.toLocaleString('fr-TN'), delta: '+5.2%', up: true, icon: Users, color: '#8B5CF6', bg: 'rgba(139,92,246,0.12)' },
-    { label: 'Alertes Système', value: String(fraudAlerts), delta: '-2 aujourd\'hui', up: false, icon: ShieldAlert, color: '#EF4444', bg: 'rgba(239,68,68,0.12)' },
-  ];
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', flexDirection: 'column', gap: '1rem' }}>
+        <div style={{ width: '60px', height: '60px', border: '3px solid rgba(59, 130, 246, 0.2)', borderTopColor: '#3B82F6', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+        <div style={{ color: '#3B82F6', fontWeight: 600, letterSpacing: '2px' }}>GÉNÉRATION DES ANALYTIQUES...</div>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      {/* Page Header */}
-      <div className="page-header">
+    <div style={{ paddingBottom: '4rem', position: 'relative' }}>
+      <div style={{ position: 'fixed', top: '-10%', right: '-10%', width: '600px', height: '600px', background: 'radial-gradient(circle, rgba(59,130,246,0.15) 0%, rgba(0,0,0,0) 70%)', filter: 'blur(60px)', zIndex: -1, pointerEvents: 'none' }} />
+      
+      {/* Header & Tabs */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem', flexWrap: 'wrap', gap: '1.5rem' }}>
         <div>
-          <h1 className="page-title" style={{ fontFamily: 'var(--font-display)' }}>
-            Analytics <span style={{ color: '#2962FF' }}>Platform</span>
+          <h1 style={{ fontSize: '2.5rem', fontWeight: 900, margin: 0, display: 'flex', alignItems: 'center', gap: '1rem', color: '#fff' }}>
+            <div style={{ padding: '0.8rem', background: 'linear-gradient(135deg, #3B82F6, #2563EB)', borderRadius: '16px', boxShadow: '0 10px 25px rgba(59,130,246,0.4)' }}>
+              <Activity size={32} color="#fff" />
+            </div>
+            Advanced Analytics
           </h1>
-          <p className="page-subtitle">Tableau de bord analytique en temps réel · STB Enterprise</p>
+          <p style={{ margin: '0.5rem 0 0 0', color: 'var(--text-muted)', fontSize: '1.1rem', paddingLeft: '4.5rem' }}>
+            Tableaux de bord analytiques complets et dynamiques
+          </p>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-          <Calendar size={16} style={{ color: 'var(--text-muted)' }} />
-          <div className="tab-bar" style={{ padding: '4px' }}>
-            {['DAILY', 'WEEKLY', 'MONTHLY'].map(p => (
-              <button key={p} className={`tab-btn${period === p ? ' active' : ''}`} onClick={() => setPeriod(p)}>
-                {p === 'DAILY' ? 'Jour' : p === 'WEEKLY' ? 'Semaine' : 'Mois'}
-              </button>
-            ))}
-          </div>
+
+        <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+          {canSeeHR && (
+            <button onClick={() => setActiveTab('HR')} style={{ padding: '0.75rem 1.5rem', background: activeTab === 'HR' ? 'rgba(59,130,246,0.15)' : 'transparent', color: activeTab === 'HR' ? '#60A5FA' : 'rgba(255,255,255,0.5)', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', transition: 'all 0.3s' }}>
+              <Users size={18} /> HR Analytics
+            </button>
+          )}
+          {canSeeFinance && (
+            <button onClick={() => setActiveTab('FINANCE')} style={{ padding: '0.75rem 1.5rem', background: activeTab === 'FINANCE' ? 'rgba(16,185,129,0.15)' : 'transparent', color: activeTab === 'FINANCE' ? '#34D399' : 'rgba(255,255,255,0.5)', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', transition: 'all 0.3s' }}>
+              <DollarSign size={18} /> Finance
+            </button>
+          )}
+          {canSeeAgency && (
+            <button onClick={() => setActiveTab('AGENCE')} style={{ padding: '0.75rem 1.5rem', background: activeTab === 'AGENCE' ? 'rgba(139,92,246,0.15)' : 'transparent', color: activeTab === 'AGENCE' ? '#A78BFA' : 'rgba(255,255,255,0.5)', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', transition: 'all 0.3s' }}>
+              <Building size={18} /> Agence
+            </button>
+          )}
         </div>
       </div>
 
-      {loading ? (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 400, flexDirection: 'column', gap: 16 }}>
-          <div style={{ width: 52, height: 52, borderRadius: '50%', border: '3px solid rgba(41,98,255,0.2)', borderTopColor: '#2962FF', animation: 'spin 0.9s linear infinite' }} />
-          <p style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-display)' }}>Chargement des analytics...</p>
-        </div>
-      ) : (
-        <>
-          {/* KPI Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
-            {kpis.map((kpi, i) => (
-              <motion.div key={kpi.label} className="glass-card stat-card" custom={i} variants={cardVariants} initial="hidden" animate="visible"
-                style={{ cursor: 'default' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                  <div style={{ background: kpi.bg, borderRadius: 12, padding: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <kpi.icon size={22} style={{ color: kpi.color }} />
-                  </div>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.78rem', fontWeight: 700, color: kpi.up ? '#10B981' : '#EF4444', background: kpi.up ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', padding: '3px 10px', borderRadius: 999 }}>
-                    {kpi.up ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}{kpi.delta}
-                  </span>
-                </div>
-                <p style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>{kpi.value}</p>
-                <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: 6 }}>{kpi.label}</p>
-                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${kpi.color}, transparent)`, borderRadius: '0 0 var(--r-xl) var(--r-xl)' }} />
-              </motion.div>
-            ))}
-          </div>
+      <AnimatePresence mode="wait">
+        {/* ===================== HR ANALYTICS ===================== */}
+        {activeTab === 'HR' && (
+          <motion.div key="hr" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.3 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+              <StatCard title="Effectif Total" value={data.hr.headcount} subtitle="vs mois précédent" icon={Users} color="59, 130, 246" trend={2.4} />
+              <StatCard title="Turnover Rate" value={`${data.hr.turnover}%`} subtitle="Moyenne annuelle" icon={TrendingUp} color="245, 158, 11" trend={-0.5} />
+              <StatCard title="Nouvelles Recrues" value="45" subtitle="Ce trimestre" icon={Briefcase} color="16, 185, 129" trend={12.5} />
+              <StatCard title="Taux d'absentéisme" value="1.8%" subtitle="vs mois précédent" icon={Calendar} color="239, 68, 68" trend={0.2} />
+            </div>
 
-          {/* Charts Row 1 */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
-            {/* Area Chart */}
-            <motion.div className="glass-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-              <div className="section-header">
-                <div className="section-accent" style={{ height: 22 }} />
-                <div>
-                  <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.05rem' }}>Masse Salariale Évolutive</h3>
-                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>6 derniers mois</p>
-                </div>
-              </div>
-              <ResponsiveContainer width="100%" height={260}>
-                <AreaChart data={areaData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="volGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#2962FF" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#2962FF" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                  <XAxis dataKey="name" stroke="#64748B" tick={{ fontSize: 11 }} />
-                  <YAxis stroke="#64748B" tick={{ fontSize: 11 }} tickFormatter={v => `${(v/1000).toFixed(0)}k`} />
-                  <Tooltip {...tooltipStyle} formatter={(v: any) => [`${Number(v).toLocaleString('fr-TN')} TND`, 'Volume']} />
-                  <Area type="monotone" dataKey="volume" stroke="#2962FF" strokeWidth={2.5} fill="url(#volGrad)" dot={false} activeDot={{ r: 5, fill: '#2962FF', stroke: '#fff', strokeWidth: 2 }} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </motion.div>
-
-            {/* Bar Chart */}
-            <motion.div className="glass-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.42 }}>
-              <div className="section-header">
-                <div className="section-accent" style={{ height: 22, background: 'linear-gradient(to bottom, #10B981, #059669)' }} />
-                <div>
-                  <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.05rem' }}>Utilisateurs Actifs</h3>
-                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Activité hebdomadaire</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
+              <div style={{ background: 'linear-gradient(180deg, rgba(30,30,40,0.8), rgba(20,20,30,0.9))', padding: '2rem', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <h3 style={{ color: '#fff', marginTop: 0, marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <Calendar color="#60A5FA" /> Tendances des Congés & Absences
+                </h3>
+                <div style={{ height: 300 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={data.hr.leaveTrends}>
+                      <defs>
+                        <linearGradient id="colorLeaves" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorSick" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#EF4444" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#EF4444" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                      <XAxis dataKey="name" stroke="rgba(255,255,255,0.3)" />
+                      <YAxis stroke="rgba(255,255,255,0.3)" />
+                      <Tooltip contentStyle={tooltipStyle.contentStyle} itemStyle={tooltipStyle.itemStyle} labelStyle={tooltipStyle.labelStyle} />
+                      <Area type="monotone" dataKey="leaves" name="Congés Payés" stroke="#3B82F6" strokeWidth={4} fillOpacity={1} fill="url(#colorLeaves)" style={{ filter: 'drop-shadow(0 4px 8px rgba(59,130,246,0.5))' }} activeDot={{ r: 8, fill: '#3B82F6', stroke: '#fff', strokeWidth: 2 }} />
+                      <Area type="monotone" dataKey="sickness" name="Maladie" stroke="#EF4444" strokeWidth={4} fillOpacity={1} fill="url(#colorSick)" style={{ filter: 'drop-shadow(0 4px 8px rgba(239,68,68,0.5))' }} activeDot={{ r: 8, fill: '#EF4444', stroke: '#fff', strokeWidth: 2 }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={barData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#10B981" />
-                      <stop offset="100%" stopColor="#059669" />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                  <XAxis dataKey="name" stroke="#64748B" tick={{ fontSize: 11 }} />
-                  <YAxis stroke="#64748B" tick={{ fontSize: 11 }} />
-                  <Tooltip {...tooltipStyle} formatter={(v: any) => [Number(v).toLocaleString('fr-TN'), 'Utilisateurs']} />
-                  <Bar dataKey="users" fill="url(#barGrad)" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </motion.div>
-          </div>
 
-          {/* Pie Chart */}
-          <motion.div className="glass-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
-            <div className="section-header">
-              <div className="section-accent" style={{ height: 22, background: 'linear-gradient(to bottom, #8B5CF6, #7C3AED)' }} />
-              <div>
-                <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.05rem' }}>Répartition des Requêtes</h3>
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Par type de demande RH</p>
+              <div style={{ background: 'linear-gradient(180deg, rgba(30,30,40,0.8), rgba(20,20,30,0.9))', padding: '2rem', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <h3 style={{ color: '#fff', marginTop: 0, marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <DollarSign color="#10B981" /> Distribution Salaires
+                </h3>
+                <div style={{ height: 300 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={data.hr.salaryDist} cx="50%" cy="50%" innerRadius={70} outerRadius={105} paddingAngle={5} dataKey="value" stroke="rgba(15,23,42,0.8)" strokeWidth={2}>
+                        {data.hr.salaryDist.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS.pie[index % COLORS.pie.length]} style={{ filter: `drop-shadow(0 0 10px ${COLORS.pie[index % COLORS.pie.length]}80)` }} />)}
+                      </Pie>
+                      <Tooltip contentStyle={tooltipStyle.contentStyle} itemStyle={tooltipStyle.itemStyle} labelStyle={tooltipStyle.labelStyle} />
+                      <Legend verticalAlign="bottom" height={36} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '3rem', flexWrap: 'wrap' }}>
-              <ResponsiveContainer width={300} height={280}>
-                <PieChart>
-                  <defs>
-                    {pieData.map((_, i) => (
-                      <filter key={i} id={`glow${i}`}>
-                        <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-                        <feMerge><feMergeNode in="coloredBlur" /><feMergeNode in="SourceGraphic" /></feMerge>
-                      </filter>
-                    ))}
-                  </defs>
-                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={70} outerRadius={120} paddingAngle={3} dataKey="value">
-                    {pieData.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="rgba(0,0,0,0.3)" strokeWidth={2} />
-                    ))}
-                  </Pie>
-                  <Tooltip {...tooltipStyle} formatter={(v: any) => [`${v} demande(s)`, '']} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {pieData.map((entry, i) => {
-                  const total = pieData.reduce((s, e) => s + e.value, 0);
-                  const pct = ((entry.value / total) * 100).toFixed(1);
-                  return (
-                    <div key={entry.name}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <div style={{ width: 12, height: 12, borderRadius: 3, background: COLORS[i] }} />
-                          <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>{entry.name}</span>
-                        </div>
-                        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                          <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{entry.value} Demandes</span>
-                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: COLORS[i] }}>{pct}%</span>
-                        </div>
-                      </div>
-                      <div className="progress-bar">
-                        <div className="progress-fill" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${COLORS[i]}, ${COLORS[(i+1) % COLORS.length]})` }} />
-                      </div>
-                    </div>
-                  );
-                })}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '1.5rem' }}>
+              <div style={{ background: 'linear-gradient(180deg, rgba(30,30,40,0.8), rgba(20,20,30,0.9))', padding: '2rem', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <h3 style={{ color: '#fff', marginTop: 0, marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <Zap color="#8B5CF6" /> Compétences &amp; Performance
+                </h3>
+                <div style={{ height: 350 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data.hr.skillsRadar}>
+                      <PolarGrid stroke="rgba(255,255,255,0.1)" />
+                      <PolarAngleAxis dataKey="subject" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} />
+                      <PolarRadiusAxis angle={30} domain={[0, 150]} tick={false} axisLine={false} />
+                      <Radar name="Équipe A" dataKey="A" stroke="#8B5CF6" fill="#8B5CF6" fillOpacity={0.5} />
+                      <Radar name="Équipe B" dataKey="B" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.5} />
+                      <Tooltip contentStyle={tooltipStyle.contentStyle} itemStyle={tooltipStyle.itemStyle} />
+                      <Legend verticalAlign="bottom" />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div style={{ background: 'linear-gradient(180deg, rgba(30,30,40,0.8), rgba(20,20,30,0.9))', padding: '2rem', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <h3 style={{ color: '#fff', marginTop: 0, marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <Briefcase color="#F59E0B" /> Salaire vs Expérience (Années)
+                </h3>
+                <div style={{ height: 350 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                      <XAxis type="number" dataKey="experience" name="Expérience" unit=" ans" stroke="rgba(255,255,255,0.3)" />
+                      <YAxis type="number" dataKey="salary" name="Salaire" unit=" TND" stroke="rgba(255,255,255,0.3)" />
+                      <ZAxis type="category" dataKey="role" name="Rôle" />
+                      <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={tooltipStyle.contentStyle} itemStyle={tooltipStyle.itemStyle} />
+                      <Scatter name="Collaborateurs" data={data.hr.salaryVsExperience} fill="#F59E0B">
+                        {data.hr.salaryVsExperience?.map((entry: any, index: number) => (
+                          <Cell key={`cell-${index}`} fill={COLORS.pie[index % COLORS.pie.length]} />
+                        ))}
+                      </Scatter>
+                    </ScatterChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
           </motion.div>
-        </>
-      )}
+        )}
+
+        {/* ===================== FINANCE ANALYTICS ===================== */}
+        {activeTab === 'FINANCE' && (
+          <motion.div key="finance" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.3 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+              <StatCard title="Masse Salariale Mensuelle" value={`${(data.finance.payrollTotal / 1000000).toFixed(2)}M TND`} subtitle="vs mois précédent" icon={DollarSign} color="16, 185, 129" trend={1.2} />
+              <StatCard title="Exposition Crédits" value={`${(data.finance.creditExposure / 1000000).toFixed(2)}M TND`} subtitle="Total Encours" icon={Briefcase} color="59, 130, 246" trend={4.5} />
+              <StatCard title="Total Avances" value={`${(data.finance.advancesTotal / 1000).toFixed(0)}K TND`} subtitle="Ce mois" icon={Zap} color="245, 158, 11" trend={-2.1} />
+              <StatCard title="Risque Financier (NPL)" value="2.4%" subtitle="Taux de créances douteuses" icon={ShieldAlert} color="239, 68, 68" trend={-0.3} />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
+              <div style={{ background: 'linear-gradient(180deg, rgba(30,30,40,0.8), rgba(20,20,30,0.9))', padding: '2rem', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <h3 style={{ color: '#fff', marginTop: 0, marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <Activity color="#34D399" /> Évolution du Risque et des Remboursements
+                </h3>
+                <div style={{ height: 350 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={data.finance.financialRisk}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                      <XAxis dataKey="name" stroke="rgba(255,255,255,0.3)" />
+                      <YAxis yAxisId="left" stroke="rgba(255,255,255,0.3)" />
+                      <YAxis yAxisId="right" orientation="right" stroke="rgba(255,255,255,0.3)" />
+                      <Tooltip contentStyle={tooltipStyle.contentStyle} itemStyle={tooltipStyle.itemStyle} labelStyle={tooltipStyle.labelStyle} />
+                      <Legend />
+                      <Bar yAxisId="left" dataKey="repayments" name="Remboursements (TND)" fill="url(#colorLeaves)" radius={[6, 6, 0, 0]} barSize={40} />
+                      <Line yAxisId="right" type="monotone" dataKey="riskScore" name="Score de Risque" stroke="#EF4444" strokeWidth={4} dot={{ r: 5, fill: '#0F111A', strokeWidth: 2, stroke: '#EF4444' }} activeDot={{ r: 8, fill: '#EF4444', stroke: '#fff', strokeWidth: 2 }} style={{ filter: 'drop-shadow(0 4px 8px rgba(239,68,68,0.5))' }} />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* ===================== AGENCY ANALYTICS ===================== */}
+        {activeTab === 'AGENCE' && (
+          <motion.div key="agency" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.3 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+              <StatCard title="Comptes Actifs" value={data.agency.totalAccounts.toLocaleString()} subtitle="Clients de l'agence" icon={Users} color="139, 92, 246" trend={3.8} />
+              <StatCard title="Cartes Émises" value={data.agency.totalCards.toLocaleString()} subtitle="Total circulation" icon={CreditCard} color="59, 130, 246" trend={5.2} />
+              <StatCard title="Nouvelles Demandes" value="142" subtitle="Ce mois" icon={Activity} color="16, 185, 129" trend={15.0} />
+              <StatCard title="Alertes Fraude" value="12" subtitle="En cours d'investigation" icon={ShieldAlert} color="239, 68, 68" trend={-10.0} />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
+              <div style={{ background: 'linear-gradient(180deg, rgba(30,30,40,0.8), rgba(20,20,30,0.9))', padding: '2rem', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <h3 style={{ color: '#fff', marginTop: 0, marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <TrendingUp color="#A78BFA" /> Volume des Transactions
+                </h3>
+                <div style={{ height: 300 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={data.agency.transactionsTrend}>
+                      <defs>
+                        <linearGradient id="colorTx" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                      <XAxis dataKey="name" stroke="rgba(255,255,255,0.3)" />
+                      <YAxis stroke="rgba(255,255,255,0.3)" />
+                      <Tooltip contentStyle={tooltipStyle.contentStyle} itemStyle={tooltipStyle.itemStyle} labelStyle={tooltipStyle.labelStyle} />
+                      <Area type="monotone" dataKey="volume" name="Transactions" stroke="#8B5CF6" strokeWidth={4} fillOpacity={1} fill="url(#colorTx)" style={{ filter: 'drop-shadow(0 4px 8px rgba(139,92,246,0.5))' }} activeDot={{ r: 8, fill: '#8B5CF6', stroke: '#fff', strokeWidth: 2 }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div style={{ background: 'linear-gradient(180deg, rgba(30,30,40,0.8), rgba(20,20,30,0.9))', padding: '2rem', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <h3 style={{ color: '#fff', marginTop: 0, marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <Users color="#60A5FA" /> Statut Clients
+                </h3>
+                <div style={{ height: 300 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={data.agency.customerActivity} layout="vertical" margin={{ top: 0, right: 30, left: 20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
+                      <XAxis type="number" stroke="rgba(255,255,255,0.3)" />
+                      <YAxis dataKey="name" type="category" stroke="rgba(255,255,255,0.6)" fontWeight={600} />
+                      <Tooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={tooltipStyle.contentStyle} itemStyle={tooltipStyle.itemStyle} />
+                      <Bar dataKey="value" name="Clients" radius={[0, 8, 8, 0]} barSize={24}>
+                        {data.agency.customerActivity.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS.primary[index % COLORS.primary.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem', marginTop: '1.5rem' }}>
+              <div style={{ background: 'linear-gradient(180deg, rgba(30,30,40,0.8), rgba(20,20,30,0.9))', padding: '2rem', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <h3 style={{ color: '#fff', marginTop: 0, marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <Activity color="#EF4444" /> Carte Thermique: Activité Hebdomadaire
+                </h3>
+                
+                {/* Custom Heatmap Grid */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', overflowX: 'auto', paddingBottom: '1rem' }}>
+                  <div style={{ display: 'flex', gap: '4px', marginLeft: '40px' }}>
+                    {['8h', '10h', '12h', '14h', '16h', '18h'].map(h => (
+                      <div key={h} style={{ width: '40px', textAlign: 'center', fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>{h}</div>
+                    ))}
+                  </div>
+                  
+                  {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map(day => (
+                    <div key={day} style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                      <div style={{ width: '36px', fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>{day}</div>
+                      {['8h', '10h', '12h', '14h', '16h', '18h'].map(hour => {
+                        const cell = data.agency.activityHeatmap?.find((c: any) => c.day === day && c.hour === hour);
+                        const val = cell?.value ?? 0;
+                        const opacity = val / 100; // Assuming max is ~100
+                        const bgColor = val > 75 ? `rgba(239, 68, 68, ${opacity})` // Red (High)
+                                      : val > 40 ? `rgba(245, 158, 11, ${opacity})` // Orange (Medium)
+                                      : `rgba(59, 130, 246, ${Math.max(opacity, 0.1)})`; // Blue (Low)
+                        
+                        return (
+                          <div
+                            key={`${day}-${hour}`}
+                            title={`${val} transactions`}
+                            style={{
+                              width: '40px', height: '40px', borderRadius: '6px',
+                              background: bgColor,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: '0.65rem', color: opacity > 0.4 ? '#fff' : 'rgba(255,255,255,0.3)',
+                              fontWeight: 700,
+                              cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s',
+                              border: '1px solid rgba(255,255,255,0.05)'
+                            }}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.transform = 'scale(1.1)';
+                              e.currentTarget.style.boxShadow = `0 4px 12px ${bgColor}`;
+                              e.currentTarget.style.zIndex = '10';
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.transform = 'scale(1)';
+                              e.currentTarget.style.boxShadow = 'none';
+                              e.currentTarget.style.zIndex = '1';
+                            }}
+                          >
+                            {val}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '1rem', justifyContent: 'flex-end', fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>
+                    <span>Activité Faible</span>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <div style={{ width: 12, height: 12, borderRadius: 2, background: 'rgba(59, 130, 246, 0.3)' }} />
+                      <div style={{ width: 12, height: 12, borderRadius: 2, background: 'rgba(245, 158, 11, 0.6)' }} />
+                      <div style={{ width: 12, height: 12, borderRadius: 2, background: 'rgba(239, 68, 68, 0.9)' }} />
+                    </div>
+                    <span>Activité Élevée</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

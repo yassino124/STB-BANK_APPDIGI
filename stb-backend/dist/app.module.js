@@ -97,6 +97,7 @@ const tickets_module_1 = require("./tickets/tickets.module");
 const hierarchy_module_1 = require("./hierarchy/hierarchy.module");
 const absence_module_1 = require("./absence/absence.module");
 const finance_module_1 = require("./finance/finance.module");
+const rules_module_1 = require("./rules/rules.module");
 const queue_module_1 = require("./queue/queue.module");
 const firebase_module_1 = require("./firebase/firebase.module");
 const realtime_module_1 = require("./realtime/realtime.module");
@@ -151,6 +152,7 @@ exports.AppModule = AppModule = __decorate([
             hierarchy_module_1.HierarchyModule,
             absence_module_1.AbsenceModule,
             finance_module_1.FinanceModule,
+            rules_module_1.RulesModule,
             requests_module_1.RequestsModule,
             conges_module_1.CongesModule,
             avances_module_1.AvancesModule,

@@ -4,13 +4,15 @@ import { Employee } from '../employees/employee.schema';
 import { Account } from '../accounts/schemas/account.schema';
 import { Transaction } from '../transactions/schemas/transaction.schema';
 import { NotificationsService } from '../notifications/notifications.service';
+import { RulesService } from '../rules/rules.service';
 export declare class AvancesService {
     private avanceModel;
     private employeeModel;
     private accountModel;
     private transactionModel;
     private notificationsService;
-    constructor(avanceModel: Model<Avance>, employeeModel: Model<Employee>, accountModel: Model<Account>, transactionModel: Model<Transaction>, notificationsService: NotificationsService);
+    private rulesService;
+    constructor(avanceModel: Model<Avance>, employeeModel: Model<Employee>, accountModel: Model<Account>, transactionModel: Model<Transaction>, notificationsService: NotificationsService, rulesService: RulesService);
     create(employeeId: string, data: {
         type: AvanceType;
         montant: number;

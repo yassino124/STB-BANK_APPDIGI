@@ -18,7 +18,8 @@ export class LeaveRequest extends Document {
   @Prop({ enum: LeaveStatus, default: LeaveStatus.PENDING_MANAGER }) status: LeaveStatus;
   @Prop({ type: Types.ObjectId, ref: 'Employee', default: null }) managerId: Types.ObjectId | null;
   @Prop({ type: Types.ObjectId, ref: 'Employee', default: null }) currentApproverId: Types.ObjectId | null;
-  @Prop({ type: [{ approverId: { type: Types.ObjectId, ref: 'Employee' }, approverName: String, level: Number, decision: String, date: Date, comment: String }], default: [] }) approvalHistory: any[];
+  @Prop({ type: String, default: null }) currentApproverRole: string | null;
+  @Prop({ type: [{ approverId: { type: Types.ObjectId, ref: 'Employee' }, approverRole: String, approverName: String, level: Number, decision: String, date: Date, comment: String }], default: [] }) approvalHistory: any[];
   
   @Prop({ type: Types.ObjectId, ref: 'Employee', default: null }) rhApprovedBy: Types.ObjectId;
   @Prop({ default: null }) rhApprovedAt: Date;

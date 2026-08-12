@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatDistanceToNow, startOfMonth } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import AIAssistantWidget from '../components/AIAssistantWidget';
+
 
 const cardVariants: any = {
   hidden: { opacity: 0, y: 15 },
@@ -167,8 +167,6 @@ export default function FinanceDashboard() {
         </div>
       </div>
 
-      {/* AI Copilot Widget */}
-      <AIAssistantWidget />
 
       {/* KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>

@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, UserPlus, Shield, Settings, LogOut, FileText,
   Building2, MapPin, BarChart3, AlertTriangle, ShieldCheck, FileBarChart,
   TrendingUp, Wallet, MessageSquare, UsersRound, Gift, Headphones, ChevronLeft, Menu,
-  Banknote, CreditCard, Calendar, CalendarDays, Target, Monitor, Bell, ShieldAlert,
+  Banknote, CreditCard, Calendar, CalendarDays, Target, Monitor, Bell, ShieldAlert, GitMerge, Network
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -23,6 +23,7 @@ const rhNavGroups = [
       { to: '/employees/new', icon: UserPlus, label: 'Nouveau collaborateur' },
       { to: '/departments', icon: Building2, label: 'Départements' },
       { to: '/branches', icon: MapPin, label: 'Agences' },
+      { to: '/organigramme', icon: Network, label: 'Organigramme (N+1)' },
     ],
   },
   {
@@ -58,6 +59,7 @@ const rhNavGroups = [
   {
     label: 'Administration',
     items: [
+      { to: '/rules', icon: GitMerge, label: 'Moteur de Règles' },
       { to: '/audit', icon: Shield, label: 'Audit Logs' },
       { to: '/settings', icon: Settings, label: 'Paramètres' },
     ],
@@ -94,6 +96,7 @@ const agenceNavGroups = [
     items: [
       { to: '/agence/accounts', icon: Banknote, label: 'Comptes Bancaires' },
       { to: '/agence/cards', icon: CreditCard, label: 'Gestion des Cartes' },
+      { to: '/agence/credits', icon: TrendingUp, label: 'Crédits' },
     ],
   },
   {

@@ -7,6 +7,7 @@ import { Account } from '../accounts/schemas/account.schema';
 import { Transaction, TransactionType, TransactionStatus, TransactionCategory } from '../transactions/schemas/transaction.schema';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/schemas/notification.schema';
+import { RulesService } from '../rules/rules.service';
 
 @Injectable()
 export class AvancesService {
@@ -16,6 +17,7 @@ export class AvancesService {
     @InjectModel(Account.name) private accountModel: Model<Account>,
     @InjectModel(Transaction.name) private transactionModel: Model<Transaction>,
     private notificationsService: NotificationsService,
+    private rulesService: RulesService,
   ) {}
 
   async create(employeeId: string, data: { type: AvanceType; montant: number; motif?: string }) {
@@ -28,12 +30,14 @@ export class AvancesService {
       throw new NotFoundException('Employé introuvable');
     }
 
-    // Validation: Max 50% du salaire pour avance salaire
+    // Validation: Dynamic limit based on Business Rules (Global Params)
     if (data.type === AvanceType.SALAIRE) {
-      const maxAvance = employee.salaireBase * 0.5;
+      const maxPercent = this.rulesService.getRule('advance.maxPercent', 50);
+      const maxAvance = (employee.salaireBase || 1000) * (maxPercent / 100);
+      
       if (data.montant > maxAvance) {
         throw new BadRequestException(
-          `Montant trop élevé. Maximum autorisé: ${maxAvance.toFixed(2)} TND (50% du salaire)`
+          `Montant trop élevé. Le maximum autorisé est de ${maxPercent}% de votre salaire, soit ${maxAvance.toFixed(2)} TND.`
         );
       }
     }

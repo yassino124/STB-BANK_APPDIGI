@@ -27,4 +27,10 @@ export class DashboardController {
   getItDashboard() {
     return this.dashboardService.getItDashboard();
   }
+
+  @Get('advanced-analytics')
+  @ApiOperation({ summary: 'Get full advanced analytics data for all roles' })
+  getAdvancedAnalytics() {
+    return this.dashboardService.getAdvancedAnalytics();
+  }
 }

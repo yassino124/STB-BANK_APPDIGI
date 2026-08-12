@@ -21,18 +21,21 @@ const notifications_service_1 = require("../notifications/notifications.service"
 const notification_schema_1 = require("../notifications/schemas/notification.schema");
 const hierarchy_service_1 = require("../hierarchy/hierarchy.service");
 const employee_schema_1 = require("../employees/employee.schema");
+const rules_service_1 = require("../rules/rules.service");
 let LeaveService = class LeaveService {
     leaveRequestModel;
     leaveBalanceModel;
     employeeModel;
     notificationsService;
     hierarchyService;
-    constructor(leaveRequestModel, leaveBalanceModel, employeeModel, notificationsService, hierarchyService) {
+    rulesService;
+    constructor(leaveRequestModel, leaveBalanceModel, employeeModel, notificationsService, hierarchyService, rulesService) {
         this.leaveRequestModel = leaveRequestModel;
         this.leaveBalanceModel = leaveBalanceModel;
         this.employeeModel = employeeModel;
         this.notificationsService = notificationsService;
         this.hierarchyService = hierarchyService;
+        this.rulesService = rulesService;
     }
     async createRequest(employeeId, dto) {
         const dateDebut = new Date(dto.dateDebut);
@@ -49,39 +52,41 @@ let LeaveService = class LeaveService {
             throw new common_1.BadRequestException('Employé introuvable');
         const approvalHistory = [];
         const approvalChain = [];
-        if (employee.managerId) {
-            const manager = employee.managerId;
-            approvalChain.push(manager._id.toString());
-            approvalHistory.push({
-                approverId: manager._id,
-                approverName: `${manager.nom} ${manager.prenom}`,
-                level: 1,
-                decision: 'PENDING',
-            });
+        let requiredApprovers = this.rulesService.getRule('leave.workflow', null);
+        if (!requiredApprovers) {
+            requiredApprovers = this.rulesService.evaluatePolicy('leave', { days: nombreJours });
         }
-        if (employee.directorId) {
-            const director = employee.directorId;
-            approvalChain.push(director._id.toString());
-            approvalHistory.push({
-                approverId: director._id,
-                approverName: `${director.nom} ${director.prenom}`,
-                level: 2,
-                decision: 'PENDING',
-            });
+        let level = 1;
+        for (const role of requiredApprovers) {
+            if (role === 'MANAGER' && employee.managerId) {
+                const manager = employee.managerId;
+                approvalChain.push(manager._id.toString());
+                approvalHistory.push({ approverId: manager._id, approverRole: 'MANAGER', approverName: `${manager.nom} ${manager.prenom}`, level: level++, decision: 'PENDING' });
+            }
+            else if (role === 'DIRECTOR' && employee.directorId) {
+                const director = employee.directorId;
+                approvalChain.push(director._id.toString());
+                approvalHistory.push({ approverId: director._id, approverRole: 'DIRECTOR', approverName: `${director.nom} ${director.prenom}`, level: level++, decision: 'PENDING' });
+            }
+            else if (role === 'DG' && employee.centralDirectorId) {
+                const dg = employee.centralDirectorId;
+                approvalChain.push(dg._id.toString());
+                approvalHistory.push({ approverId: dg._id, approverRole: 'DG', approverName: `${dg.nom} ${dg.prenom}`, level: level++, decision: 'PENDING' });
+            }
+            else if (role === 'RH' || role === 'FINANCE') {
+                approvalHistory.push({ approverId: null, approverRole: role, approverName: `Équipe ${role}`, level: level++, decision: 'PENDING' });
+            }
         }
-        if (employee.centralDirectorId) {
-            const centralDirector = employee.centralDirectorId;
-            approvalChain.push(centralDirector._id.toString());
-            approvalHistory.push({
-                approverId: centralDirector._id,
-                approverName: `${centralDirector.nom} ${centralDirector.prenom}`,
-                level: 3,
-                decision: 'PENDING',
-            });
+        if (approvalHistory.length === 0) {
+            approvalHistory.push({ approverId: null, approverRole: 'RH', approverName: 'Équipe RH (Fallback)', level: 1, decision: 'PENDING' });
         }
-        const hasManagers = approvalChain.length > 0;
-        const initialStatus = hasManagers ? leave_schema_1.LeaveStatus.PENDING_MANAGER : leave_schema_1.LeaveStatus.PENDING_RH;
-        const initialApprover = hasManagers ? new mongoose_2.Types.ObjectId(approvalChain[0]) : null;
+        const firstStep = approvalHistory[0];
+        let initialStatus = leave_schema_1.LeaveStatus.PENDING_MANAGER;
+        if (firstStep.approverRole === 'RH') {
+            initialStatus = leave_schema_1.LeaveStatus.PENDING_RH;
+        }
+        const initialApproverId = firstStep.approverId ? new mongoose_2.Types.ObjectId(firstStep.approverId) : null;
+        const initialApproverRole = !firstStep.approverId ? firstStep.approverRole : null;
         const createData = {
             employeeId: new mongoose_2.Types.ObjectId(employeeId),
             type: dto.type,
@@ -90,7 +95,8 @@ let LeaveService = class LeaveService {
             nombreJours,
             motif: dto.motif,
             status: initialStatus,
-            currentApproverId: initialApprover,
+            currentApproverId: initialApproverId,
+            currentApproverRole: initialApproverRole,
             approvalHistory: approvalHistory,
         };
         if (employee.managerId) {
@@ -136,74 +142,68 @@ let LeaveService = class LeaveService {
             .sort({ createdAt: -1 })
             .exec();
     }
-    async handleManagerApproval(id, managerId, decision, commentaire = '') {
+    async processApproval(id, userId, userRoles, decision, commentaire = '') {
         const request = await this.leaveRequestModel.findById(id).exec();
         if (!request)
             throw new common_1.NotFoundException('Demande de congé introuvable');
-        if (request.status !== leave_schema_1.LeaveStatus.PENDING_MANAGER) {
-            throw new common_1.BadRequestException(`Demande déjà traitée. Statut actuel: ${request.status}`);
+        if (request.status === leave_schema_1.LeaveStatus.APPROVED || request.status === leave_schema_1.LeaveStatus.REJECTED) {
+            throw new common_1.BadRequestException(`Demande déjà traitée (Statut: ${request.status})`);
         }
-        const historyStepIndex = request.approvalHistory.findIndex(h => h.approverId?.toString() === managerId);
+        const historyStepIndex = request.approvalHistory.findIndex(h => h.decision === 'PENDING');
         if (historyStepIndex === -1) {
-            throw new common_1.ForbiddenException('Vous n\'êtes pas dans la chaîne de validation de cette demande');
+            throw new common_1.BadRequestException('Aucune étape en attente pour cette demande');
         }
         const historyStep = request.approvalHistory[historyStepIndex];
+        const isDirectApprover = historyStep.approverId && historyStep.approverId.toString() === userId;
+        const isRoleApprover = !historyStep.approverId && historyStep.approverRole && userRoles.includes(historyStep.approverRole);
+        const isSuperAdmin = userRoles.includes('SUPER_ADMIN');
+        if (!isDirectApprover && !isRoleApprover && !isSuperAdmin) {
+            throw new common_1.ForbiddenException(`Vous n'êtes pas autorisé à valider cette étape (Requise: ${historyStep.approverRole || historyStep.approverName})`);
+        }
+        request.approvalHistory[historyStepIndex].decision = decision;
+        request.approvalHistory[historyStepIndex].date = new Date();
+        request.approvalHistory[historyStepIndex].comment = commentaire;
+        if (!historyStep.approverId) {
+            const user = await this.employeeModel.findById(userId).select('nom prenom').exec();
+            if (user) {
+                request.approvalHistory[historyStepIndex].approverName = `${user.nom} ${user.prenom} (Équipe ${historyStep.approverRole})`;
+                request.approvalHistory[historyStepIndex].approverId = new mongoose_2.Types.ObjectId(userId);
+            }
+        }
+        request.markModified('approvalHistory');
         if (decision === 'APPROVED') {
-            request.approvalHistory[historyStepIndex].decision = 'APPROVED';
-            request.approvalHistory[historyStepIndex].date = new Date();
-            request.approvalHistory[historyStepIndex].comment = commentaire;
-            request.markModified('approvalHistory');
             const nextStep = request.approvalHistory.find(h => h.level > historyStep.level && h.decision === 'PENDING');
             if (nextStep) {
-                request.currentApproverId = new mongoose_2.Types.ObjectId(nextStep.approverId.toString());
-                await this.notificationsService.sendToEmployee(request.employeeId.toString(), `✅ Validé par ${historyStep.approverName}`, `Votre demande est maintenant en attente de validation par ${nextStep.approverName}.`, notification_schema_1.NotificationType.HR_REQUEST);
+                request.currentApproverId = nextStep.approverId ? new mongoose_2.Types.ObjectId(nextStep.approverId.toString()) : null;
+                request.currentApproverRole = !nextStep.approverId ? nextStep.approverRole : null;
+                if (nextStep.approverRole === 'RH' || nextStep.approverRole === 'FINANCE') {
+                    request.status = leave_schema_1.LeaveStatus.PENDING_RH;
+                }
+                else {
+                    request.status = leave_schema_1.LeaveStatus.PENDING_MANAGER;
+                }
+                await this.notificationsService.sendToEmployee(request.employeeId.toString(), `✅ Validé (Étape ${historyStep.level})`, `Votre demande a passé l'étape ${historyStep.level}. En attente de : ${nextStep.approverName}.`, notification_schema_1.NotificationType.HR_REQUEST);
             }
             else {
-                request.status = leave_schema_1.LeaveStatus.PENDING_RH;
+                request.status = leave_schema_1.LeaveStatus.APPROVED;
                 request.currentApproverId = null;
-                await this.notificationsService.sendToEmployee(request.employeeId.toString(), `✅ Validation managers terminée`, `Votre demande de congé a passé l'étape manager. En attente de validation finale des RH.`, notification_schema_1.NotificationType.HR_REQUEST);
+                request.currentApproverRole = null;
+                request.validatedBy = new mongoose_2.Types.ObjectId(userId);
+                request.validatedAt = new Date();
+                const balance = await this.getOrCreateBalance(request.employeeId.toString());
+                balance.soldeUtilise += request.nombreJours;
+                await balance.save();
+                const soldeDisponible = balance.soldeAnnuel - balance.soldeUtilise;
+                await this.employeeModel.updateOne({ _id: request.employeeId }, { $set: { soldeConges: soldeDisponible } }).exec();
+                await this.notificationsService.sendToEmployee(request.employeeId.toString(), '✅ Congé entièrement validé', `Votre demande de congé du ${request.dateDebut.toLocaleDateString('fr-FR')} est validée. Solde mis à jour.`, notification_schema_1.NotificationType.HR_REQUEST);
             }
         }
         else {
             request.status = leave_schema_1.LeaveStatus.REJECTED;
             request.currentApproverId = null;
-            request.approvalHistory[historyStepIndex].decision = 'REJECTED';
-            request.approvalHistory[historyStepIndex].date = new Date();
-            request.approvalHistory[historyStepIndex].comment = commentaire;
-            request.markModified('approvalHistory');
+            request.currentApproverRole = null;
             request.commentaire = commentaire;
-            await this.notificationsService.sendToEmployee(request.employeeId.toString(), `❌ Congé refusé par ${historyStep.approverName}`, `Votre demande de congé a été refusée. ${commentaire}`, notification_schema_1.NotificationType.HR_REQUEST);
-        }
-        return request.save();
-    }
-    async handleRhApproval(id, rhId, decision, commentaire = '') {
-        const request = await this.leaveRequestModel.findById(id).exec();
-        if (!request)
-            throw new common_1.NotFoundException('Demande de congé introuvable');
-        if (request.status !== leave_schema_1.LeaveStatus.PENDING_RH) {
-            throw new common_1.BadRequestException(`Demande ne peut pas être traitée par la RH. Statut: ${request.status}`);
-        }
-        if (decision === 'APPROVED') {
-            request.status = leave_schema_1.LeaveStatus.APPROVED;
-            request.rhApprovedBy = new mongoose_2.Types.ObjectId(rhId);
-            request.rhApprovedAt = new Date();
-            request.rhCommentaire = commentaire;
-            request.validatedBy = new mongoose_2.Types.ObjectId(rhId);
-            request.validatedAt = new Date();
-            const balance = await this.getOrCreateBalance(request.employeeId.toString());
-            balance.soldeUtilise += request.nombreJours;
-            await balance.save();
-            const soldeDisponible = balance.soldeAnnuel - balance.soldeUtilise;
-            await this.employeeModel.updateOne({ _id: request.employeeId }, { $set: { soldeConges: soldeDisponible } }).exec();
-            await this.notificationsService.sendToEmployee(request.employeeId.toString(), '✅ Congé validé', `Votre demande de congé du ${request.dateDebut.toLocaleDateString('fr-FR')} est maintenant entièrement validée. Solde mis à jour.`, notification_schema_1.NotificationType.HR_REQUEST);
-        }
-        else {
-            request.status = leave_schema_1.LeaveStatus.REJECTED;
-            request.rhCommentaire = commentaire;
-            request.commentaire = commentaire;
-            request.validatedBy = new mongoose_2.Types.ObjectId(rhId);
-            request.validatedAt = new Date();
-            await this.notificationsService.sendToEmployee(request.employeeId.toString(), '❌ Congé refusé par les RH', `Votre demande de congé a été refusée par les RH. ${commentaire}`, notification_schema_1.NotificationType.HR_REQUEST);
+            await this.notificationsService.sendToEmployee(request.employeeId.toString(), `❌ Congé refusé à l'étape ${historyStep.level}`, `Votre demande de congé a été refusée. ${commentaire}`, notification_schema_1.NotificationType.HR_REQUEST);
         }
         return request.save();
     }
@@ -228,9 +228,10 @@ let LeaveService = class LeaveService {
     async getOrCreateBalance(employeeId) {
         let balance = await this.leaveBalanceModel.findOne({ employeeId: new mongoose_2.Types.ObjectId(employeeId) }).exec();
         if (!balance) {
+            const maxDays = this.rulesService.getRule('leave.maxDays', 30);
             balance = await this.leaveBalanceModel.create({
                 employeeId: new mongoose_2.Types.ObjectId(employeeId),
-                soldeAnnuel: 30,
+                soldeAnnuel: maxDays,
                 soldeUtilise: 0,
             });
         }
@@ -247,6 +248,7 @@ exports.LeaveService = LeaveService = __decorate([
         mongoose_2.Model,
         mongoose_2.Model,
         notifications_service_1.NotificationsService,
-        hierarchy_service_1.HierarchyService])
+        hierarchy_service_1.HierarchyService,
+        rules_service_1.RulesService])
 ], LeaveService);
 //# sourceMappingURL=leave.service.js.map
