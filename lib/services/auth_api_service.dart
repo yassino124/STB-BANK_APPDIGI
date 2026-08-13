@@ -10,9 +10,8 @@ class AuthApiService {
   // On iOS Simulator: use 127.0.0.1
   // On Android Emulator: use 10.0.2.2
   // On real device: use your machine's local IP (e.g. 192.168.x.x)
-  static const String _baseUrl = kDebugMode 
-      ? 'http://127.0.0.1:3000/api/v1' 
-      : 'https://api.stb.com.tn/v1'; // Production HTTPS
+  // static const String _baseUrl = 'http://127.0.0.1:3000/api/v1'; // 💻 Local
+  static const String _baseUrl = 'https://stb-backend.onrender.com/api/v1'; // ☁️ Render Cloud
 
   static const _storage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),

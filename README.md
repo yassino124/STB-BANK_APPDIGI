@@ -12,7 +12,9 @@
 [![React](https://img.shields.io/badge/Dashboard-React%20+%20Vite-61DAFB?style=flat-square&logo=react)](https://react.dev)
 [![MongoDB](https://img.shields.io/badge/Database-MongoDB%207-47A248?style=flat-square&logo=mongodb)](https://mongodb.com)
 [![Redis](https://img.shields.io/badge/Cache-Redis%207-DC382D?style=flat-square&logo=redis)](https://redis.io)
+[![Cloudinary](https://img.shields.io/badge/CDN-Cloudinary-3448C5?style=flat-square&logo=cloudinary)](https://cloudinary.com)
 [![Docker](https://img.shields.io/badge/Infrastructure-Docker-2496ED?style=flat-square&logo=docker)](https://docker.com)
+[![Render](https://img.shields.io/badge/Hosting-Render-000000?style=flat-square&logo=render)](https://render.com)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 [![Tests](https://img.shields.io/badge/Tests-26%20Passing-brightgreen?style=flat-square&logo=jest)](stb-backend/src)
 [![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF?style=flat-square&logo=github-actions)](https://github.com/yassino124/STB-BANK_APPDIGI/actions)
@@ -167,6 +169,7 @@ Le système couvre l'ensemble du cycle de vie bancaire RH & Finance à travers *
 | API Framework | NestJS v10 (Node.js) | Architecture modulaire |
 | Base de données | MongoDB 7 + Mongoose | Stockage principal |
 | Cache & Queues | Redis 7 + BullMQ | Performance & jobs async |
+| Fichiers & Médias | Cloudinary | CDN pour PDF et Images |
 | Authentification | JWT (Access + Refresh) | Sécurité stateless |
 | Logging | Winston (JSON structuré) | Observabilité production |
 | Temps réel | Socket.io | Notifications live |
@@ -177,8 +180,13 @@ Le système couvre l'ensemble du cycle de vie bancaire RH & Finance à travers *
 ### Infrastructure
 
 ```yaml
-Services Docker:
-  - MongoDB 7          → Base de données principale
+Services Cloud & Déploiement:
+  - Render.com         → Hébergement API Cloud (Infrastructure as Code)
+  - MongoDB Atlas      → Base de données Cloud
+  - Cloudinary         → Stockage des documents et avatars
+
+Services Docker Locaux:
+  - MongoDB 7          → Base de données locale
   - Redis 7-alpine     → Cache + Rate Limiting + Queues
   - NestJS Backend     → API (multi-stage build optimisé)
   - React Dashboard    → Interface web (Nginx)
