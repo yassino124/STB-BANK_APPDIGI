@@ -61,6 +61,10 @@
     "uuid": "^14.0.1",
     "winston": "^3.19.0"
   },
+  "overrides": {
+    "js-yaml": "^5.2.2",
+    "uuid": "$uuid"
+  },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.18.0",
