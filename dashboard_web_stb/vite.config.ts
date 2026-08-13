@@ -6,7 +6,8 @@ export default defineConfig({
   server: {
     proxy: {
       '/api/v1': {
-        target: 'http://localhost:3000',
+        // target: 'http://localhost:3000', // 💻 Local
+        target: 'https://stb-backend-blno.onrender.com', // ☁️ Render Cloud
         changeOrigin: true,
       },
     },

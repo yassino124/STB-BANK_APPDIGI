@@ -2,8 +2,8 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 
 const api = axios.create({
-  // baseURL: '/api/v1', // Local Proxy
-  baseURL: import.meta.env.VITE_API_URL || 'https://stb-backend.onrender.com/api/v1',
+  // baseURL: 'http://localhost:3000/api/v1', // 💻 Local
+  baseURL: import.meta.env.VITE_API_URL || 'https://stb-backend-blno.onrender.com/api/v1', // ☁️ Render Cloud
   headers: {
     'Content-Type': 'application/json',
   },
