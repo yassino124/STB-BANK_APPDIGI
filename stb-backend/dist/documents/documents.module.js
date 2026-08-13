@@ -13,6 +13,7 @@ const documents_controller_1 = require("./documents.controller");
 const documents_service_1 = require("./documents.service");
 const document_schema_1 = require("./schemas/document.schema");
 const employees_module_1 = require("../employees/employees.module");
+const cloudinary_module_1 = require("../cloudinary/cloudinary.module");
 let DocumentsModule = class DocumentsModule {
 };
 exports.DocumentsModule = DocumentsModule;
@@ -23,6 +24,7 @@ exports.DocumentsModule = DocumentsModule = __decorate([
                 { name: document_schema_1.EmployeeDocument.name, schema: document_schema_1.EmployeeDocumentSchema },
             ]),
             employees_module_1.EmployeesModule,
+            cloudinary_module_1.CloudinaryModule,
         ],
         controllers: [documents_controller_1.DocumentsController],
         providers: [documents_service_1.DocumentsService],

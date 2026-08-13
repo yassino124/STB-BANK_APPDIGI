@@ -79,6 +79,7 @@ import { QueueModule } from './queue/queue.module';
 import { FirebaseModule } from './firebase/firebase.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { DatabaseModule } from './database/database.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
 
 @Module({
   imports: [

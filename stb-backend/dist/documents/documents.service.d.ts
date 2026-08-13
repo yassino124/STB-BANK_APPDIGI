@@ -1,10 +1,12 @@
 import { Model, Types } from 'mongoose';
 import { EmployeeDocument, DocumentDocument } from './schemas/document.schema';
 import { EmployeeDocument as EmployeeDoc } from '../employees/employee.schema';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 export declare class DocumentsService {
     private documentModel;
     private employeeModel;
-    constructor(documentModel: Model<DocumentDocument>, employeeModel: Model<EmployeeDoc>);
+    private readonly cloudinaryService;
+    constructor(documentModel: Model<DocumentDocument>, employeeModel: Model<EmployeeDoc>, cloudinaryService: CloudinaryService);
     private generateContratCDI;
     private generateAttestationTravail;
     private generateAttestationSalaire;

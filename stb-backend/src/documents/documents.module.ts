@@ -4,6 +4,7 @@ import { DocumentsController } from './documents.controller';
 import { DocumentsService } from './documents.service';
 import { EmployeeDocument, EmployeeDocumentSchema } from './schemas/document.schema';
 import { EmployeesModule } from '../employees/employees.module';
+import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import { EmployeesModule } from '../employees/employees.module';
       { name: EmployeeDocument.name, schema: EmployeeDocumentSchema },
     ]),
     EmployeesModule,
+    CloudinaryModule,
   ],
   controllers: [DocumentsController],
   providers: [DocumentsService],

@@ -55,14 +55,16 @@ const schedule_1 = require("@nestjs/schedule");
 const event_emitter_1 = require("@nestjs/event-emitter");
 const mongoose_2 = require("mongoose");
 const document_schema_1 = require("./schemas/document.schema");
+const employee_schema_1 = require("../employees/employee.schema");
 const employee_status_enum_1 = require("../common/enums/employee-status.enum");
 const pdfkit_1 = __importDefault(require("pdfkit"));
 const fs = __importStar(require("fs"));
-function streamToBase64(doc) {
+const cloudinary_service_1 = require("../cloudinary/cloudinary.service");
+function streamToBuffer(doc) {
     return new Promise((resolve, reject) => {
         const chunks = [];
         doc.on('data', (chunk) => chunks.push(chunk));
-        doc.on('end', () => resolve('data:application/pdf;base64,' + Buffer.concat(chunks).toString('base64')));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
         doc.on('error', reject);
         doc.end();
     });
@@ -142,9 +144,11 @@ function drawTwoFields(doc, label1, val1, label2, val2) {
 let DocumentsService = class DocumentsService {
     documentModel;
     employeeModel;
-    constructor(documentModel, employeeModel) {
+    cloudinaryService;
+    constructor(documentModel, employeeModel, cloudinaryService) {
         this.documentModel = documentModel;
         this.employeeModel = employeeModel;
+        this.cloudinaryService = cloudinaryService;
     }
     async generateContratCDI(emp) {
         const doc = new pdfkit_1.default({ margin: 50, size: 'A4' });
@@ -174,7 +178,7 @@ let DocumentsService = class DocumentsService {
         doc.moveTo(doc.page.width - 230, sigY + 50).lineTo(doc.page.width - 50, sigY + 50).strokeColor(STB_BLUE).stroke();
         doc.fontSize(8).fillColor(STB_GRAY).text(`Fait à Tunis, le ${dateNow}`, 50, sigY + 60, { align: 'center', width: doc.page.width - 100 });
         drawSTBFooter(doc);
-        return streamToBase64(doc);
+        return streamToBuffer(doc);
     }
     async generateAttestationTravail(emp) {
         const doc = new pdfkit_1.default({ margin: 50, size: 'A4' });
@@ -214,7 +218,7 @@ let DocumentsService = class DocumentsService {
         doc.fontSize(10).fillColor(STB_BLUE).font('Helvetica-Bold').text('Le Directeur des Ressources Humaines', { align: 'right' });
         doc.fontSize(9).fillColor(STB_GRAY).font('Helvetica').text('STB Bank — Direction Générale', { align: 'right' });
         drawSTBFooter(doc);
-        return streamToBase64(doc);
+        return streamToBuffer(doc);
     }
     async generateAttestationSalaire(emp) {
         const doc = new pdfkit_1.default({ margin: 50, size: 'A4' });
@@ -267,7 +271,7 @@ let DocumentsService = class DocumentsService {
         doc.fontSize(10).fillColor(STB_GRAY).font('Helvetica').text(`Fait à Tunis, le ${dateNow}`, { align: 'right' });
         doc.fontSize(10).fillColor(STB_BLUE).font('Helvetica-Bold').text('Le Directeur RH — STB Bank', { align: 'right' });
         drawSTBFooter(doc);
-        return streamToBase64(doc);
+        return streamToBuffer(doc);
     }
     async generateFichePaie(emp, month, year) {
         const doc = new pdfkit_1.default({ margin: 50, size: 'A4' });
@@ -328,7 +332,7 @@ let DocumentsService = class DocumentsService {
         doc.fontSize(8).fillColor(STB_GRAY).font('Helvetica')
             .text('Ce bulletin de paie est généré automatiquement par le système RH STB. Conservez-le précieusement.', { align: 'center' });
         drawSTBFooter(doc);
-        return streamToBase64(doc);
+        return streamToBuffer(doc);
     }
     async generateContratCredit(emp, additionalData = {}) {
         const doc = new pdfkit_1.default({ margin: 50, size: 'A4' });
@@ -359,7 +363,7 @@ let DocumentsService = class DocumentsService {
         doc.moveTo(doc.page.width - 210, sigY + 45).lineTo(doc.page.width - 50, sigY + 45).strokeColor(STB_BLUE).stroke();
         doc.fontSize(8).fillColor(STB_GRAY).text(`Fait à Tunis en deux exemplaires, le ${dateNow}`, 50, sigY + 55, { align: 'center', width: doc.page.width - 100 });
         drawSTBFooter(doc);
-        return streamToBase64(doc);
+        return streamToBuffer(doc);
     }
     async generateBadge(emp) {
         const doc = new pdfkit_1.default({ margin: 0, size: [300, 480] });
@@ -408,7 +412,7 @@ let DocumentsService = class DocumentsService {
         doc.fontSize(9).fillColor(STB_WHITE).font('Helvetica-Bold').text('QR CODE', 100, 410, { width: 100, align: 'center' });
         doc.fontSize(7).fillColor(STB_GOLD).text(`STB-${emp.matricule}`, 100, 425, { width: 100, align: 'center' });
         doc.fontSize(7).fillColor('#93C5FD').font('Helvetica').text('www.stb.com.tn  •  En Service STB', 15, 460, { align: 'center', width: 270 });
-        return streamToBase64(doc);
+        return streamToBuffer(doc);
     }
     async generateGenericDocument(emp, title, refType, customText) {
         const doc = new pdfkit_1.default({ margin: 50, size: 'A4' });
@@ -429,7 +433,7 @@ let DocumentsService = class DocumentsService {
         doc.moveTo(doc.page.width - 220, sigY + 60).lineTo(doc.page.width - 50, sigY + 60).strokeColor(STB_BLUE).stroke();
         doc.fontSize(9).fillColor(STB_GRAY).text(`Fait à Tunis, le ${dateNow}`, 50, sigY + 75, { align: 'center', width: doc.page.width - 100 });
         drawSTBFooter(doc);
-        return streamToBase64(doc);
+        return streamToBuffer(doc);
     }
     async generateDocument(employeeId, documentType, additionalData = {}) {
         const employee = await this.employeeModel.findById(employeeId);
@@ -440,14 +444,14 @@ let DocumentsService = class DocumentsService {
         const month = now.getMonth() + 1;
         const monthName = now.toLocaleString('fr-FR', { month: 'long' });
         const typeUpper = documentType.toUpperCase();
-        let fileBase64;
+        let pdfBuffer;
         let title;
         let fileName;
         let docType;
         switch (typeUpper) {
             case 'CONTRAT_CDI':
             case 'CONTRACT':
-                fileBase64 = await this.generateContratCDI(employee);
+                pdfBuffer = await this.generateContratCDI(employee);
                 title = `Contrat CDI — ${employee.prenom} ${employee.nom}`;
                 fileName = `contrat_cdi_${employee.matricule}_${year}.pdf`;
                 docType = document_schema_1.DocumentType.CONTRACT;
@@ -455,88 +459,88 @@ let DocumentsService = class DocumentsService {
             case 'ATTESTATION_TRAVAIL':
             case 'WORK_CERTIFICATE':
             case 'ATTESTATION':
-                fileBase64 = await this.generateAttestationTravail(employee);
+                pdfBuffer = await this.generateAttestationTravail(employee);
                 title = `Attestation de Travail — ${employee.prenom} ${employee.nom} — ${year}`;
                 fileName = `attestation_travail_${employee.matricule}_${year}.pdf`;
                 docType = document_schema_1.DocumentType.WORK_CERTIFICATE;
                 break;
             case 'ATTESTATION_SALAIRE':
             case 'SALARY_CERTIFICATE':
-                fileBase64 = await this.generateAttestationSalaire(employee);
+                pdfBuffer = await this.generateAttestationSalaire(employee);
                 title = `Attestation de Salaire — ${employee.prenom} ${employee.nom} — ${year}`;
                 fileName = `attestation_salaire_${employee.matricule}_${year}.pdf`;
                 docType = document_schema_1.DocumentType.SALARY_CERTIFICATE;
                 break;
             case 'FICHE_PAIE':
             case 'PAYSLIP':
-                fileBase64 = await this.generateFichePaie(employee, month, year);
+                pdfBuffer = await this.generateFichePaie(employee, month, year);
                 title = `Fiche de Paie — ${monthName} ${year} — ${employee.prenom} ${employee.nom}`;
                 fileName = `fiche_paie_${employee.matricule}_${year}_${String(month).padStart(2, '0')}.pdf`;
                 docType = document_schema_1.DocumentType.PAYSLIP;
                 break;
             case 'CONTRAT_CREDIT':
-                fileBase64 = await this.generateContratCredit(employee, additionalData);
+                pdfBuffer = await this.generateContratCredit(employee, additionalData);
                 title = `Contrat de Crédit — ${employee.prenom} ${employee.nom} — ${year}`;
                 fileName = `contrat_credit_${employee.matricule}_${year}.pdf`;
                 docType = document_schema_1.DocumentType.CONTRACT;
                 break;
             case 'BADGE':
             case 'ID_DOCUMENT':
-                fileBase64 = await this.generateBadge(employee);
+                pdfBuffer = await this.generateBadge(employee);
                 title = `Badge Numérique — ${employee.prenom} ${employee.nom}`;
                 fileName = `badge_${employee.matricule}.pdf`;
                 docType = document_schema_1.DocumentType.ID_DOCUMENT;
                 break;
             case 'CONTRAT_CDD':
-                fileBase64 = await this.generateGenericDocument(employee, 'Contrat à Durée Déterminée', 'CDD', `Le présent contrat à durée déterminée engage la Société Tunisienne de Banque et M./Mme ${employee.prenom} ${employee.nom} pour une durée déterminée, selon la législation tunisienne en vigueur.`);
+                pdfBuffer = await this.generateGenericDocument(employee, 'Contrat à Durée Déterminée', 'CDD', `Le présent contrat à durée déterminée engage la Société Tunisienne de Banque et M./Mme ${employee.prenom} ${employee.nom} pour une durée déterminée, selon la législation tunisienne en vigueur.`);
                 title = `Contrat CDD — ${employee.prenom} ${employee.nom}`;
                 fileName = `contrat_cdd_${employee.matricule}_${year}.pdf`;
                 docType = document_schema_1.DocumentType.CONTRACT;
                 break;
             case 'ATTESTATION_EMBAUCHE':
-                fileBase64 = await this.generateGenericDocument(employee, 'Attestation d\'Embauche', 'EMB', `Nous soussignés, la Société Tunisienne de Banque (STB), attestons que M./Mme ${employee.prenom} ${employee.nom} est embauché(e) au sein de notre institution depuis le ${employee.dateEmbauche ? new Date(employee.dateEmbauche).toLocaleDateString('fr-FR') : now.toLocaleDateString('fr-FR')}.`);
+                pdfBuffer = await this.generateGenericDocument(employee, 'Attestation d\'Embauche', 'EMB', `Nous soussignés, la Société Tunisienne de Banque (STB), attestons que M./Mme ${employee.prenom} ${employee.nom} est embauché(e) au sein de notre institution depuis le ${employee.dateEmbauche ? new Date(employee.dateEmbauche).toLocaleDateString('fr-FR') : now.toLocaleDateString('fr-FR')}.`);
                 title = `Attestation d'Embauche — ${employee.prenom} ${employee.nom}`;
                 fileName = `attestation_embauche_${employee.matricule}_${year}.pdf`;
                 docType = document_schema_1.DocumentType.WORK_CERTIFICATE;
                 break;
             case 'AUTORISATION_CONGE':
-                fileBase64 = await this.generateGenericDocument(employee, 'Autorisation de Congé', 'CNG', `La Direction RH de la STB accorde par la présente une autorisation de congé à M./Mme ${employee.prenom} ${employee.nom} selon le calendrier défini et validé par son manager direct.`);
+                pdfBuffer = await this.generateGenericDocument(employee, 'Autorisation de Congé', 'CNG', `La Direction RH de la STB accorde par la présente une autorisation de congé à M./Mme ${employee.prenom} ${employee.nom} selon le calendrier défini et validé par son manager direct.`);
                 title = `Autorisation Congé — ${employee.prenom} ${employee.nom}`;
                 fileName = `autorisation_conge_${employee.matricule}_${year}.pdf`;
                 docType = document_schema_1.DocumentType.OTHER;
                 break;
             case 'DECISION_PRIME':
-                fileBase64 = await this.generateGenericDocument(employee, 'Décision d\'Attribution de Prime', 'PRM', `Par décision de la Direction Générale de la STB, une prime de mérite est accordée à M./Mme ${employee.prenom} ${employee.nom} en reconnaissance de son implication et de ses résultats exceptionnels.`);
+                pdfBuffer = await this.generateGenericDocument(employee, 'Décision d\'Attribution de Prime', 'PRM', `Par décision de la Direction Générale de la STB, une prime de mérite est accordée à M./Mme ${employee.prenom} ${employee.nom} en reconnaissance de son implication et de ses résultats exceptionnels.`);
                 title = `Décision Prime — ${employee.prenom} ${employee.nom}`;
                 fileName = `decision_prime_${employee.matricule}_${year}.pdf`;
                 docType = document_schema_1.DocumentType.OTHER;
                 break;
             case 'DECISION_PROMOTION':
-                fileBase64 = await this.generateGenericDocument(employee, 'Décision de Promotion', 'PRO', `La Direction Générale est heureuse d'annoncer la promotion de M./Mme ${employee.prenom} ${employee.nom} au vu de son ancienneté et de la qualité de son travail.`);
+                pdfBuffer = await this.generateGenericDocument(employee, 'Décision de Promotion', 'PRO', `La Direction Générale est heureuse d'annoncer la promotion de M./Mme ${employee.prenom} ${employee.nom} au vu de son ancienneté et de la qualité de son travail.`);
                 title = `Décision Promotion — ${employee.prenom} ${employee.nom}`;
                 fileName = `decision_promotion_${employee.matricule}_${year}.pdf`;
                 docType = document_schema_1.DocumentType.OTHER;
                 break;
             case 'DECISION_MUTATION':
-                fileBase64 = await this.generateGenericDocument(employee, 'Décision de Mutation', 'MUT', `M./Mme ${employee.prenom} ${employee.nom} est muté(e) vers un nouveau département/agence au sein de la STB, dans le cadre de la mobilité interne et du développement des compétences.`);
+                pdfBuffer = await this.generateGenericDocument(employee, 'Décision de Mutation', 'MUT', `M./Mme ${employee.prenom} ${employee.nom} est muté(e) vers un nouveau département/agence au sein de la STB, dans le cadre de la mobilité interne et du développement des compétences.`);
                 title = `Décision Mutation — ${employee.prenom} ${employee.nom}`;
                 fileName = `decision_mutation_${employee.matricule}_${year}.pdf`;
                 docType = document_schema_1.DocumentType.OTHER;
                 break;
             case 'AVENANT_CONTRAT':
-                fileBase64 = await this.generateGenericDocument(employee, 'Avenant au Contrat de Travail', 'AVE', `Le présent document constitue un avenant au contrat de travail initial de M./Mme ${employee.prenom} ${employee.nom}, modifiant certaines clauses conformément aux récents accords entre les parties.`);
+                pdfBuffer = await this.generateGenericDocument(employee, 'Avenant au Contrat de Travail', 'AVE', `Le présent document constitue un avenant au contrat de travail initial de M./Mme ${employee.prenom} ${employee.nom}, modifiant certaines clauses conformément aux récents accords entre les parties.`);
                 title = `Avenant Contrat — ${employee.prenom} ${employee.nom}`;
                 fileName = `avenant_contrat_${employee.matricule}_${year}.pdf`;
                 docType = document_schema_1.DocumentType.CONTRACT;
                 break;
             case 'TAX_DECLARATION':
-                fileBase64 = await this.generateGenericDocument(employee, 'Déclaration Fiscale (Retenue à la source)', 'FIS', `Document justifiant la retenue à la source effectuée sur les revenus de M./Mme ${employee.prenom} ${employee.nom} au profit du Trésor Public Tunisien pour l'exercice fiscal en cours.`);
+                pdfBuffer = await this.generateGenericDocument(employee, 'Déclaration Fiscale (Retenue à la source)', 'FIS', `Document justifiant la retenue à la source effectuée sur les revenus de M./Mme ${employee.prenom} ${employee.nom} au profit du Trésor Public Tunisien pour l'exercice fiscal en cours.`);
                 title = `Déclaration Fiscale — ${employee.prenom} ${employee.nom}`;
                 fileName = `declaration_fiscale_${employee.matricule}_${year}.pdf`;
                 docType = document_schema_1.DocumentType.TAX_DECLARATION;
                 break;
             case 'CNSS_DECLARATION':
-                fileBase64 = await this.generateGenericDocument(employee, 'Déclaration CNSS', 'CNS', `Attestation de déclaration et de versement des cotisations sociales à la CNSS pour M./Mme ${employee.prenom} ${employee.nom}.`);
+                pdfBuffer = await this.generateGenericDocument(employee, 'Déclaration CNSS', 'CNS', `Attestation de déclaration et de versement des cotisations sociales à la CNSS pour M./Mme ${employee.prenom} ${employee.nom}.`);
                 title = `Déclaration CNSS — ${employee.prenom} ${employee.nom}`;
                 fileName = `declaration_cnss_${employee.matricule}_${year}.pdf`;
                 docType = document_schema_1.DocumentType.CNSS_DECLARATION;
@@ -544,9 +548,11 @@ let DocumentsService = class DocumentsService {
             default:
                 throw new common_1.BadRequestException(`Type de document non supporté: ${documentType}`);
         }
+        const cloudinaryResponse = await this.cloudinaryService.uploadBuffer(pdfBuffer, 'stb_documents');
+        const cloudinaryUrl = cloudinaryResponse.secure_url;
         const existing = await this.documentModel.findOne({ employeeId: new mongoose_2.Types.ObjectId(employeeId), type: docType, year, month: typeUpper === 'FICHE_PAIE' || typeUpper === 'PAYSLIP' ? month : undefined });
         if (existing) {
-            existing.fileUrl = fileBase64;
+            existing.fileUrl = cloudinaryUrl;
             existing.title = title;
             await existing.save();
             return existing;
@@ -556,8 +562,8 @@ let DocumentsService = class DocumentsService {
             type: docType,
             title,
             fileName,
-            fileSize: Math.round(fileBase64.length * 0.75),
-            fileUrl: fileBase64,
+            fileSize: pdfBuffer.length,
+            fileUrl: cloudinaryUrl,
             mimeType: 'application/pdf',
             description: `Document généré automatiquement par STB RH Système`,
             isRead: false,
@@ -687,8 +693,9 @@ __decorate([
 exports.DocumentsService = DocumentsService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(document_schema_1.EmployeeDocument.name)),
-    __param(1, (0, mongoose_1.InjectModel)('Employee')),
+    __param(1, (0, mongoose_1.InjectModel)(employee_schema_1.Employee.name)),
     __metadata("design:paramtypes", [mongoose_2.Model,
-        mongoose_2.Model])
+        mongoose_2.Model,
+        cloudinary_service_1.CloudinaryService])
 ], DocumentsService);
 //# sourceMappingURL=documents.service.js.map

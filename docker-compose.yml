@@ -7,7 +7,7 @@ services:
 
   # ── MongoDB ──────────────────────────────────────────────────────────────────
   mongodb:
-    image: mongo:7.0-jammy
+    image: mongo:7
     container_name: stb_mongodb
     restart: unless-stopped
     environment:
