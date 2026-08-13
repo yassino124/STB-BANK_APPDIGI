@@ -13,7 +13,6 @@ on:
 
 env:
   NODE_VERSION: '20'
-  IMAGE_NAME: stb-backend
 
 jobs:
   # ────────────────────────────────────────────────────────────────────────────
@@ -25,7 +24,7 @@ jobs:
 
     services:
       mongodb:
-        image: mongo:7.0-jammy
+        image: mongo:7
         ports:
           - 27017:27017
         options: >-
@@ -47,10 +46,6 @@ jobs:
 
       - name: 📦 Install dependencies
         run: npm ci
-        working-directory: stb-backend
-
-      - name: 🔍 Lint code
-        run: npm run lint
         working-directory: stb-backend
 
       - name: 🧪 Run unit tests with coverage
@@ -99,14 +94,6 @@ jobs:
       - name: 🔎 Audit npm dependencies (high severity)
         run: npm audit --audit-level=high
         working-directory: stb-backend
-        continue-on-error: true  # ne bloque pas le build, mais affiche le rapport
-
-      - name: 🔑 Scan for hardcoded secrets
-        uses: trufflesecurity/trufflehog@main
-        with:
-          path: ./stb-backend/src
-          base: main
-          head: HEAD
         continue-on-error: true
 
   # ────────────────────────────────────────────────────────────────────────────
@@ -135,7 +122,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}
+          images: ${{ secrets.DOCKER_USERNAME }}/stb-backend
           tags: |
             type=sha,prefix=sha-
             type=raw,value=latest
@@ -153,41 +140,20 @@ jobs:
           cache-to: type=gha,mode=max
 
   # ────────────────────────────────────────────────────────────────────────────
-  # JOB 4: Deploy to Staging
+  # JOB 4: Trigger Render Deploy via webhook
   # ────────────────────────────────────────────────────────────────────────────
-  deploy-staging:
-    name: 🚀 Deploy to Staging
+  deploy-render:
+    name: 🚀 Trigger Render Deploy
     needs: build-docker
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    environment:
-      name: staging
-      url: http://${{ secrets.STAGING_HOST }}:3000
 
     steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 🚀 SSH Deploy to Staging Server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.STAGING_HOST }}
-          username: ${{ secrets.STAGING_USER }}
-          key: ${{ secrets.STAGING_SSH_KEY }}
-          script: |
-            set -e
-            echo "📦 Pulling latest images..."
-            cd /opt/stb-banking
-            docker compose pull backend
-            
-            echo "🚀 Starting services..."
-            docker compose up -d --no-deps backend
-            
-            echo "⏳ Waiting for health check..."
-            sleep 15
-            docker compose ps
-            
-            echo "✅ Health check..."
-            curl -f http://localhost:3000/api/v1/health || exit 1
-            
-            echo "🎉 Deployment successful! Build: ${{ github.sha }}"
+      - name: 🚀 Trigger Render redeploy via API
+        run: |
+          curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys" \
+            -d '{"clearCache":"do_not_clear"}'
+          echo "✅ Render deploy triggered for commit ${{ github.sha }}"

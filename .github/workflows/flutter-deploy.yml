@@ -17,10 +17,10 @@ env:
 
 jobs:
   # ────────────────────────────────────────────────────────────────────────────
-  # JOB 1: Tests Flutter
+  # JOB 1: Static Analysis + Tests
   # ────────────────────────────────────────────────────────────────────────────
   test:
-    name: 🧪 Flutter Tests & Analysis
+    name: 🧪 Flutter Analysis & Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -54,10 +54,10 @@ jobs:
           retention-days: 14
 
   # ────────────────────────────────────────────────────────────────────────────
-  # JOB 2: Build Android AAB (Release)
+  # JOB 2: Build Android APK (Debug — pour démonstration)
   # ────────────────────────────────────────────────────────────────────────────
   build-android:
-    name: 🤖 Build Android Release (AAB)
+    name: 🤖 Build Android APK (Debug)
     needs: test
     runs-on: ubuntu-latest
 
@@ -81,123 +81,19 @@ jobs:
       - name: 📦 Get dependencies
         run: flutter pub get
 
-      # ── Decode le Keystore depuis le secret GitHub ────────────────────────
-      - name: 🔑 Decode Keystore from Secret
-        run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/stb_release.keystore
-        shell: bash
+      - name: 🏗️ Build Debug APK
+        run: flutter build apk --debug --build-number=${{ github.run_number }}
 
-      # ── Créer key.properties depuis les secrets ───────────────────────────
-      - name: 🔑 Create key.properties
-        run: |
-          cat > android/key.properties << EOF
-          storePassword=${{ secrets.KEYSTORE_STORE_PASSWORD }}
-          keyPassword=${{ secrets.KEYSTORE_KEY_PASSWORD }}
-          keyAlias=${{ secrets.KEYSTORE_KEY_ALIAS }}
-          storeFile=stb_release.keystore
-          EOF
-
-      # ── Build AAB Release signé ───────────────────────────────────────────
-      - name: 🏗️ Build Release AAB
-        run: |
-          flutter build appbundle \
-            --release \
-            --build-number=${{ github.run_number }} \
-            --dart-define=API_URL=${{ secrets.PROD_API_URL || 'https://api.stb.com.tn' }}
-
-      # ── Upload l'AAB comme artifact du workflow ───────────────────────────
-      - name: 📤 Upload AAB Artifact
+      - name: 📤 Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: stb-release-${{ github.run_number }}.aab
-          path: build/app/outputs/bundle/release/app-release.aab
+          name: stb-debug-${{ github.run_number }}.apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
           retention-days: 30
 
-      # ── Calculer le hash SHA256 du bundle ────────────────────────────────
-      - name: 🔐 Generate SHA256 checksum
-        run: |
-          sha256sum build/app/outputs/bundle/release/app-release.aab > build/app/outputs/bundle/release/checksum.sha256
-          cat build/app/outputs/bundle/release/checksum.sha256
-
-  # ────────────────────────────────────────────────────────────────────────────
-  # JOB 3: Deploy vers Google Play Internal Testing
-  # ────────────────────────────────────────────────────────────────────────────
-  deploy-play-store:
-    name: 🚀 Deploy to Google Play (Internal Testing)
-    needs: build-android
-    runs-on: ubuntu-latest
-    environment:
-      name: play-store-internal
-      url: https://play.google.com/console
-
-    steps:
-      - name: 📥 Checkout
-        uses: actions/checkout@v4
-
-      - name: 📥 Download AAB artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: stb-release-${{ github.run_number }}.aab
-          path: release/
-
-      # ── Créer les notes de mise à jour pour le Play Store ────────────────
-      - name: 📝 Create release notes
-        run: |
-          mkdir -p whatsnew
-          cat > whatsnew/whatsnew-fr-FR << EOF
-          ✨ Mise à jour STB Banking - Build ${{ github.run_number }}
-          
-          Améliorations :
-          - Performance optimisée
-          - Corrections de bugs
-          - Nouvelles fonctionnalités IA
-          
-          Commit: ${{ github.sha }}
-          EOF
-          
-          cat > whatsnew/whatsnew-en-US << EOF
-          ✨ STB Banking Update - Build ${{ github.run_number }}
-          
-          Improvements:
-          - Optimized performance
-          - Bug fixes
-          - New AI features
-          
-          Commit: ${{ github.sha }}
-          EOF
-
-      # ── Upload vers Google Play ───────────────────────────────────────────
-      - name: 🚀 Upload to Google Play Internal Testing
-        uses: r0adkll/upload-google-play@v1
-        with:
-          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT }}
-          packageName: com.stb.bank.mobile
-          releaseFiles: release/app-release.aab
-          track: internal
-          status: completed
-          whatsNewDirectory: whatsnew/
-          mappingFile: ''  # Si tu as ProGuard, ajouter ici
-
-  # ────────────────────────────────────────────────────────────────────────────
-  # JOB 4: Notification de résultat
-  # ────────────────────────────────────────────────────────────────────────────
-  notify:
-    name: 📢 Notify Result
-    needs: [deploy-play-store]
-    runs-on: ubuntu-latest
-    if: always()
-
-    steps:
-      - name: ✅ Success notification
-        if: needs.deploy-play-store.result == 'success'
+      - name: ✅ Build Summary
         run: |
           echo "✅ BUILD SUCCESS"
-          echo "📱 Build #${{ github.run_number }} deployed to Play Store Internal Testing"
-          echo "🔗 SHA: ${{ github.sha }}"
-
-      - name: ❌ Failure notification
-        if: needs.deploy-play-store.result == 'failure'
-        run: |
-          echo "❌ BUILD FAILED"
-          echo "📱 Build #${{ github.run_number }} failed"
-          echo "🔗 Check: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "📱 STB Mobile Build #${{ github.run_number }}"
+          echo "🔗 Commit: ${{ github.sha }}"
+          echo "📦 APK size: $(du -sh build/app/outputs/flutter-apk/app-debug.apk | cut -f1)"

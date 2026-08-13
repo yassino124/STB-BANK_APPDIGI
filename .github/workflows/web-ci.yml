@@ -38,12 +38,12 @@ jobs:
         run: npm run build
         working-directory: dashboard_web_stb
         env:
-          VITE_API_URL: ${{ secrets.PROD_API_URL || 'http://localhost:3000' }}
+          VITE_API_URL: https://stb-backend-lu64.onrender.com/api/v1
 
       - name: 📊 Bundle size report
         run: |
           echo "=== Bundle Sizes ==="
-          du -sh dashboard_web_stb/dist/assets/*.js 2>/dev/null || true
+          du -sh dashboard_web_stb/dist/assets/*.js 2>/dev/null | head -10 || true
           echo "Total dist size: $(du -sh dashboard_web_stb/dist | cut -f1)"
 
       - name: 📤 Upload build artifact
@@ -52,31 +52,3 @@ jobs:
           name: web-dashboard-build-${{ github.run_number }}
           path: dashboard_web_stb/dist
           retention-days: 14
-
-  deploy-dashboard:
-    name: 🚀 Deploy Dashboard
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    environment:
-      name: staging
-      url: http://${{ secrets.STAGING_HOST }}:8080
-
-    steps:
-      - name: 📥 Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: web-dashboard-build-${{ github.run_number }}
-          path: dist/
-
-      - name: 🚀 Deploy to staging
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.STAGING_HOST }}
-          username: ${{ secrets.STAGING_USER }}
-          key: ${{ secrets.STAGING_SSH_KEY }}
-          script: |
-            cd /opt/stb-banking
-            docker compose pull dashboard
-            docker compose up -d --no-deps dashboard
-            echo "✅ Dashboard deployed successfully"
