@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
-import '../services/ollama_api_service.dart';
+import '../services/ai_api_service.dart';
 
 class AIPredictiveBanner extends StatefulWidget {
   final double currentBalance;
@@ -27,7 +27,7 @@ class _AIPredictiveBannerState extends State<AIPredictiveBanner> {
   }
 
   Future<void> _fetchInsight() async {
-    final insight = await OllamaApiService.getPredictiveInsight(widget.currentBalance);
+    final insight = await AiApiService.getPredictiveInsight(widget.currentBalance);
     if (mounted) {
       setState(() {
         _insight = insight;

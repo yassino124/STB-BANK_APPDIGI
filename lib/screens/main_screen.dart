@@ -31,7 +31,7 @@ import 'dart:ui';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:flutter_tts/flutter_tts.dart';
-import '../services/ollama_api_service.dart';
+import '../services/ai_api_service.dart';
 import '../services/auth_api_service.dart';
 
 class MainScreen extends StatefulWidget {

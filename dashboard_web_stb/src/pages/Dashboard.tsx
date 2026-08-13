@@ -225,7 +225,7 @@ const Dashboard = () => {
         ];
         setActivityData(newActivity);
 
-        // Only update moodMap if Ollama returned real data
+        // Only update moodMap if Gemini returned real data
         const newMoodMap = (moodRes?.data && Array.isArray(moodRes.data) && moodRes.data.length > 0)
           ? moodRes.data
           : DEMO_MOOD;

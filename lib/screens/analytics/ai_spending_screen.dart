@@ -6,7 +6,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../providers/app_provider.dart';
 import '../../viewmodels/dashboard_viewmodel.dart';
 import '../../models/banking_models.dart';
-import '../../services/ollama_api_service.dart';
+import '../../services/ai_api_service.dart';
 
 class AISpendingScreen extends StatefulWidget {
   const AISpendingScreen({super.key});
@@ -39,7 +39,7 @@ class _AISpendingScreenState extends State<AISpendingScreen> {
     }
 
     try {
-      final response = await OllamaApiService.analyzeSpending(dataString);
+      final response = await AiApiService.analyzeSpending(dataString);
       if (mounted) {
         setState(() {
           _aiAnalysis = response.isNotEmpty 

@@ -14,7 +14,7 @@ import '../../services/pdf_report_service.dart';
 import '../../screens/main_screen.dart';
 import '../../screens/copilot/ai_predictions_screen.dart';
 import '../../screens/rh/ai_leave_planner_screen.dart';
-import '../../services/ollama_api_service.dart';
+import '../../services/ai_api_service.dart';
 
 class _C {
   static const navy     = Color(0xFF04111F);
@@ -207,7 +207,7 @@ class _CopilotChatScreenState extends State<CopilotChatScreen>
         final ctx = _buildCtx(p);
         final res = await AuthApiService.sendCopilotMessage(q, userContext: ctx);
         if (res.isSuccess && res.data != null && res.data!.isNotEmpty) reply = res.data!;
-        else reply = await OllamaApiService.generateResponse('STB Copilot', q);
+        else reply = await AiApiService.generateResponse('STB Copilot', q);
       } catch (_) {}
       if (reply.isEmpty || reply.contains('hors ligne')) reply = _textFallback(q, p);
       if (mounted) {

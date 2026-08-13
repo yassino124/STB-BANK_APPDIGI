@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 // import 'package:speech_to_text/speech_to_text.dart' as stt;  // Temporarily disabled
 import '../../providers/app_provider.dart';
 import '../../theme/app_theme.dart';
-import '../../services/ollama_api_service.dart';
+import '../../services/ai_api_service.dart';
 
 class AILeavePlannerScreen extends StatefulWidget {
   final int remainingDays;
@@ -56,7 +56,7 @@ class _AILeavePlannerScreenState extends State<AILeavePlannerScreen>
     HapticFeedback.mediumImpact();
     setState(() { _isLoading = true; _planResult = null; });
     
-    final result = await OllamaApiService.planLeave(widget.remainingDays, text);
+    final result = await AiApiService.planLeave(widget.remainingDays, text);
     
     setState(() { _isLoading = false; _planResult = result; });
     Future.delayed(const Duration(milliseconds: 100), () {

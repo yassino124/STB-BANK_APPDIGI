@@ -31,6 +31,9 @@ services:
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
+      # AI (Gemini)
+      - key: GEMINI_API_KEY
+        sync: false
       # Redis (Render provides a Redis service URL)
       - key: REDIS_HOST
         sync: false

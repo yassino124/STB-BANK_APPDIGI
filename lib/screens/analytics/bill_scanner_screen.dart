@@ -8,7 +8,7 @@ import 'package:image_picker/image_picker.dart';
 // import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';  // Temporarily disabled
 import '../../providers/app_provider.dart';
 import '../../theme/app_theme.dart';
-import '../../services/ollama_api_service.dart';
+import '../../services/ai_api_service.dart';
 
 class BillScannerScreen extends StatefulWidget {
   const BillScannerScreen({super.key});
@@ -81,7 +81,7 @@ class _BillScannerScreenState extends State<BillScannerScreen>
       }
 
       // Ollama analysis
-      final rawJson = await OllamaApiService.analyzeBillText(text);
+      final rawJson = await AiApiService.analyzeBillText(text);
       
       Map<String, dynamic> parsed;
       try {

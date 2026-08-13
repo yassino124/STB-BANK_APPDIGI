@@ -31,6 +31,30 @@ let CopilotController = class CopilotController {
         const reply = await this.copilotService.chat(employee, message);
         return { reply };
     }
+    async analyzeSpending(user, spendingData) {
+        const employee = await this.employeesService.findOne(user.sub);
+        const reply = await this.copilotService.analyzeSpending(employee, spendingData);
+        return { reply };
+    }
+    async getPredictiveInsight(user, balance) {
+        const employee = await this.employeesService.findOne(user.sub);
+        const reply = await this.copilotService.getPredictiveInsight(employee, balance);
+        return { reply };
+    }
+    async processVoiceCommand(user, text) {
+        const employee = await this.employeesService.findOne(user.sub);
+        const reply = await this.copilotService.processVoiceCommand(employee, text);
+        return { reply };
+    }
+    async analyzeBillText(text) {
+        const result = await this.copilotService.analyzeBillText(text);
+        return result;
+    }
+    async planLeave(user, remainingDays, userRequest) {
+        const employee = await this.employeesService.findOne(user.sub);
+        const reply = await this.copilotService.planLeave(employee, remainingDays, userRequest);
+        return { reply };
+    }
 };
 exports.CopilotController = CopilotController;
 __decorate([
@@ -47,6 +71,56 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], CopilotController.prototype, "chat", null);
+__decorate([
+    (0, common_1.Post)('analyze-spending'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)('spendingData')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], CopilotController.prototype, "analyzeSpending", null);
+__decorate([
+    (0, common_1.Post)('predictive-insight'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)('balance')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Number]),
+    __metadata("design:returntype", Promise)
+], CopilotController.prototype, "getPredictiveInsight", null);
+__decorate([
+    (0, common_1.Post)('voice-command'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)('text')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], CopilotController.prototype, "processVoiceCommand", null);
+__decorate([
+    (0, common_1.Post)('analyze-bill'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    __param(0, (0, common_1.Body)('text')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], CopilotController.prototype, "analyzeBillText", null);
+__decorate([
+    (0, common_1.Post)('plan-leave'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)('remainingDays')),
+    __param(2, (0, common_1.Body)('userRequest')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Number, String]),
+    __metadata("design:returntype", Promise)
+], CopilotController.prototype, "planLeave", null);
 exports.CopilotController = CopilotController = __decorate([
     (0, swagger_1.ApiTags)('🤖 Copilot AI'),
     (0, common_1.Controller)('copilot'),

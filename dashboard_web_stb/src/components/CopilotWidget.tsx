@@ -491,7 +491,7 @@ const CopilotWidget = () => {
         }
       }
 
-      // Fallback 2: Real API Call to Ollama
+      // Gemini AI: call backend /ai/chat — powered by Google Gemini via Render
       const { data } = await api.post('/ai/chat', { 
         prompt: text, role: user?.roles?.[0] || 'RH', context: 'dashboard' 
       });
