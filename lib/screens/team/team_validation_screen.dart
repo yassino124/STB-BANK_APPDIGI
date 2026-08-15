@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -435,14 +437,26 @@ class _RequestCard extends StatelessWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             // Employee header
             Row(children: [
-              Container(
-                width: 56, height: 56,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: const LinearGradient(colors: [Color(0xFF2962FF), Color(0xFF00B4FF)]),
-                  image: avatar != null && avatar.isNotEmpty ? DecorationImage(image: NetworkImage(avatar), fit: BoxFit.cover) : null,
+              ClipOval(
+                child: Container(
+                  width: 56, height: 56,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(colors: [Color(0xFF2962FF), Color(0xFF00B4FF)]),
+                  ),
+                  child: (avatar != null && avatar.isNotEmpty)
+                      ? (avatar.startsWith('data:image') 
+                          ? Image.memory(
+                              base64Decode(avatar.split(',').last),
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Center(child: Text(initials.toUpperCase(), style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800))),
+                            )
+                          : Image.network(
+                              avatar.startsWith('http') ? avatar : 'https://stb-backend-blno.onrender.com/$avatar',
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Center(child: Text(initials.toUpperCase(), style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800))),
+                            ))
+                      : Center(child: Text(initials.toUpperCase(), style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800))),
                 ),
-                child: avatar == null || avatar.isEmpty ? Center(child: Text(initials, style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800))) : null,
               ),
               const SizedBox(width: 14),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

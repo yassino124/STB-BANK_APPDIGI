@@ -72,49 +72,50 @@ export class TransactionsService {
       throw new BadRequestException(`Maximum transfer amount is ${NumberUtil.formatCurrency(BANKING_CONSTANTS.MAX_TRANSFER_AMOUNT)}`);
     }
 
-    // ⚠️ SIMPLIFIED VERSION WITHOUT TRANSACTIONS (for standalone MongoDB)
-    // In production with MongoDB Replica Set, use transactions for atomicity
-    
     try {
+      // ── 1. Validation des comptes ─────────────────────────────────────────
       const fromAccount = await this.accountModel.findOne({ employeeId: new Types.ObjectId(fromEmployeeId), isPrimary: true }).exec()
         || await this.accountModel.findOne({ employeeId: new Types.ObjectId(fromEmployeeId) }).exec();
-        
+
       if (!fromAccount) throw new NotFoundException('Source account not found');
-      if (fromAccount.status === AccountStatus.FROZEN) {
-        throw new ForbiddenException('Source account is frozen');
-      }
+      if (fromAccount.status === AccountStatus.FROZEN) throw new ForbiddenException('Source account is frozen');
 
       const toEmployee = await this.employeeModel.findOne({ matricule: toMatricule.toUpperCase() }).exec();
       if (!toEmployee) throw new NotFoundException('Destination employee not found');
 
       const toAccount = await this.accountModel.findOne({ employeeId: toEmployee._id, isPrimary: true }).exec()
         || await this.accountModel.findOne({ employeeId: toEmployee._id }).exec();
-        
+
       if (!toAccount) throw new NotFoundException('Destination account not found');
-      if (toAccount.status === AccountStatus.FROZEN) {
-        throw new ForbiddenException('Destination account is frozen');
-      }
-      if (fromAccount._id.toString() === toAccount._id.toString()) {
-        throw new BadRequestException('Cannot transfer to same account');
-      }
+      if (toAccount.status === AccountStatus.FROZEN) throw new ForbiddenException('Destination account is frozen');
+      if (fromAccount._id.toString() === toAccount._id.toString()) throw new BadRequestException('Cannot transfer to same account');
 
       const fee = montant > 10000 ? montant * 0.005 : 0;
       const totalDebit = montant + fee;
 
-      if (fromAccount.solde < totalDebit) {
-        throw new BadRequestException('Insufficient balance for transfer including fees');
+      // ── 2. Débit atomique avec vérification du solde dans le filtre ──────
+      // 🛡️ Correction Race Condition : findOneAndUpdate avec $gte dans le filtre
+      // Si deux requêtes arrivent simultanément, une seule trouvera le document
+      // avec solde >= totalDebit. L'autre recevra null → BadRequestException.
+      const debitedAccount = await this.accountModel.findOneAndUpdate(
+        { _id: fromAccount._id, solde: { $gte: totalDebit }, status: { $ne: AccountStatus.FROZEN } },
+        { $inc: { solde: -totalDebit } },
+        { new: true },
+      ).exec();
+
+      if (!debitedAccount) {
+        throw new BadRequestException('Insufficient balance or account unavailable (concurrent request blocked)');
       }
 
-      // Update balances using atomic operations
-      await this.accountModel.findByIdAndUpdate(fromAccount._id, { $inc: { solde: -totalDebit } }).exec();
+      // ── 3. Crédit du compte destinataire ─────────────────────────────────
       await this.accountModel.findByIdAndUpdate(toAccount._id, { $inc: { solde: montant } }).exec();
-      
-      // Also update employee compteSolde which is often used directly by the app
+
+      // ── 4. Mise à jour compteSolde employé ───────────────────────────────
       await this.employeeModel.findByIdAndUpdate(fromAccount.employeeId, { $inc: { compteSolde: -totalDebit } }).exec();
       await this.employeeModel.findByIdAndUpdate(toAccount.employeeId, { $inc: { compteSolde: montant } }).exec();
 
+      // ── 5. Enregistrement de la transaction ──────────────────────────────
       const reference = StringUtil.generateReference('TRF');
-
       const transaction = await this.transactionModel.create({
         employeeId: fromAccount.employeeId,
         montant,
@@ -139,9 +140,7 @@ export class TransactionsService {
         fee,
       });
 
-      // Fire fraud detection asynchronously
       this.detectFraud(transaction._id.toString()).catch(err => console.error('Fraud detection error:', err));
-
       return transaction;
     } catch (error) {
       throw error;
@@ -156,42 +155,45 @@ export class TransactionsService {
     }
 
     try {
+      // ── 1. Validation des comptes ─────────────────────────────────────────
       const fromAccount = await this.accountModel.findOne({ employeeId: new Types.ObjectId(fromEmployeeId), isPrimary: true }).exec()
         || await this.accountModel.findOne({ employeeId: new Types.ObjectId(fromEmployeeId) }).exec();
-        
+
       if (!fromAccount) throw new NotFoundException('Source account not found');
-      if (fromAccount.status === AccountStatus.FROZEN) {
-        throw new ForbiddenException('Source account is frozen');
-      }
+      if (fromAccount.status === AccountStatus.FROZEN) throw new ForbiddenException('Source account is frozen');
 
       const toAccount = await this.accountModel.findOne({ employeeId: new Types.ObjectId(toEmployeeId), isPrimary: true }).exec()
         || await this.accountModel.findOne({ employeeId: new Types.ObjectId(toEmployeeId) }).exec();
-        
+
       if (!toAccount) throw new NotFoundException('Destination account not found');
-      if (toAccount.status === AccountStatus.FROZEN) {
-        throw new ForbiddenException('Destination account is frozen');
-      }
-      if (fromAccount._id.toString() === toAccount._id.toString()) {
-        throw new BadRequestException('Cannot transfer to same account');
-      }
+      if (toAccount.status === AccountStatus.FROZEN) throw new ForbiddenException('Destination account is frozen');
+      if (fromAccount._id.toString() === toAccount._id.toString()) throw new BadRequestException('Cannot transfer to same account');
 
       const fee = amount > 10000 ? amount * 0.005 : 0;
       const totalDebit = amount + fee;
 
-      if (fromAccount.solde < totalDebit) {
-        throw new BadRequestException('Insufficient balance for transfer including fees');
+      // ── 2. Débit atomique avec vérification du solde dans le filtre ──────
+      // 🛡️ Correction Race Condition : findOneAndUpdate avec $gte dans le filtre
+      // Garantit qu'une seule transaction peut débiter si deux arrivent en même temps.
+      const debitedAccount = await this.accountModel.findOneAndUpdate(
+        { _id: fromAccount._id, solde: { $gte: totalDebit }, status: { $ne: AccountStatus.FROZEN } },
+        { $inc: { solde: -totalDebit } },
+        { new: true },
+      ).exec();
+
+      if (!debitedAccount) {
+        throw new BadRequestException('Insufficient balance or account unavailable (concurrent request blocked)');
       }
 
-      // Update balances using atomic operations
-      await this.accountModel.findByIdAndUpdate(fromAccount._id, { $inc: { solde: -totalDebit } }).exec();
+      // ── 3. Crédit du compte destinataire ─────────────────────────────────
       await this.accountModel.findByIdAndUpdate(toAccount._id, { $inc: { solde: amount } }).exec();
-      
-      // Also update employee compteSolde
+
+      // ── 4. Mise à jour compteSolde employé ───────────────────────────────
       await this.employeeModel.findByIdAndUpdate(fromAccount.employeeId, { $inc: { compteSolde: -totalDebit } }).exec();
       await this.employeeModel.findByIdAndUpdate(toAccount.employeeId, { $inc: { compteSolde: amount } }).exec();
 
+      // ── 5. Enregistrement de la transaction ──────────────────────────────
       const reference = StringUtil.generateReference('TRF');
-
       const transaction = await this.transactionModel.create({
         employeeId: fromAccount.employeeId,
         montant: amount,
@@ -219,9 +221,7 @@ export class TransactionsService {
         reference,
       });
 
-      // Fire fraud detection asynchronously
       this.detectFraud(transaction._id.toString()).catch(err => console.error('Fraud detection error:', err));
-
       return transaction;
     } catch (error) {
       throw error;

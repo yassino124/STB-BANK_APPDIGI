@@ -98,11 +98,8 @@ export class TransactionsController {
       return { success: true, data: result };
     } catch (error) {
       console.error('❌ Transfer error:', error.message, error.stack);
-      return { 
-        success: false, 
-        statusCode: 500, 
-        message: error.message || 'Transfer failed' 
-      };
+      // Re-throw so NestJS exception filters return proper HTTP 400/4xx
+      throw error;
     }
   }
 

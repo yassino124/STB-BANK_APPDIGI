@@ -10,7 +10,8 @@ class WebSocketService {
   factory WebSocketService() => _instance;
   WebSocketService._internal();
 
-  static const _url = 'ws://127.0.0.1:3000';
+  //static const _url = 'ws://127.0.0.1:3000';
+  static const _url = 'https://stb-backend-blno.onrender.com/api/v1';
   static const _heartbeatInterval = Duration(seconds: 30);
 
   dynamic _channel;
