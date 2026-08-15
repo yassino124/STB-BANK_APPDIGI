@@ -64,7 +64,11 @@ class _DocumentsScreenState extends State<DocumentsScreen> with SingleTickerProv
 
       if (fileUrl.startsWith('http')) {
         // ✅ Download from Cloudinary URL using http package (follows redirects)
-        final response = await http.get(Uri.parse(fileUrl));
+        final token = await AuthApiService.getAccessToken() ?? '';
+        final response = await http.get(
+          Uri.parse(fileUrl),
+          headers: {'Authorization': 'Bearer $token'},
+        );
         if (response.statusCode == 200) {
           await file.writeAsBytes(response.bodyBytes);
         } else {
@@ -102,7 +106,11 @@ class _DocumentsScreenState extends State<DocumentsScreen> with SingleTickerProv
 
       if (pdfUrl.startsWith('http')) {
         // ✅ Download from Cloudinary URL using http package (follows redirects)
-        final response = await http.get(Uri.parse(pdfUrl));
+        final token = await AuthApiService.getAccessToken() ?? '';
+        final response = await http.get(
+          Uri.parse(pdfUrl),
+          headers: {'Authorization': 'Bearer $token'},
+        );
         if (response.statusCode == 200) {
           await file.writeAsBytes(response.bodyBytes);
         } else {

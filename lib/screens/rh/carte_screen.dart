@@ -8,6 +8,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 import 'dart:convert';
 import 'dart:io';
+import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -81,10 +82,27 @@ class _CarteScreenState extends State<CarteScreen> {
     }
     try {
       showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
-      final bytes = base64Decode(doc['fileUrl'].toString().split(',').last);
+      
       final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/${doc['fileName'] ?? 'document.pdf'}');
-      await file.writeAsBytes(bytes);
+      
+      final fileUrl = doc['fileUrl'].toString();
+      if (fileUrl.startsWith('http')) {
+        final token = await AuthApiService.getAccessToken() ?? '';
+        final response = await http.get(
+          Uri.parse(fileUrl),
+          headers: {'Authorization': 'Bearer $token'},
+        );
+        if (response.statusCode == 200) {
+          await file.writeAsBytes(response.bodyBytes);
+        } else {
+          throw Exception('Erreur HTTP: ${response.statusCode}');
+        }
+      } else {
+        final bytes = base64Decode(fileUrl.split(',').last);
+        await file.writeAsBytes(bytes);
+      }
+
       await AuthApiService.markDocumentAsRead(doc['_id']);
       if (mounted) Navigator.pop(context);
       await OpenFile.open(file.path);
