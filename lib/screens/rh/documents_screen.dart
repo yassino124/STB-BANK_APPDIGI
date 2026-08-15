@@ -9,6 +9,8 @@ import '../../viewmodels/rh_viewmodel.dart';
 import '../../models/rh_models.dart';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:async';
+
 import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 import '../../services/auth_api_service.dart';
@@ -57,10 +59,26 @@ class _DocumentsScreenState extends State<DocumentsScreen> with SingleTickerProv
         barrierDismissible: false,
         builder: (context) => const Center(child: CircularProgressIndicator()),
       );
-      final bytes = base64Decode((doc['fileUrl'] ?? '').split(',').last);
+      final fileUrl = doc['fileUrl'] ?? '';
       final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/${doc['fileName'] ?? 'document.pdf'}');
-      await file.writeAsBytes(bytes);
+      
+      if (fileUrl.startsWith('http')) {
+        // Download from Cloudinary URL
+        final httpClient = HttpClient();
+        final request = await httpClient.getUrl(Uri.parse(fileUrl));
+        final response = await request.close();
+        final bytes = await response.fold<List<int>>([], (acc, chunk) => acc..addAll(chunk));
+        await file.writeAsBytes(bytes);
+        httpClient.close();
+      } else if (fileUrl.contains(',')) {
+        // Legacy base64
+        final bytes = base64Decode(fileUrl.split(',').last);
+        await file.writeAsBytes(bytes);
+      } else {
+        throw Exception('Format URL non supporté');
+      }
+      
       await AuthApiService.markDocumentAsRead(doc['_id']);
       if (mounted) Navigator.pop(context);
       await OpenFile.open(file.path);
@@ -71,6 +89,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> with SingleTickerProv
     }
   }
 
+
   Future<void> _downloadFiche(PayrollDocument fiche) async {
     if (fiche.pdfUrl == null || fiche.pdfUrl!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Document non disponible')));
@@ -78,12 +97,27 @@ class _DocumentsScreenState extends State<DocumentsScreen> with SingleTickerProv
     }
     try {
       showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
-      final bytes = base64Decode(fiche.pdfUrl!.split(',').last);
+      final pdfUrl = fiche.pdfUrl!;
       final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/Fiche_Paie_${fiche.mois}_${fiche.annee}.pdf');
-      await file.writeAsBytes(bytes);
+      
+      if (pdfUrl.startsWith('http')) {
+        // Download from Cloudinary URL
+        final httpClient = HttpClient();
+        final request = await httpClient.getUrl(Uri.parse(pdfUrl));
+        final response = await request.close();
+        final bytes = await response.fold<List<int>>([], (acc, chunk) => acc..addAll(chunk));
+        await file.writeAsBytes(bytes);
+        httpClient.close();
+      } else {
+        // Legacy base64
+        final bytes = base64Decode(pdfUrl.split(',').last);
+        await file.writeAsBytes(bytes);
+      }
+      
       if (mounted) Navigator.pop(context);
       await OpenFile.open(file.path);
+
     } catch (e) {
       if (mounted) Navigator.pop(context);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e')));

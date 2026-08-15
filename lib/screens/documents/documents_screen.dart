@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:async';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 import '../../services/auth_api_service.dart';
 import '../../theme/app_theme.dart';
+
 
 class DocumentsScreen extends StatefulWidget {
   const DocumentsScreen({super.key});
@@ -137,7 +139,6 @@ class _DocumentsScreenState extends State<DocumentsScreen> with TickerProviderSt
 
   Future<void> _downloadDocument(DocumentItem doc) async {
     try {
-      // Show loading
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -146,44 +147,28 @@ class _DocumentsScreenState extends State<DocumentsScreen> with TickerProviderSt
         ),
       );
 
-      // Check if this is an auto-generated PDF (download from API)
-      final isAutoGen = doc.type.startsWith('CONTRAT_') || 
-                        doc.type.startsWith('ATTESTATION_') || 
-                        doc.type.startsWith('DECISION_') || 
-                        doc.type.startsWith('AUTORISATION_') ||
-                        doc.type == 'FICHE_PAIE' ||
-                        doc.type == 'AVENANT_CONTRAT';
-
-      late final File file;
       final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/${doc.fileName}');
 
-      if (isAutoGen) {
-        // Download from backend API endpoint
-        final result = await AuthApiService.downloadDocument(doc.id);
-        if (!result.isSuccess || result.data == null) {
-          throw Exception(result.error ?? 'Erreur lors du téléchargement');
-        }
-        
-        // result.data contains the PDF bytes
-        file = File('${dir.path}/${doc.fileName}');
-        await file.writeAsBytes(result.data as List<int>);
-      } else {
-        // Decode base64 from fileUrl (old method)
-        final bytes = base64Decode(doc.fileUrl.split(',').last);
-        file = File('${dir.path}/${doc.fileName}');
+      if (doc.fileUrl.startsWith('http')) {
+        // ✅ Download from Cloudinary URL directly
+        final httpClient = HttpClient();
+        final request = await httpClient.getUrl(Uri.parse(doc.fileUrl));
+        final response = await request.close();
+        final bytes = await response.fold<List<int>>([], (acc, chunk) => acc..addAll(chunk));
         await file.writeAsBytes(bytes);
+        httpClient.close();
+      } else if (doc.fileUrl.contains(',')) {
+        // Legacy base64
+        final bytes = base64Decode(doc.fileUrl.split(',').last);
+        await file.writeAsBytes(bytes);
+      } else {
+        throw Exception('Format URL non supporté');
       }
 
-      // Mark as read
       await AuthApiService.markDocumentAsRead(doc.id);
-      
-      // Close loading
       if (mounted) Navigator.pop(context);
-
-      // Open file
       await OpenFile.open(file.path);
-
-      // Refresh list
       _loadDocuments();
     } catch (e) {
       if (mounted) Navigator.pop(context);
@@ -197,6 +182,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> with TickerProviderSt
       }
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
