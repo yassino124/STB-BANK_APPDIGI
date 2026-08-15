@@ -70,11 +70,7 @@ let TransactionsController = class TransactionsController {
         }
         catch (error) {
             console.error('❌ Transfer error:', error.message, error.stack);
-            return {
-                success: false,
-                statusCode: 500,
-                message: error.message || 'Transfer failed'
-            };
+            throw error;
         }
     }
     async findEmployeeTx(id) {

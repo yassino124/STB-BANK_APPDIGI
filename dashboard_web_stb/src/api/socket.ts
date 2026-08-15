@@ -1,7 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 import toast from 'react-hot-toast';
 
-// const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000'; // 💻 Local
+//const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000'; // 💻 Local
 const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'https://stb-backend-blno.onrender.com'; // ☁️ Render Cloud
 
 class SocketService {

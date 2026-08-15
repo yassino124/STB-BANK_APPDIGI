@@ -88,9 +88,8 @@ let TransactionsService = class TransactionsService {
                 || await this.accountModel.findOne({ employeeId: new mongoose_2.Types.ObjectId(fromEmployeeId) }).exec();
             if (!fromAccount)
                 throw new common_1.NotFoundException('Source account not found');
-            if (fromAccount.status === account_schema_1.AccountStatus.FROZEN) {
+            if (fromAccount.status === account_schema_1.AccountStatus.FROZEN)
                 throw new common_1.ForbiddenException('Source account is frozen');
-            }
             const toEmployee = await this.employeeModel.findOne({ matricule: toMatricule.toUpperCase() }).exec();
             if (!toEmployee)
                 throw new common_1.NotFoundException('Destination employee not found');
@@ -98,18 +97,16 @@ let TransactionsService = class TransactionsService {
                 || await this.accountModel.findOne({ employeeId: toEmployee._id }).exec();
             if (!toAccount)
                 throw new common_1.NotFoundException('Destination account not found');
-            if (toAccount.status === account_schema_1.AccountStatus.FROZEN) {
+            if (toAccount.status === account_schema_1.AccountStatus.FROZEN)
                 throw new common_1.ForbiddenException('Destination account is frozen');
-            }
-            if (fromAccount._id.toString() === toAccount._id.toString()) {
+            if (fromAccount._id.toString() === toAccount._id.toString())
                 throw new common_1.BadRequestException('Cannot transfer to same account');
-            }
             const fee = montant > 10000 ? montant * 0.005 : 0;
             const totalDebit = montant + fee;
-            if (fromAccount.solde < totalDebit) {
-                throw new common_1.BadRequestException('Insufficient balance for transfer including fees');
+            const debitedAccount = await this.accountModel.findOneAndUpdate({ _id: fromAccount._id, solde: { $gte: totalDebit }, status: { $ne: account_schema_1.AccountStatus.FROZEN } }, { $inc: { solde: -totalDebit } }, { new: true }).exec();
+            if (!debitedAccount) {
+                throw new common_1.BadRequestException('Insufficient balance or account unavailable (concurrent request blocked)');
             }
-            await this.accountModel.findByIdAndUpdate(fromAccount._id, { $inc: { solde: -totalDebit } }).exec();
             await this.accountModel.findByIdAndUpdate(toAccount._id, { $inc: { solde: montant } }).exec();
             await this.employeeModel.findByIdAndUpdate(fromAccount.employeeId, { $inc: { compteSolde: -totalDebit } }).exec();
             await this.employeeModel.findByIdAndUpdate(toAccount.employeeId, { $inc: { compteSolde: montant } }).exec();
@@ -154,25 +151,22 @@ let TransactionsService = class TransactionsService {
                 || await this.accountModel.findOne({ employeeId: new mongoose_2.Types.ObjectId(fromEmployeeId) }).exec();
             if (!fromAccount)
                 throw new common_1.NotFoundException('Source account not found');
-            if (fromAccount.status === account_schema_1.AccountStatus.FROZEN) {
+            if (fromAccount.status === account_schema_1.AccountStatus.FROZEN)
                 throw new common_1.ForbiddenException('Source account is frozen');
-            }
             const toAccount = await this.accountModel.findOne({ employeeId: new mongoose_2.Types.ObjectId(toEmployeeId), isPrimary: true }).exec()
                 || await this.accountModel.findOne({ employeeId: new mongoose_2.Types.ObjectId(toEmployeeId) }).exec();
             if (!toAccount)
                 throw new common_1.NotFoundException('Destination account not found');
-            if (toAccount.status === account_schema_1.AccountStatus.FROZEN) {
+            if (toAccount.status === account_schema_1.AccountStatus.FROZEN)
                 throw new common_1.ForbiddenException('Destination account is frozen');
-            }
-            if (fromAccount._id.toString() === toAccount._id.toString()) {
+            if (fromAccount._id.toString() === toAccount._id.toString())
                 throw new common_1.BadRequestException('Cannot transfer to same account');
-            }
             const fee = amount > 10000 ? amount * 0.005 : 0;
             const totalDebit = amount + fee;
-            if (fromAccount.solde < totalDebit) {
-                throw new common_1.BadRequestException('Insufficient balance for transfer including fees');
+            const debitedAccount = await this.accountModel.findOneAndUpdate({ _id: fromAccount._id, solde: { $gte: totalDebit }, status: { $ne: account_schema_1.AccountStatus.FROZEN } }, { $inc: { solde: -totalDebit } }, { new: true }).exec();
+            if (!debitedAccount) {
+                throw new common_1.BadRequestException('Insufficient balance or account unavailable (concurrent request blocked)');
             }
-            await this.accountModel.findByIdAndUpdate(fromAccount._id, { $inc: { solde: -totalDebit } }).exec();
             await this.accountModel.findByIdAndUpdate(toAccount._id, { $inc: { solde: amount } }).exec();
             await this.employeeModel.findByIdAndUpdate(fromAccount.employeeId, { $inc: { compteSolde: -totalDebit } }).exec();
             await this.employeeModel.findByIdAndUpdate(toAccount.employeeId, { $inc: { compteSolde: amount } }).exec();

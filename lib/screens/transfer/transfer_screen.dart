@@ -8,6 +8,8 @@ import '../../services/auth_api_service.dart';
 import '../../viewmodels/dashboard_viewmodel.dart';
 import '../../viewmodels/notifications_viewmodel.dart';
 import 'dart:ui';
+import 'dart:convert';
+import 'dart:typed_data';
 
 class TransferScreen extends StatefulWidget {
   const TransferScreen({super.key});
@@ -28,11 +30,48 @@ class _TransferScreenState extends State<TransferScreen> {
   final TextEditingController _searchCtrl = TextEditingController();
 
   final List<String> _quickAmounts = ["10", "20", "50", "100", "200"];
+  
+  // Avatar cache for performance
+  static final Map<String, Uint8List> _avatarBytesCache = {};
 
   @override
   void initState() {
     super.initState();
     _loadAllCollaborators();
+  }
+
+  // Helper to decode avatar from backend (base64 or URL)
+  ImageProvider? _getAvatarImageProvider(String? avatarUrl) {
+    if (avatarUrl == null || avatarUrl.isEmpty) return null;
+    
+    try {
+      // Base64 data URI format: data:image/png;base64,iVBORw0KGgo...
+      if (avatarUrl.startsWith('data:image')) {
+        final base64String = avatarUrl.split(',')[1];
+        Uint8List bytes;
+        if (_avatarBytesCache.containsKey(base64String)) {
+          bytes = _avatarBytesCache[base64String]!;
+        } else {
+          bytes = base64Decode(base64String);
+          _avatarBytesCache[base64String] = bytes;
+        }
+        return MemoryImage(bytes);
+      } else if (avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://')) {
+        // Full URL from backend or CDN
+        return NetworkImage(avatarUrl);
+      } else if (avatarUrl.startsWith('/') || avatarUrl.startsWith('public/')) {
+        // Relative path - convert to full API URL
+        const apiBaseUrl = 'http://localhost:3000'; // TODO: Get from env
+        final cleanPath = avatarUrl.startsWith('/') ? avatarUrl : '/$avatarUrl';
+        return NetworkImage('$apiBaseUrl$cleanPath');
+      } else {
+        // Unknown format
+        return null;
+      }
+    } catch (e) {
+      print('Error loading avatar: $e');
+      return null;
+    }
   }
 
   // Load all collaborators from backend on init
@@ -565,18 +604,27 @@ class _TransferScreenState extends State<TransferScreen> {
                     ),
                     child: Row(
                       children: [
+                        // Avatar with image from backend or initials
                         Container(
                           width: 44, height: 44,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: avatarColor,
+                            image: r['avatar'] != null && r['avatar'].toString().isNotEmpty
+                                ? DecorationImage(
+                                    image: NetworkImage('${r['avatar']}'),
+                                    fit: BoxFit.cover,
+                                  )
+                                : null,
                           ),
-                          child: Center(
-                            child: Text(
-                              name.isNotEmpty ? name.substring(0, 1).toUpperCase() : "?",
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                            ),
-                          ),
+                          child: r['avatar'] == null || r['avatar'].toString().isEmpty
+                              ? Center(
+                                  child: Text(
+                                    name.isNotEmpty ? name.substring(0, 1).toUpperCase() : "?",
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                                  ),
+                                )
+                              : null,
                         ),
                         const SizedBox(width: 16),
                         Expanded(

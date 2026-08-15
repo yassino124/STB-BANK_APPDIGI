@@ -73,12 +73,6 @@ export declare class TransactionsController {
         statusCode?: undefined;
         message?: undefined;
         debug?: undefined;
-    } | {
-        success: boolean;
-        statusCode: number;
-        message: any;
-        debug?: undefined;
-        data?: undefined;
     }>;
     findEmployeeTx(id: string): Promise<{
         success: boolean;

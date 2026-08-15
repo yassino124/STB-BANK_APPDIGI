@@ -59,6 +59,7 @@ const employee_schema_1 = require("../employees/employee.schema");
 const employee_status_enum_1 = require("../common/enums/employee-status.enum");
 const pdfkit_1 = __importDefault(require("pdfkit"));
 const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
 const cloudinary_service_1 = require("../cloudinary/cloudinary.service");
 function streamToBuffer(doc) {
     return new Promise((resolve, reject) => {
@@ -80,7 +81,7 @@ function drawSTBHeader(doc, title, subtitle) {
     doc.rect(0, 0, doc.page.width, 110).fill(STB_BLUE);
     doc.rect(0, 105, doc.page.width, 5).fill(STB_GOLD);
     try {
-        const logoPath = '/Users/mohamedyassineouertani/Downloads/stb_mobile/public/logo for splash.png';
+        const logoPath = path.join(process.cwd(), 'public', 'logo for splash.png');
         if (fs.existsSync(logoPath)) {
             doc.image(logoPath, 30, 25, { width: 60 });
         }
@@ -376,7 +377,7 @@ let DocumentsService = class DocumentsService {
         doc.circle(300, 480, 180).lineWidth(2).strokeOpacity(0.05).strokeColor('#FFFFFF').stroke();
         doc.fontSize(8).fillColor('#93C5FD').font('Helvetica-Oblique').text('SOCIÉTÉ TUNISIENNE DE BANQUE', 15, 25, { align: 'center', width: 270 });
         try {
-            const logoPath = '/Users/mohamedyassineouertani/Downloads/stb_mobile/public/logo for splash.png';
+            const logoPath = path.join(process.cwd(), 'public', 'logo for splash.png');
             if (fs.existsSync(logoPath)) {
                 doc.image(logoPath, 130, 38, { width: 40 });
             }

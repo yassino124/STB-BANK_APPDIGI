@@ -1,0 +1,35 @@
+flutter_native_splash:
+  # Logo STB pour le splash screen
+  image: assets/images/stb_logo.png
+  
+  # Couleur de fond - Bleu STB
+  color: "#0D47A1"
+  
+  # Couleur de fond pour le dark mode
+  color_dark: "#060D1A"
+  
+  # Image pour dark mode (optionnel - même logo)
+  image_dark: assets/images/stb_logo.png
+  
+  # Configuration Android
+  android: true
+  android_gravity: center
+  android_12:
+    image: assets/images/stb_logo.png
+    color: "#0D47A1"
+    icon_background_color: "#0D47A1"
+  
+  # Configuration iOS
+  ios: true
+  ios_content_mode: center
+  
+  # Configuration Web
+  web: true
+  web_image_mode: center
+  
+  # Afficher le logo en plein écran
+  fullscreen: true
+  
+  # Infos supplémentaires (optionnel)
+  info_plist_files:
+    - 'ios/Runner/Info.plist'
