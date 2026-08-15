@@ -11,7 +11,8 @@ export class CloudinaryService {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder,
-          resource_type: 'auto', // Important for PDFs and non-image files
+          resource_type: 'raw', // PDFs must use 'raw' to be served as-is
+          format: 'pdf',
         },
         (error: UploadApiErrorResponse, result: UploadApiResponse) => {
           if (error) {

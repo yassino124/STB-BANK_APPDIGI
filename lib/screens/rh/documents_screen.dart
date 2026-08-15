@@ -9,8 +9,7 @@ import '../../viewmodels/rh_viewmodel.dart';
 import '../../models/rh_models.dart';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:async';
-
+import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 import '../../services/auth_api_service.dart';
@@ -62,15 +61,15 @@ class _DocumentsScreenState extends State<DocumentsScreen> with SingleTickerProv
       final fileUrl = doc['fileUrl'] ?? '';
       final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/${doc['fileName'] ?? 'document.pdf'}');
-      
+
       if (fileUrl.startsWith('http')) {
-        // Download from Cloudinary URL
-        final httpClient = HttpClient();
-        final request = await httpClient.getUrl(Uri.parse(fileUrl));
-        final response = await request.close();
-        final bytes = await response.fold<List<int>>([], (acc, chunk) => acc..addAll(chunk));
-        await file.writeAsBytes(bytes);
-        httpClient.close();
+        // ✅ Download from Cloudinary URL using http package (follows redirects)
+        final response = await http.get(Uri.parse(fileUrl));
+        if (response.statusCode == 200) {
+          await file.writeAsBytes(response.bodyBytes);
+        } else {
+          throw Exception('Erreur HTTP: ${response.statusCode}');
+        }
       } else if (fileUrl.contains(',')) {
         // Legacy base64
         final bytes = base64Decode(fileUrl.split(',').last);
@@ -78,7 +77,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> with SingleTickerProv
       } else {
         throw Exception('Format URL non supporté');
       }
-      
+
       await AuthApiService.markDocumentAsRead(doc['_id']);
       if (mounted) Navigator.pop(context);
       await OpenFile.open(file.path);
@@ -100,21 +99,21 @@ class _DocumentsScreenState extends State<DocumentsScreen> with SingleTickerProv
       final pdfUrl = fiche.pdfUrl!;
       final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/Fiche_Paie_${fiche.mois}_${fiche.annee}.pdf');
-      
+
       if (pdfUrl.startsWith('http')) {
-        // Download from Cloudinary URL
-        final httpClient = HttpClient();
-        final request = await httpClient.getUrl(Uri.parse(pdfUrl));
-        final response = await request.close();
-        final bytes = await response.fold<List<int>>([], (acc, chunk) => acc..addAll(chunk));
-        await file.writeAsBytes(bytes);
-        httpClient.close();
+        // ✅ Download from Cloudinary URL using http package (follows redirects)
+        final response = await http.get(Uri.parse(pdfUrl));
+        if (response.statusCode == 200) {
+          await file.writeAsBytes(response.bodyBytes);
+        } else {
+          throw Exception('Erreur HTTP: ${response.statusCode}');
+        }
       } else {
         // Legacy base64
         final bytes = base64Decode(pdfUrl.split(',').last);
         await file.writeAsBytes(bytes);
       }
-      
+
       if (mounted) Navigator.pop(context);
       await OpenFile.open(file.path);
 

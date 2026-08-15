@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:async';
+import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 import '../../services/auth_api_service.dart';
@@ -151,13 +151,13 @@ class _DocumentsScreenState extends State<DocumentsScreen> with TickerProviderSt
       final file = File('${dir.path}/${doc.fileName}');
 
       if (doc.fileUrl.startsWith('http')) {
-        // ✅ Download from Cloudinary URL directly
-        final httpClient = HttpClient();
-        final request = await httpClient.getUrl(Uri.parse(doc.fileUrl));
-        final response = await request.close();
-        final bytes = await response.fold<List<int>>([], (acc, chunk) => acc..addAll(chunk));
-        await file.writeAsBytes(bytes);
-        httpClient.close();
+        // ✅ Download from Cloudinary URL using http package (follows redirects)
+        final response = await http.get(Uri.parse(doc.fileUrl));
+        if (response.statusCode == 200) {
+          await file.writeAsBytes(response.bodyBytes);
+        } else {
+          throw Exception('Erreur HTTP: ${response.statusCode}');
+        }
       } else if (doc.fileUrl.contains(',')) {
         // Legacy base64
         final bytes = base64Decode(doc.fileUrl.split(',').last);
