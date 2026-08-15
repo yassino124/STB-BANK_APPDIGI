@@ -236,7 +236,12 @@ const itNavGroups = [
   },
 ];
 
-const Sidebar = () => {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const { user, logout, isAgence, isFinance, isManager, isRH, isAdmin, isIT } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -263,21 +268,28 @@ const Sidebar = () => {
   const sidebarWidth = collapsed ? 72 : 268;
 
   return (
-    <motion.aside
-      animate={{ width: sidebarWidth }}
-      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      style={{
-        width: sidebarWidth,
-        flexShrink: 0,
-        background: 'var(--bg-sidebar)',
-        borderRight: '1px solid var(--border)',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-        zIndex: 20,
-        position: 'relative',
-      }}
-    >
+    <>
+      {/* Overlay for mobile */}
+      <div 
+        className={`sidebar-overlay ${isOpen ? 'open' : ''}`}
+        onClick={onClose}
+      />
+      
+      <motion.aside
+        className={`sidebar ${isOpen ? 'open' : ''}`}
+        animate={{ width: sidebarWidth }}
+        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        style={{
+          width: sidebarWidth,
+          flexShrink: 0,
+          background: 'var(--bg-sidebar)',
+          borderRight: '1px solid var(--border)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          zIndex: 100,
+        }}
+      >
       <div style={{
         padding: collapsed ? '1.5rem 0' : '1.5rem',
         display: 'flex',
@@ -478,6 +490,7 @@ const Sidebar = () => {
         </button>
       </div>
     </motion.aside>
+    </>
   );
 };
 

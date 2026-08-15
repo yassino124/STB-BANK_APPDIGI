@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from './Sidebar';
@@ -9,6 +10,7 @@ import CommandPalette from './CommandPalette';
 const Layout = () => {
   const { user, isLoading } = useAuth();
   const location = useLocation();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   console.log('Layout render:', { path: location.pathname, user, isLoading });
 
@@ -27,9 +29,9 @@ const Layout = () => {
 
   return (
     <div className="app-layout" style={{ display: 'flex' }}>
-      <Sidebar />
+      <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
       <div className="main-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <Topbar />
+        <Topbar onMenuClick={() => setIsMobileMenuOpen(true)} />
         <main className="content-area" style={{ flex: 1, overflow: 'auto', padding: '1.5rem', position: 'relative' }}>
           <AnimatePresence mode="wait">
             <motion.div

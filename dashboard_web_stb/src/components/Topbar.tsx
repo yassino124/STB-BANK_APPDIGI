@@ -1,10 +1,14 @@
 import { useState } from 'react';
-import { Bell, Search } from 'lucide-react';
+import { Bell, Search, Menu } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
 
-const Topbar = () => {
+interface TopbarProps {
+  onMenuClick?: () => void;
+}
+
+const Topbar = ({ onMenuClick }: TopbarProps) => {
   const { user, primaryRole } = useAuth();
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
@@ -15,14 +19,23 @@ const Topbar = () => {
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       className="topbar"
     >
-      <motion.div 
-        className="search-box"
-        animate={{ width: isSearchFocused ? 320 : 250 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        style={{ overflow: 'hidden' }}
-      >
-        <Search size={16} color="var(--text-muted)" />
-        <input
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <button 
+          className="mobile-menu-btn" 
+          onClick={onMenuClick}
+          style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'none' }}
+        >
+          <Menu size={24} />
+        </button>
+
+        <motion.div 
+          className="search-box"
+          animate={{ width: isSearchFocused ? 280 : (window.innerWidth <= 768 ? 150 : 250) }}
+          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          style={{ overflow: 'hidden' }}
+        >
+          <Search size={16} color="var(--text-muted)" />
+          <input
           type="text"
           placeholder="Rechercher par nom, matricule..."
           onFocus={() => setIsSearchFocused(true)}
@@ -43,6 +56,7 @@ const Topbar = () => {
           ⌘K
         </div>
       </motion.div>
+      </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
         <motion.div whileHover={{ scale: 1.1, rotate: 10 }} whileTap={{ scale: 0.9 }}>
