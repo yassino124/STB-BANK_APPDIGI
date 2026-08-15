@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 
 /// STB API Service — connects to NestJS backend on localhost:3000
 class AuthApiService {
@@ -67,8 +68,10 @@ class AuthApiService {
     return access != null && access.isNotEmpty && refresh != null;
   }
 
-  static Future<void> saveMatricule(String matricule) =>
-      _storage.write(key: 'matricule', value: matricule);
+  static Future<void> saveMatricule(String matricule) async {
+      await _storage.write(key: 'matricule', value: matricule);
+      OneSignal.login(matricule); // 🔔 Lier le téléphone au matricule
+  }
   static Future<String?> getMatricule() => _storage.read(key: 'matricule');
 
   static Future<void> saveBiometricEnabled(bool enabled) =>
@@ -85,9 +88,11 @@ class AuthApiService {
   static Future<void> clearAll() async {
     _cachedEmployeeId = null;
     await _storage.deleteAll();
+    OneSignal.logout(); // 🔔 Déconnecter des notifications
   }
 
   static Future<void> saveProfile(String profileJson) =>
+
       _storage.write(key: 'employee_profile', value: profileJson);
   static Future<String?> getProfile() => _storage.read(key: 'employee_profile');
   static Future<void> clearProfile() => _storage.delete(key: 'employee_profile');

@@ -14,10 +14,16 @@ import 'viewmodels/cheques_viewmodel.dart';
 import 'viewmodels/rh_viewmodel.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'widgets/biometric_lock_wrapper.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('fr', null);
+  
+  // 🔔 Initialisation OneSignal (Remplacer par ton vrai APP_ID OneSignal)
+  OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
+  OneSignal.initialize("65944f0a-cb15-46aa-b3b7-63a78c8c33f7");
+  OneSignal.Notifications.requestPermission(true);
   
   // Note: PollingService is driven by DashboardViewModel internally — no need to start here
   

@@ -14,6 +14,8 @@ export class NotificationsService {
   ) {}
 
   async sendToEmployee(employeeId: string, title: string, body: string, type: NotificationType = NotificationType.SYSTEM, data: any = {}) {
+    const employee = await this.employeeModel.findById(employeeId);
+    
     const notif = new this.notifModel({
       employeeId: new Types.ObjectId(employeeId),
       title,
@@ -21,7 +23,34 @@ export class NotificationsService {
       type,
       data,
     });
-    return notif.save();
+    const savedNotif = await notif.save();
+
+    // 🔔 Push to OneSignal
+    if (employee && process.env.ONESIGNAL_APP_ID && process.env.ONESIGNAL_REST_API_KEY) {
+      try {
+        await fetch('https://onesignal.com/api/v1/notifications', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Basic ${process.env.ONESIGNAL_REST_API_KEY}`
+          },
+          body: JSON.stringify({
+            app_id: process.env.ONESIGNAL_APP_ID,
+            include_aliases: {
+              external_id: [employee.matricule]
+            },
+            target_channel: 'push',
+            headings: { "en": title, "fr": title },
+            contents: { "en": body, "fr": body },
+            data: data
+          })
+        });
+      } catch (err) {
+        console.error('OneSignal Push Error:', err);
+      }
+    }
+    
+    return savedNotif;
   }
 
   async sendCustomNotification(dto: SendNotificationDto) {
