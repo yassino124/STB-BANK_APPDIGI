@@ -38,9 +38,9 @@ function drawSTBHeader(doc: PDFKit.PDFDocument, title: string, subtitle: string)
   // Gold accent stripe
   doc.rect(0, 105, doc.page.width, 5).fill(STB_GOLD);
 
-  // Logo
+  // Logo — use relative path for Render compatibility
   try {
-    const logoPath = '/Users/mohamedyassineouertani/Downloads/stb_mobile/public/logo for splash.png';
+    const logoPath = path.join(process.cwd(), 'public', 'logo for splash.png');
     if (fs.existsSync(logoPath)) {
       doc.image(logoPath, 30, 25, { width: 60 });
     } else {
@@ -401,7 +401,7 @@ export class DocumentsService {
     doc.fontSize(8).fillColor('#93C5FD').font('Helvetica-Oblique').text('SOCIÉTÉ TUNISIENNE DE BANQUE', 15, 25, { align: 'center', width: 270 });
     
     try {
-      const logoPath = '/Users/mohamedyassineouertani/Downloads/stb_mobile/public/logo for splash.png';
+      const logoPath = path.join(process.cwd(), 'public', 'logo for splash.png');
       if (fs.existsSync(logoPath)) {
         doc.image(logoPath, 130, 38, { width: 40 });
       } else {
