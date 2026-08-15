@@ -12,12 +12,12 @@ export class SecurityConfig {
   static readonly DEVICE_TRUST_REQUIRED = true;
   static readonly RATE_LIMIT_TTL = 60;
   static readonly RATE_LIMIT_LIMIT = 10;
-  static readonly CORS_ORIGINS = process.env.CORS_ORIGINS?.split(',') || [
+  static readonly CORS_ORIGINS = [
+    ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : []),
     'http://localhost:3000',
     'http://localhost:4200',
     'http://localhost:5173',
     'https://stb-backend-blno.onrender.com',
-    // Vercel deployments — covers all preview + production URLs
     'https://stb-bank-appdigi.vercel.app',
     'https://dashboard-web-stb.vercel.app',
   ];
