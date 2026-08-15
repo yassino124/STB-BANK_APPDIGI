@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 class AiApiService {
   // Points to the same backend as AuthApiService
   //static const String _baseUrl = 'https://stb-backend-blno.onrender.com/api/v1';
-  static const String _baseUrl = 'http://127.0.0.1:3000/api/v1'; // 💻 Local dev
+  static const String _baseUrl = 'https://stb-backend-blno.onrender.com/api/v1'; // ☁️ Production
 
   static const _storage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
