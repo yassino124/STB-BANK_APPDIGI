@@ -1276,6 +1276,28 @@ class AuthApiService {
       (body) => (body as Map<String, dynamic>)['count'] as int,
     );
   }
+
+  // ── SEND TEST NOTIFICATION (OneSignal) ───────────────────────────
+  static Future<ApiResult<dynamic>> sendTestNotification({
+    String? employeeId,
+    required String title,
+    required String body,
+    String type = 'SYSTEM',
+  }) async {
+    return _authRequest(
+      () async => http.post(
+        Uri.parse('$_baseUrl/notifications/send'),
+        headers: await authenticatedHeaders().then((h) => {...h, 'Content-Type': 'application/json'}),
+        body: jsonEncode({
+          if (employeeId != null && employeeId.isNotEmpty) 'employeeId': employeeId,
+          'title': title,
+          'body': body,
+          'type': type,
+        }),
+      ).timeout(const Duration(seconds: 15)),
+      (body) => body,
+    );
+  }
 }
 
 // ── Models ────────────────────────────────────────────────────────
