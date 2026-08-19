@@ -236,25 +236,35 @@ class AuthApiService {
     required String deviceUUID,
     required String biometricType, // 'FACE_ID' | 'FINGERPRINT'
   }) async {
-    try {
-      final body = {
-        'matricule': matricule,
-        'deviceUUID': deviceUUID,
-        'biometricType': biometricType,
-      };
+    final body = {
+      'matricule': matricule,
+      'deviceUUID': deviceUUID,
+      'biometricType': biometricType,
+    };
 
-      final response = await http
-          .post(
-            Uri.parse('$_baseUrl/auth/login/biometric'),
-            headers: _headers,
-            body: jsonEncode(body),
-          )
-          .timeout(const Duration(seconds: 10));
+    for (int attempt = 1; attempt <= 2; attempt++) {
+      try {
+        final response = await http
+            .post(
+              Uri.parse('$_baseUrl/auth/login/biometric'),
+              headers: _headers,
+              body: jsonEncode(body),
+            )
+            .timeout(const Duration(seconds: 45));
 
-      return _handleResponse(response, (b) => LoginResponse.fromJson(b as Map<String, dynamic>));
-    } catch (e) {
-      return ApiResult.error(_networkError(e));
+        return _handleResponse(response, (b) => LoginResponse.fromJson(b as Map<String, dynamic>));
+      } catch (e) {
+        final errStr = e.toString();
+        final isTimeout = errStr.contains('TimeoutException');
+        final isSocket = errStr.contains('SocketException') || errStr.contains('Connection refused');
+
+        if (isTimeout && attempt < 2) continue;
+        if (isSocket) return ApiResult.error('Connexion impossible. Vérifiez votre réseau.');
+        if (isTimeout) return ApiResult.error('Le serveur démarre, réessayez dans quelques secondes.');
+        return ApiResult.error(_networkError(e));
+      }
     }
+    return const ApiResult.error('Impossible de joindre le serveur.');
   }
 
   // ── LOGIN — PIN ──────────────────────────────────────────────────
@@ -263,25 +273,35 @@ class AuthApiService {
     required String pin,
     String? deviceUUID,
   }) async {
-    try {
-      final body = {
-        'matricule': matricule,
-        'pin': pin,
-        if (deviceUUID != null) 'deviceUUID': deviceUUID,
-      };
+    final body = {
+      'matricule': matricule,
+      'pin': pin,
+      if (deviceUUID != null) 'deviceUUID': deviceUUID,
+    };
 
-      final response = await http
-          .post(
-            Uri.parse('$_baseUrl/auth/login/pin'),
-            headers: _headers,
-            body: jsonEncode(body),
-          )
-          .timeout(const Duration(seconds: 10));
+    for (int attempt = 1; attempt <= 2; attempt++) {
+      try {
+        final response = await http
+            .post(
+              Uri.parse('$_baseUrl/auth/login/pin'),
+              headers: _headers,
+              body: jsonEncode(body),
+            )
+            .timeout(const Duration(seconds: 45));
 
-      return _handleResponse(response, (b) => LoginResponse.fromJson(b as Map<String, dynamic>));
-    } catch (e) {
-      return ApiResult.error(_networkError(e));
+        return _handleResponse(response, (b) => LoginResponse.fromJson(b as Map<String, dynamic>));
+      } catch (e) {
+        final errStr = e.toString();
+        final isTimeout = errStr.contains('TimeoutException');
+        final isSocket = errStr.contains('SocketException') || errStr.contains('Connection refused');
+
+        if (isTimeout && attempt < 2) continue;
+        if (isSocket) return ApiResult.error('Connexion impossible. Vérifiez votre réseau.');
+        if (isTimeout) return ApiResult.error('Le serveur démarre, réessayez dans quelques secondes.');
+        return ApiResult.error(_networkError(e));
+      }
     }
+    return const ApiResult.error('Impossible de joindre le serveur.');
   }
 
   // ── REFRESH TOKEN ────────────────────────────────────────────────

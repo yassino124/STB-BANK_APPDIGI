@@ -192,11 +192,11 @@ class _LoginScreenState extends State<LoginScreen> {
     HapticFeedback.heavyImpact();
     setState(() { _scanning = true; _errorMsg = null; });
 
-    final matricule = await AuthApiService.getMatricule();
-    if (matricule == null) {
+    final matricule = (await AuthApiService.getMatricule()) ?? _userCtrl.text.trim();
+    if (matricule.isEmpty) {
       setState(() {
         _scanning = false;
-        _errorMsg = 'Aucun compte enregistré. Connectez-vous par mot de passe d\'abord.';
+        _errorMsg = 'Veuillez entrer votre matricule d\'abord, ou vous connecter par mot de passe pour activer la biométrie.';
       });
       return;
     }
