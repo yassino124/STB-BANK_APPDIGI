@@ -34,11 +34,19 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _scanning = false;
   bool _obscure = true;
   String? _errorMsg;
+  String _loadingMsg = 'Connexion en cours...';
   final _localAuth = LocalAuthentication();
 
   // Fixed demo device UUID
   static const _deviceUUID = 'stb-demo-device-001';
   static const _deviceName = 'iPhone Demo STB';
+
+  @override
+  void initState() {
+    super.initState();
+    // 🏓 Warm up the Render backend silently as soon as login screen opens
+    AuthApiService.pingServer();
+  }
 
   @override
   void dispose() {
@@ -71,8 +79,20 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _errorMsg = 'Matricule et mot de passe requis.');
       return;
     }
-    setState(() { _loading = true; _errorMsg = null; });
+    setState(() { _loading = true; _errorMsg = null; _loadingMsg = 'Connexion en cours...'; });
     HapticFeedback.mediumImpact();
+
+    // Show a secondary message after 8s in case Render is still waking up
+    Future.delayed(const Duration(seconds: 8), () {
+      if (mounted && _loading) {
+        setState(() => _loadingMsg = 'Démarrage du serveur... ⏳');
+      }
+    });
+    Future.delayed(const Duration(seconds: 25), () {
+      if (mounted && _loading) {
+        setState(() => _loadingMsg = 'Presque prêt... 🔄');
+      }
+    });
 
     final result = await AuthApiService.login(
       matricule: _userCtrl.text.trim(),
@@ -597,7 +617,15 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               child: Center(
                 child: _loading
-                    ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                    ? Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)),
+                          const SizedBox(width: 10),
+                          Text(_loadingMsg, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                        ],
+                      )
                     : Text(p.translate('sign_in'), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
               ),
             ),
@@ -611,16 +639,39 @@ class _LoginScreenState extends State<LoginScreen> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
               ),
-              child: Row(children: [
-                const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444), size: 16),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _errorMsg!,
-                    style: const TextStyle(color: Color(0xFFEF4444), fontSize: 12, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ]),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444), size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _errorMsg!,
+                        style: const TextStyle(color: Color(0xFFEF4444), fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ]),
+                  if (_errorMsg!.contains('démarre') || _errorMsg!.contains('Impossible')) ...[
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: _loading ? null : _login,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppTheme.electricBlue.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(Icons.refresh_rounded, color: AppTheme.electricBlue, size: 14),
+                          SizedBox(width: 5),
+                          Text('Réessayer', style: TextStyle(color: AppTheme.electricBlue, fontSize: 12, fontWeight: FontWeight.w700)),
+                        ]),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ).animate().fadeIn().shakeX(duration: 400.ms),
           ],
         ],

@@ -195,27 +195,39 @@ class AuthApiService {
     String? deviceName,
     String platform = 'iOS',
   }) async {
-    try {
-      final body = {
-        'matricule': matricule,
-        'password': password,
-        if (deviceUUID != null) 'deviceUUID': deviceUUID,
-        if (deviceName != null) 'deviceName': deviceName,
-        'platform': platform,
-      };
+    final body = {
+      'matricule': matricule,
+      'password': password,
+      if (deviceUUID != null) 'deviceUUID': deviceUUID,
+      if (deviceName != null) 'deviceName': deviceName,
+      'platform': platform,
+    };
 
-      final response = await http
-          .post(
-            Uri.parse('$_baseUrl/auth/login'),
-            headers: _headers,
-            body: jsonEncode(body),
-          )
-          .timeout(const Duration(seconds: 10));
+    // Try up to 2 times to handle Render cold-start (sleeps after inactivity)
+    for (int attempt = 1; attempt <= 2; attempt++) {
+      try {
+        final response = await http
+            .post(
+              Uri.parse('$_baseUrl/auth/login'),
+              headers: _headers,
+              body: jsonEncode(body),
+            )
+            .timeout(const Duration(seconds: 45)); // ⬆️ 45s for Render wake-up
 
-      return _handleResponse(response, (b) => LoginResponse.fromJson(b as Map<String, dynamic>));
-    } catch (e) {
-      return ApiResult.error(_networkError(e));
+        return _handleResponse(response, (b) => LoginResponse.fromJson(b as Map<String, dynamic>));
+      } catch (e) {
+        final errStr = e.toString();
+        final isTimeout = errStr.contains('TimeoutException');
+        final isSocket = errStr.contains('SocketException') || errStr.contains('Connection refused');
+
+        // On timeout (Render cold-start), retry once automatically
+        if (isTimeout && attempt < 2) continue;
+        if (isSocket) return ApiResult.error('Connexion impossible. Vérifiez votre réseau.');
+        if (isTimeout) return ApiResult.error('Le serveur démarre, réessayez dans quelques secondes.');
+        return ApiResult.error(_networkError(e));
+      }
     }
+    return const ApiResult.error('Impossible de joindre le serveur.');
   }
 
   // ── LOGIN — Biometric ────────────────────────────────────────────
@@ -1095,8 +1107,22 @@ class AuthApiService {
     if (s.contains('SocketException') || s.contains('Connection refused')) {
       return 'Connexion impossible. Vérifiez votre réseau.';
     }
-    if (s.contains('TimeoutException')) return 'Le serveur ne répond pas.';
+    if (s.contains('TimeoutException')) return 'Le serveur démarre, réessayez dans quelques secondes.';
     return 'Erreur réseau inattendue.';
+  }
+
+  /// 🏓 Ping backend to wake it up (Render free-tier cold start)
+  /// Uses /health/ping (simple liveness check, no DB query).
+  /// Call this early (e.g. on app launch / login screen init) so the server
+  /// is already warm by the time the user taps "Se connecter".
+  static Future<void> pingServer() async {
+    try {
+      await http
+          .get(Uri.parse('$_baseUrl/health/ping'))
+          .timeout(const Duration(seconds: 60));
+    } catch (_) {
+      // Silent — fire-and-forget, we don't surface errors here
+    }
   }
 
   // ── AMICALE ────────────────────────────────────────────────────────
