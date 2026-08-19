@@ -28,7 +28,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _userCtrl = TextEditingController(text: 'EMP001234');
+  final _userCtrl = TextEditingController(); // Empty by default so user types real ID
   final _passCtrl = TextEditingController();
   bool _loading = false;
   bool _scanning = false;
@@ -37,15 +37,24 @@ class _LoginScreenState extends State<LoginScreen> {
   String _loadingMsg = 'Connexion en cours...';
   final _localAuth = LocalAuthentication();
 
-  // Fixed demo device UUID
-  static const _deviceUUID = 'stb-demo-device-001';
-  static const _deviceName = 'iPhone Demo STB';
+  String _deviceUUID = '';
+  String _deviceName = 'Mobile Device';
 
   @override
   void initState() {
     super.initState();
     // 🏓 Warm up the Render backend silently as soon as login screen opens
     AuthApiService.pingServer();
+    _initDevice();
+  }
+
+  Future<void> _initDevice() async {
+    String? savedId = await AuthApiService.getDeviceUUID();
+    if (savedId == null) {
+      savedId = 'dev-${DateTime.now().millisecondsSinceEpoch}-${Random().nextInt(999999)}';
+      await AuthApiService.saveDeviceUUID(savedId);
+    }
+    if (mounted) setState(() => _deviceUUID = savedId!);
   }
 
   @override
