@@ -87,7 +87,11 @@ class AuthApiService {
 
   static Future<void> clearAll() async {
     _cachedEmployeeId = null;
-    await _storage.deleteAll();
+    await _storage.delete(key: 'access_token');
+    await _storage.delete(key: 'refresh_token');
+    await _storage.delete(key: 'employee_profile');
+    // DO NOT delete device_uuid, matricule, or biometric_enabled
+    // so the user can still use biometric login after logging out!
     OneSignal.logout(); // 🔔 Déconnecter des notifications
   }
 

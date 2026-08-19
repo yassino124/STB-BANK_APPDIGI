@@ -198,17 +198,18 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    HapticFeedback.heavyImpact();
-    setState(() { _scanning = true; _errorMsg = null; });
-
     final matricule = (await AuthApiService.getMatricule()) ?? _userCtrl.text.trim();
     if (matricule.isEmpty) {
+      if (!mounted) return;
       setState(() {
-        _scanning = false;
         _errorMsg = 'Veuillez entrer votre matricule d\'abord, ou vous connecter par mot de passe pour activer la biométrie.';
       });
       return;
     }
+
+    HapticFeedback.heavyImpact();
+    if (!mounted) return;
+    setState(() { _scanning = true; _errorMsg = null; });
 
     final biometricType = type == 'faceid' ? 'FACE_ID' : 'FINGERPRINT';
     final result = await AuthApiService.biometricLogin(
