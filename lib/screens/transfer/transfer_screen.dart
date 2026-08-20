@@ -61,7 +61,7 @@ class _TransferScreenState extends State<TransferScreen> {
         return NetworkImage(avatarUrl);
       } else if (avatarUrl.startsWith('/') || avatarUrl.startsWith('public/')) {
         // Relative path - convert to full API URL
-        const apiBaseUrl = 'http://localhost:3000'; // TODO: Get from env
+        const apiBaseUrl = 'https://stb-backend-blno.onrender.com';
         final cleanPath = avatarUrl.startsWith('/') ? avatarUrl : '/$avatarUrl';
         return NetworkImage('$apiBaseUrl$cleanPath');
       } else {
@@ -581,6 +581,7 @@ class _TransferScreenState extends State<TransferScreen> {
                 final name = "${r['prenom']} ${r['nom']}";
                 final matricule = r['matricule'] ?? "";
                 final avatarColor = Color(r['avatarColor'] as int? ?? 0xFF2962FF);
+                final imageProvider = _getAvatarImageProvider(r['avatar']?.toString());
 
                 return GestureDetector(
                   onTap: () {
@@ -610,17 +611,17 @@ class _TransferScreenState extends State<TransferScreen> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: avatarColor,
-                            image: r['avatar'] != null && r['avatar'].toString().isNotEmpty
+                            image: imageProvider != null
                                 ? DecorationImage(
-                                    image: NetworkImage('${r['avatar']}'),
+                                    image: imageProvider,
                                     fit: BoxFit.cover,
                                   )
                                 : null,
                           ),
-                          child: r['avatar'] == null || r['avatar'].toString().isEmpty
+                          child: imageProvider == null
                               ? Center(
                                   child: Text(
-                                    name.isNotEmpty ? name.substring(0, 1).toUpperCase() : "?",
+                                    name.trim().isNotEmpty ? name.trim().substring(0, 1).toUpperCase() : "?",
                                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
                                   ),
                                 )
