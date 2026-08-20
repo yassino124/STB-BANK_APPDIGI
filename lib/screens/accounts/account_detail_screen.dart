@@ -125,6 +125,7 @@ class _AccountDetailScreenState extends State<AccountDetailScreen>
   void dispose() {
     _searchCtrl.dispose();
     _micAnim.dispose();
+    _speech.stop();
     super.dispose();
   }
 

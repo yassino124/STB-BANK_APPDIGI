@@ -1,0 +1,48 @@
+services:
+  - type: web
+    name: stb-backend-blno
+    env: docker
+    region: frankfurt
+    plan: free
+    dockerContext: ./stb-backend
+    dockerfilePath: ./stb-backend/Dockerfile
+    branch: main
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      # Database
+      - key: MONGODB_URI
+        sync: false # User must set this in the Render Dashboard
+      - key: MONGODB_DB_NAME
+        value: stb_db
+      # JWT Secrets (Will be injected in Dashboard)
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      # Cloudinary
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      # AI (Gemini)
+      - key: GEMINI_API_KEY
+        sync: false
+      # Redis (Render provides a Redis service URL)
+      - key: REDIS_HOST
+        sync: false
+      - key: REDIS_PORT
+        value: 6379
+      - key: REDIS_PASSWORD
+        sync: false
+      # Application
+      - key: APP_URL
+        value: "https://stb-backend-blno.onrender.com"
+      - key: CORS_ORIGINS
+        value: "https://your-frontend-domain.com,http://localhost:5173"
