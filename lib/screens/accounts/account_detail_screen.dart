@@ -10,6 +10,7 @@ import 'package:open_file/open_file.dart';
 import 'dart:io';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 class AccountDetailScreen extends StatefulWidget {
   final Map<String, dynamic> account;
@@ -28,6 +29,7 @@ class _AccountDetailScreenState extends State<AccountDetailScreen>
   bool _searchFocused = false;
   bool _isListening = false;
   late AnimationController _micAnim;
+  final stt.SpeechToText _speech = stt.SpeechToText();
   
   // ✅ Dynamic data from backend
   List<Map<String, dynamic>> _allTx = [];
@@ -336,25 +338,55 @@ class _AccountDetailScreenState extends State<AccountDetailScreen>
     }
   }
 
-  void _toggleVoice() {
+  void _toggleVoice() async {
     HapticFeedback.mediumImpact();
-    setState(() => _isListening = !_isListening);
-    if (_isListening) {
-      _micAnim.repeat(reverse: true);
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) {
-          setState(() {
-            _isListening = false;
-            _query = 'virement';
-            _searchCtrl.text = 'virement';
-          });
-          _micAnim.stop();
-          _micAnim.reset();
-        }
-      });
+    
+    if (!_isListening) {
+      bool available = await _speech.initialize(
+        onStatus: (status) {
+          if (status == 'done' || status == 'notListening') {
+            if (mounted) {
+              setState(() => _isListening = false);
+              _micAnim.stop();
+              _micAnim.reset();
+            }
+          }
+        },
+        onError: (error) {
+          if (mounted) {
+            setState(() => _isListening = false);
+            _micAnim.stop();
+            _micAnim.reset();
+          }
+        },
+      );
+      
+      if (available) {
+        setState(() => _isListening = true);
+        _micAnim.repeat(reverse: true);
+        
+        _speech.listen(
+          onResult: (val) {
+            setState(() {
+              _searchCtrl.text = val.recognizedWords;
+              _query = val.recognizedWords;
+            });
+          },
+          localeId: 'fr_FR',
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text("Le microphone n'est pas accessible."),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
     } else {
+      setState(() => _isListening = false);
       _micAnim.stop();
       _micAnim.reset();
+      _speech.stop();
     }
   }
 
