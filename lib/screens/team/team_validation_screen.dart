@@ -181,22 +181,23 @@ class _TeamValidationScreenState extends State<TeamValidationScreen>
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Row(children: [
-                        GestureDetector(
-                          onTap: () {
-                            HapticFeedback.lightImpact();
-                            Navigator.of(context).pop();
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.15), 
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1),
+                        if (Navigator.canPop(context))
+                          GestureDetector(
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              Navigator.of(context).pop();
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15), 
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1),
+                              ),
+                              child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 22),
                             ),
-                            child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 22),
                           ),
-                        ),
-                        const SizedBox(width: 12),
+                        if (Navigator.canPop(context)) const SizedBox(width: 12),
                         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Text('Mon Équipe', style: GoogleFonts.outfit(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
                           Text('Validation des demandes', style: GoogleFonts.inter(color: Colors.white70, fontSize: 12)),
