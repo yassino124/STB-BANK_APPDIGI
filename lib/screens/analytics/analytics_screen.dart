@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../viewmodels/dashboard_viewmodel.dart';
-import '../../models/banking_models.dart';
 import 'ai_spending_screen.dart';
 
 class AnalyticsScreen extends StatefulWidget {
@@ -83,7 +82,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                 Expanded(
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -94,6 +93,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                         _buildCategorySection(vm, fg, mt, cd, bd, dk),
                         const SizedBox(height: 24),
                         _buildInsightsBanner(fg, mt, dk),
+                        const SizedBox(height: 16),
                       ],
                     ),
                   ),
@@ -310,8 +310,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                         children: [
                           if (isSel)
                             Container(
-                              margin: const EdgeInsets.only(bottom: 6),
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                              margin: const EdgeInsets.only(bottom: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(color: AppTheme.electricBlue, borderRadius: BorderRadius.circular(6)),
                               child: Text('${e.value.round()}', style: GoogleFonts.inter(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800)),
                             ),
@@ -319,7 +319,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                             duration: const Duration(milliseconds: 300),
                             curve: Curves.easeOutExpo,
                             width: 24,
-                            height: (120 * pct).clamp(0, 120).toDouble(),
+                            height: (110 * pct).clamp(0, 110).toDouble(),
                             decoration: BoxDecoration(
                               gradient: isSel || isMax 
                                   ? const LinearGradient(colors: [AppTheme.royalBlue, AppTheme.electricBlue], begin: Alignment.bottomCenter, end: Alignment.topCenter)
@@ -329,7 +329,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                               boxShadow: isSel || isMax ? [BoxShadow(color: AppTheme.electricBlue.withValues(alpha: 0.35), blurRadius: 8, offset: const Offset(0, -2))] : [],
                             ),
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 8),
                           Text(e.key < _months.length ? _months[e.key] : '', style: GoogleFonts.inter(color: isSel ? AppTheme.electricBlue : mt, fontSize: 10, fontWeight: isSel ? FontWeight.w800 : FontWeight.w600)),
                         ],
                       );

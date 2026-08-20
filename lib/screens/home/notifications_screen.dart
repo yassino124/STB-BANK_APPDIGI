@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../viewmodels/notifications_viewmodel.dart';
 import '../../models/banking_models.dart';
-import 'notification_test_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -66,27 +65,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       ],
                     ),
                   ),
-                  // 🔔 Test OneSignal Button
-                  GestureDetector(
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationTestScreen()));
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF6C63FF).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFF6C63FF).withValues(alpha: 0.3)),
-                      ),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        const Icon(Icons.science_rounded, color: Color(0xFF6C63FF), size: 15),
-                        const SizedBox(width: 5),
-                        Text('Test', style: AppTheme.caption(const Color(0xFF6C63FF)).copyWith(fontWeight: FontWeight.w800)),
-                      ]),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
                   if (vm.items.isNotEmpty)
                     GestureDetector(
                       onTap: () {
