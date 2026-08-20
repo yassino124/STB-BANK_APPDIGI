@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../../providers/app_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../services/auth_api_service.dart';
@@ -21,6 +22,8 @@ class _AnnuaireScreenState extends State<AnnuaireScreen> {
   bool _searchFocused = false;
   bool _isListening = false;
   bool _isLoading = true;
+  
+  final stt.SpeechToText _speech = stt.SpeechToText();
 
   final _directions = ['Tous', 'Dév. Digital', 'Finance', 'RH', 'Opérations', 'SI'];
 
@@ -96,26 +99,55 @@ class _AnnuaireScreenState extends State<AnnuaireScreen> {
     super.dispose();
   }
 
-  void _onVoiceSearch() {
+  void _onVoiceSearch() async {
     HapticFeedback.heavyImpact();
-    setState(() => _isListening = !_isListening);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(children: [
-          const Icon(Icons.mic_rounded, color: Colors.white),
-          const SizedBox(width: 12),
-          Text(_isListening ? "Écoute en cours (IA STB)..." : "Écoute terminée",
-              style: const TextStyle(fontWeight: FontWeight.w700)),
-        ]),
-        backgroundColor: AppTheme.electricBlue,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 3),
-      ),
-    );
-    if (_isListening) {
-      Future.delayed(const Duration(seconds: 3), () {
-        if (mounted) setState(() => _isListening = false);
-      });
+    
+    if (!_isListening) {
+      bool available = await _speech.initialize(
+        onStatus: (status) {
+          if (status == 'done' || status == 'notListening') {
+            if (mounted) setState(() => _isListening = false);
+          }
+        },
+        onError: (error) {
+          if (mounted) setState(() => _isListening = false);
+        },
+      );
+      
+      if (available) {
+        setState(() => _isListening = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(children: const [
+              Icon(Icons.mic_rounded, color: Colors.white),
+              SizedBox(width: 12),
+              Text("Écoute en cours...", style: TextStyle(fontWeight: FontWeight.w700)),
+            ]),
+            backgroundColor: AppTheme.electricBlue,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        _speech.listen(
+          onResult: (val) {
+            setState(() {
+              _searchCtrl.text = val.recognizedWords;
+              _searchQuery = val.recognizedWords;
+            });
+          },
+          localeId: 'fr_FR', // Optional: enforce French language
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text("Le microphone n'est pas accessible."),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } else {
+      setState(() => _isListening = false);
+      _speech.stop();
     }
   }
 
